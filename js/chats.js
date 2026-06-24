@@ -77,14 +77,6 @@ const Chats = {
     document.getElementById('chatResult').innerHTML = '<span class="text-info">Sending...</span>';
 
     try {
-      // Firestore में मैसेज सेव करें
-      await db.collection('messages').add({
-        to: phone,
-        body: message,
-        type: 'outgoing',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
       const url = `https://graph.facebook.com/v22.0/${config.phoneNumberId}/messages`;
       const payload = {
         messaging_product: 'whatsapp',
@@ -104,14 +96,21 @@ const Chats = {
 
       const result = await response.json();
 
-      if (response.ok) {
-        document.getElementById('chatResult').innerHTML = '<span class="text-success">✅ Sent!</span>';
+      if (response.ok && result.messages) {
+        // Firestore में मैसेज सेव करें
+        await db.collection('messages').add({
+          to: phone,
+          body: message,
+          type: 'outgoing',
+          waMessageId: result.messages[0]?.id || '',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('chatResult').innerHTML = '<span class="text-success">✅ Sent successfully!</span>';
         this.render();
       } else {
-        document.getElementById('chatResult').innerHTML = `<span class="text-danger">❌ ${result.error?.message || 'Error'}</span>`;
+        document.getElementById('chatResult').innerHTML = `<span class="text-danger">❌ ${result.error?.message || 'Failed to send'}</span>`;
       }
     } catch (err) {
       document.getElementById('chatResult').innerHTML = `<span class="text-danger">❌ ${err.message}</span>`;
     }
   }
-};
