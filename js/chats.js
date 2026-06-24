@@ -12,7 +12,6 @@ const Chats = {
 
     let html = `
       <div class="row g-3">
-        <!-- Send Message Panel -->
         <div class="col-md-4">
           <div class="card-widget">
             <h5><i class="fab fa-whatsapp text-success me-2"></i>Send Message</h5>
@@ -31,7 +30,6 @@ const Chats = {
           </div>
         </div>
 
-        <!-- Message History Panel -->
         <div class="col-md-8">
           <div class="card-widget">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -44,17 +42,14 @@ const Chats = {
               </div>
             </div>
 
-            <!-- Webhook Info -->
             <div class="alert alert-success py-2 px-3 small mb-2">
               <i class="fas fa-check-circle me-1"></i> Webhook is active. Incoming messages appear automatically every 10 seconds.
             </div>
 
-            <!-- Search Filter -->
             <div class="mb-2">
               <input type="text" id="chatSearch" class="form-control form-control-sm" placeholder="Search messages..." oninput="Chats.filterMessages()">
             </div>
 
-            <!-- Message List -->
             <div style="max-height: 450px; overflow-y: auto;" id="messageList">
               ${messages.length === 0
                 ? '<p class="text-center text-muted py-4">No messages yet. Send your first WhatsApp message!</p>'
@@ -84,7 +79,6 @@ const Chats = {
     `;
     contentArea.innerHTML = html;
 
-    // Auto-refresh every 10 seconds
     if (window._chatInterval) clearInterval(window._chatInterval);
     window._chatInterval = setInterval(() => {
       const title = document.getElementById('currentSectionTitle');
@@ -94,7 +88,6 @@ const Chats = {
     }, 10000);
   },
 
-  // Silent refresh (no loading spinner)
   async refreshMessages() {
     try {
       const snap = await db.collection('messages').orderBy('createdAt', 'desc').limit(100).get();
@@ -121,10 +114,9 @@ const Chats = {
             </div>
           </div>
         `).join('');
-    } catch (e) { /* silent */ }
+    } catch (e) {}
   },
 
-  // Search filter
   filterMessages() {
     const search = document.getElementById('chatSearch')?.value?.toLowerCase() || '';
     document.querySelectorAll('.message-row').forEach(row => {
@@ -195,52 +187,13 @@ const Chats = {
 
   async refreshFromMeta() {
     const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
-    if (!cfg?.accessToken || !cfg?.phoneNumberId) return alert('WhatsApp not configured.');
-
-    contentArea.innerHTML = '<p class="text-center py-5">Refreshing from WhatsApp...</p>';
-
-    let added = 0;
-    try {
-      // Fetch recent messages from phone number
-      const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages?limit=50`, {
-        headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
-      });
-      const data = await res.json();
-
-      if (data.data) {
-        for (const msg of data.data) {
-          const existing = await db.collection('messages').where('waMessageId', '==', msg.id).get();
-          if (existing.empty) {
-            await db.collection('messages').add({
-              from: msg.from,
-              to: msg.to,
-              body: msg.text?.body || '(media/template)',
-              type: msg.from === cfg.phoneNumberId ? 'outgoing' : 'incoming',
-              waMessageId: msg.id,
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            added++;
-          }
-        }
-      }
-      alert(`✅ Refreshed! ${added} new messages added.`);
-      this.render();
-    } catch (err) {
-      alert('Error: ' + err.message);
-      this.render();
-    }
-  },
-
-  async checkIncoming() {
-    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
     if (!cfg?.accessToken) return alert('WhatsApp not configured.');
 
-    contentArea.innerHTML = '<p class="text-center py-5">Checking incoming messages...</p>';
+    contentArea.innerHTML = '<p class="text-center py-5">Refreshing messages...</p>';
 
     let added = 0;
     try {
       const wabaId = '342856675576986';
-      // Try conversations endpoint
       const convRes = await fetch(`https://graph.facebook.com/v22.0/${wabaId}/conversations?limit=10`, {
         headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
       });
@@ -270,10 +223,10 @@ const Chats = {
                 }
               }
             }
-          } catch (e) { /* skip failed conversations */ }
+          } catch (e) {}
         }
       }
-      alert(`✅ Check complete! ${added} new messages found.`);
+      alert(`✅ Refreshed! ${added} new messages found.`);
       this.render();
     } catch (err) {
       alert('Error: ' + err.message);
