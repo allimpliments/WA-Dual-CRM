@@ -21,12 +21,10 @@ document.getElementById('registerBtn').addEventListener('click', async () => {
   if (!name || !email || password.length < 6) return alert('Please fill all fields correctly.');
   try {
     const userCred = await auth.createUserWithEmailAndPassword(email, password);
-    // Firestore में user document create करें (default role = client)
     await db.collection('users').doc(userCred.user.uid).set({
       name, email, role: 'client',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    // Registration के बाद UI अपने आप update हो जाएगा (onAuthStateChanged)
   } catch (err) {
     alert(err.message);
   }
@@ -44,15 +42,14 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 
 auth.onAuthStateChanged(async (user) => {
   if (user) {
-    // Firestore से user data लाएँ (role सहित)
     let userData = null;
     try {
       const doc = await db.collection('users').doc(user.uid).get();
       if (doc.exists) {
         userData = doc.data();
       } else {
-        // अगर document मौजूद नहीं है (जैसे Console से सिर्फ Auth में user बनाया), तो default role के साथ बना दें
-        userData = { name: user.email, email: user.email, role: 'admin' }; // fallback role
+        // fallback admin
+        userData = { name: user.email, email: user.email, role: 'admin' };
         await db.collection('users').doc(user.uid).set({
           name: user.email,
           email: user.email,
@@ -65,15 +62,22 @@ auth.onAuthStateChanged(async (user) => {
       userData = { name: user.email, email: user.email, role: 'admin' };
     }
     window.currentUser = { uid: user.uid, ...userData };
+
+    // Force hide login, show main
     loginScreen.style.display = 'none';
+    loginScreen.style.visibility = 'hidden';
+    loginScreen.style.height = '0px';
     appMain.style.display = 'block';
-    initApp(userData.role); // role के अनुसार sidebar और dashboard load करें
-    // Topbar में role दिखाएँ (वैकल्पिक)
+
+    initApp(userData.role);
+
     const roleBadge = document.getElementById('userRoleBadge');
     if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
   } else {
     window.currentUser = null;
     loginScreen.style.display = 'flex';
+    loginScreen.style.visibility = 'visible';
+    loginScreen.style.height = '100vh';
     appMain.style.display = 'none';
   }
 });
