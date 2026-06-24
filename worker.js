@@ -1,12 +1,41 @@
-// Cloudflare Worker – WhatsApp Webhook for 11 Avatar WA Dual CRM
-// Final production code with full logging
+// Cloudflare Worker – FINAL FIXED VERSION
+// Receives Meta webhooks at /webhook path
+// Phone number: +91 74897 71499 (11 Avatar Digital Hub)
 
 const SERVICE_ACCOUNT = {
   client_email: "firebase-adminsdk-fbsvc@avatar-wa-dual-crm.iam.gserviceaccount.com",
-  private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCyLj7Q+KJ1mB2M\n/Qxf9bETEj9A4/v6g2raq6e9hNYrQ0Gft5uLRUrkcQgQuZG//DjnCDPhfe5jrEZK\nYcxkG5Lr+EmFYN704q9db9yWRep8t7YBcxwO4r6x/OzOKXHtAADhjSw+60D0FAxw\nyT3O/GmLiQ2HGwIgr75cPQpOl95ewc2c5toyXNNvREQ0US39kBVgLzk4SCpwKzZZ\nQIaS1KpkcLBhSOHucD1LSFd8hzp96e2mPdu2G3DoGZd2VSfqDDNbWMj7Rci3BTa0\nTEi1Ttf2n10zufiCOrvhtuaa0/yQKVKWmBTZXj7pO3txCAtHki0SsoisHTmBRgwo\nDV8k/ScfAgMBAAECggEABduMWB1cZeZGzmxBPGRc2mYmqzDzhzRLzn2HKa1Uxx5S\naXhFRkpUYHcwzy/ykS+vBTVZU0frDt7KfsaBTCc16MkETby2B7HuFvHG/C+3Ojtl\n4d1RZlHg+AP7Gvn001hFLyUPd9APFhcUo56SCBx3Mc2jIrZqFv4AEZM2JAhNGKtT\nVLYbK9unJS1ZDwE9qUelrKnhw6UGDU6YfocQy5RMYKQX69EGr6xuSKtSaJd8s5Hi\nFIEoCXS+QBxxzyu4fdKeUtDDg6YrWOC7rxnbAaDjmNIiwrUgHVlWIdUCZNvKi3Fv\nErL6nhKy+1KsCmctGZh7agGTDh+mTlpIv1K/2Uu5QQKBgQDc0+ouNgHfftnMM9ru\nA4iOuuRsmnY2dJSSPXpKHCUTmkkxGBstdsWPHfABpPg1OLpZ3t1v16YBn10D3dtl\njkYqO17Gh06yUxPv403rV0EMthT6gJ0Eg4uGCDV1tAaeh+dZ7M9yi0Bx/fk602Qc\noNmbS793r3We0K9FZHQmL4KvwQKBgQDOj2z4v5lkmgimqBU2d/FuQBv+CvuEXtiN\nCuUIKkXX6SuHnTD44nkT4EbrNdsH/xJFIfMZ3nwfocUU6yvpgT+hsvKptDm/HFff\nC771/rZf0BuxrMUL8LqPXH0yLgNxQODkgdqJ0mLUOU5UNlvtIjnJRJqn/CezpFb1\nJqLizumO3wKBgQDLFXzFeNeqIa/NM1dBEzDQCqKuGjNjCz3ja/R+GXojl/19z+yW\nmCdB4kdqS7wUvhHrOqGtDMbXsSbKuordz8VJa4ZSz/cY2nx4XjO3nmvtc7rBUeyV\nTSDQZ9Y6ZBC+VL/4HGf/sH7ZFrfRWL018tuNDVGNkWh7YPH/wE1tHL50QQKBgQDB\nDGap7FeuIA+pwjlhGKQ5iA0hVp5Ozl3RI7d99BQmgDNAoXadhPvnyZo+Ra0ZQhiP\nJ/WN3dNftM7+h/QYXcVcmGQWmuvFYvX07YNhYNaNoW/glDnsuOWDCsuvVDW/aQVG\nSt42JLxc39oG9m7fpzceldF84jswt4zVvXBKTVsXPQKBgHB6vQteFC7s79Necwuo\nTx0Mc5lO9ok4M93S9XztRv46aEQYktHNUwA1Oh0SejVrEsJyV5VAAwaghr71QGET\nXjrnrYj5ijT+lZXAiaE/q07dfJF8OeYcAliDGUWsJTo6gBJ4XFh95CO7h0aMjD/P\nU9zgHs3EZPfAkxXe43z0SUm0\n-----END PRIVATE KEY-----\n",
+  private_key: `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCyLj7Q+KJ1mB2M
+/Qxf9bETEj9A4/v6g2raq6e9hNYrQ0Gft5uLRUrkcQgQuZG//DjnCDPhfe5jrEZK
+YcxkG5Lr+EmFYN704q9db9yWRep8t7YBcxwO4r6x/OzOKXHtAADhjSw+60D0FAxw
+yT3O/GmLiQ2HGwIgr75cPQpOl95ewc2c5toyXNNvREQ0US39kBVgLzk4SCpwKzZZ
+QIaS1KpkcLBhSOHucD1LSFd8hzp96e2mPdu2G3DoGZd2VSfqDDNbWMj7Rci3BTa0
+TEi1Ttf2n10zufiCOrvhtuaa0/yQKVKWmBTZXj7pO3txCAtHki0SsoisHTmBRgwo
+DV8k/ScfAgMBAAECggEABduMWB1cZeZGzmxBPGRc2mYmqzDzhzRLzn2HKa1Uxx5S
+aXhFRkpUYHcwzy/ykS+vBTVZU0frDt7KfsaBTCc16MkETby2B7HuFvHG/C+3Ojtl
+4d1RZlHg+AP7Gvn001hFLyUPd9APFhcUo56SCBx3Mc2jIrZqFv4AEZM2JAhNGKtT
+VLYbK9unJS1ZDwE9qUelrKnhw6UGDU6YfocQy5RMYKQX69EGr6xuSKtSaJd8s5Hi
+FIEoCXS+QBxxzyu4fdKeUtDDg6YrWOC7rxnbAaDjmNIiwrUgHVlWIdUCZNvKi3Fv
+ErL6nhKy+1KsCmctGZh7agGTDh+mTlpIv1K/2Uu5QQKBgQDc0+ouNgHfftnMM9ru
+A4iOuuRsmnY2dJSSPXpKHCUTmkkxGBstdsWPHfABpPg1OLpZ3t1v16YBn10D3dtl
+jkYqO17Gh06yUxPv403rV0EMthT6gJ0Eg4uGCDV1tAaeh+dZ7M9yi0Bx/fk602Qc
+oNmbS793r3We0K9FZHQmL4KvwQKBgQDOj2z4v5lkmgimqBU2d/FuQBv+CvuEXtiN
+CuUIKkXX6SuHnTD44nkT4EbrNdsH/xJFIfMZ3nwfocUU6yvpgT+hsvKptDm/HFff
+C771/rZf0BuxrMUL8LqPXH0yLgNxQODkgdqJ0mLUOU5UNlvtIjnJRJqn/CezpFb1
+JqLizumO3wKBgQDLFXzFeNeqIa/NM1dBEzDQCqKuGjNjCz3ja/R+GXojl/19z+yW
+mCdB4kdqS7wUvhHrOqGtDMbXsSbKuordz8VJa4ZSz/cY2nx4XjO3nmvtc7rBUeyV
+TSDQZ9Y6ZBC+VL/4HGf/sH7ZFrfRWL018tuNDVGNkWh7YPH/wE1tHL50QQKBgQDB
+DGap7FeuIA+pwjlhGKQ5iA0hVp5Ozl3RI7d99BQmgDNAoXadhPvnyZo+Ra0ZQhiP
+J/WN3dNftM7+h/QYXcVcmGQWmuvFYvX07YNhYNaNoW/glDnsuOWDCsuvVDW/aQVG
+St42JLxc39oG9m7fpzceldF84jswt4zVvXBKTVsXPQKBgHB6vQteFC7s79Necwuo
+Tx0Mc5lO9ok4M93S9XztRv46aEQYktHNUwA1Oh0SejVrEsJyV5VAAwaghr71QGET
+XjrnrYj5ijT+lZXAiaE/q07dfJF8OeYcAliDGUWsJTo6gBJ4XFh95CO7h0aMjD/P
+U9zgHs3EZPfAkxXe43z0SUm0
+-----END PRIVATE KEY-----`,
   project_id: "avatar-wa-dual-crm"
 };
 
+const PRIVATE_KEY = SERVICE_ACCOUNT.private_key.replace(/\\n/g, "\n");
 const VERIFY_TOKEN = "my_verify_token_123";
 const PHONE_NUMBER_ID = "342354115627791";
 const WHATSAPP_TOKEN = "EAA1OYCPXuvoBR2EO28cL1FgY7dZBfGohYPZByXicxZCE30QyaLhnMtvgaxRPi7mhVCzVmCLZBAiLU6XHT0420fFNsw2ZAwesmG0z9egSckC7WZCq4ja2MoZBvwR8dCY9IAdSpTzzaaNyTk71I4l2xjQ8DtFA7q9KN7scIU4cTTZBciySmKesOMqPgsqxM3g7cAZDZD";
@@ -34,12 +63,15 @@ async function getAccessToken() {
 
 async function createJWT(header, payload) {
   const encoder = new TextEncoder();
+  const pemContents = PRIVATE_KEY
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\s+/g, "");
+  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
   const key = await crypto.subtle.importKey(
-    "pkcs8",
-    str2ab(atob(SERVICE_ACCOUNT.private_key.replace(/-----[^-]+-----/g, "").replace(/\s+/g, ""))),
+    "pkcs8", binaryKey.buffer,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
+    false, ["sign"]
   );
   const base64url = (str) => btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const headerB64 = base64url(JSON.stringify(header));
@@ -48,13 +80,6 @@ async function createJWT(header, payload) {
   const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(toSign));
   const sigB64 = base64url(String.fromCharCode(...new Uint8Array(sig)));
   return `${toSign}.${sigB64}`;
-}
-
-function str2ab(str) {
-  const buf = new ArrayBuffer(str.length);
-  const bufView = new Uint8Array(buf);
-  for (let i = 0; i < str.length; i++) bufView[i] = str.charCodeAt(i);
-  return buf;
 }
 
 async function saveMessage(msg) {
@@ -66,7 +91,7 @@ async function saveMessage(msg) {
       fields: {
         from: { stringValue: msg.from || "" },
         to: { stringValue: PHONE_NUMBER_ID },
-        body: { stringValue: msg.text?.body || msg.button?.text || msg.interactive?.body?.text || "(media)" },
+        body: { stringValue: msg.text?.body || "(media)" },
         type: { stringValue: "incoming" },
         waMessageId: { stringValue: msg.id || "" },
         createdAt: { timestampValue: new Date().toISOString() }
@@ -84,33 +109,6 @@ async function saveMessage(msg) {
   }
 }
 
-async function logPayload(data) {
-  try {
-    const token = await getAccessToken();
-    const docId = `log-${Date.now()}`;
-    const url = `${FIRESTORE_BASE}/webhook_logs?documentId=${encodeURIComponent(docId)}`;
-    const body = {
-      fields: {
-        payload: { stringValue: JSON.stringify(data).substring(0, 5000) },
-        createdAt: { timestampValue: new Date().toISOString() }
-      }
-    };
-    await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-  } catch (e) {}
-}
-
-function getAutoReply(body) {
-  const msg = (body || "").toLowerCase();
-  if (msg.includes("price") || msg.includes("pricing")) return "Our plans start at ₹999/month. Visit our website for details!";
-  if (msg.includes("hello") || msg.includes("hi") || msg.includes("hey")) return "Hello! How can I help you today? 😊";
-  if (msg.includes("support") || msg.includes("help")) return "Sure! Please describe your issue, our team will get back to you.";
-  return null;
-}
-
 async function sendReply(to, text) {
   try {
     await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
@@ -118,7 +116,15 @@ async function sendReply(to, text) {
       headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
       body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text } })
     });
-  } catch (e) { console.error("Reply Error:", e.message); }
+  } catch (e) {}
+}
+
+function getAutoReply(body) {
+  const msg = (body || "").toLowerCase();
+  if (msg.includes("price") || msg.includes("pricing")) return "Our plans start at ₹999/month.";
+  if (msg.includes("hello") || msg.includes("hi") || msg.includes("hey")) return "Hello! How can I help you? 😊";
+  if (msg.includes("support") || msg.includes("help")) return "Sure! Please describe your issue.";
+  return null;
 }
 
 async function handleRequest(request) {
@@ -148,6 +154,7 @@ async function handleRequest(request) {
     }
   }
 
+  // GET = Meta webhook verification
   if (request.method === "GET") {
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
@@ -158,35 +165,24 @@ async function handleRequest(request) {
     return new Response("Forbidden", { status: 403 });
   }
 
+  // POST = incoming WhatsApp event
   if (request.method === "POST") {
     try {
       const body = await request.json();
-      
-      // Log the full payload for debugging
-      event.waitUntil(logPayload(body));
+      console.log("Webhook received:", JSON.stringify(body).substring(0, 300));
 
       if (body.object === "whatsapp_business_account") {
-        for (const entry of body.entry) {
-          for (const change of entry.changes) {
+        for (const entry of body.entry || []) {
+          for (const change of entry.changes || []) {
             const value = change.value || {};
-            
-            // Handle incoming messages
             if (value.messages && value.messages.length > 0) {
               for (const msg of value.messages) {
-                console.log("Message from:", msg.from, "body:", (msg.text?.body || "").substring(0, 50));
+                console.log("Saving message from:", msg.from);
                 event.waitUntil(saveMessage(msg));
-                
                 const replyText = getAutoReply(msg.text?.body || "");
                 if (replyText) {
                   event.waitUntil(sendReply(msg.from, replyText));
                 }
-              }
-            }
-            
-            // Handle status updates (sent, delivered, read)
-            if (value.statuses && value.statuses.length > 0) {
-              for (const status of value.statuses) {
-                console.log("Status update:", status.status, "for:", status.id);
               }
             }
           }
