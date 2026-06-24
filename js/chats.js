@@ -17,7 +17,7 @@ const Chats = {
             <h5><i class="fab fa-whatsapp text-success me-2"></i>Send Message</h5>
             <div class="mb-3">
               <label class="form-label">Phone Number</label>
-              <input type="text" id="chatPhone" class="form-control form-control-sm" placeholder="+919810012345 or 9810012345">
+              <input type="text" id="chatPhone" class="form-control form-control-sm" placeholder="+919810012345">
             </div>
             <div class="mb-3">
               <label class="form-label">Message</label>
@@ -32,19 +32,27 @@ const Chats = {
 
         <div class="col-md-8">
           <div class="card-widget">
-            <h5><i class="fas fa-history text-primary me-2"></i>Message History</h5>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="mb-0"><i class="fas fa-history text-primary me-2"></i>Message History</h5>
+              <button class="btn btn-outline-primary btn-sm" onclick="Chats.refreshFromMeta()">
+                <i class="fas fa-sync-alt me-1"></i> Refresh from WhatsApp
+              </button>
+            </div>
             <div style="max-height: 400px; overflow-y: auto;">
               ${messages.length === 0
-                ? '<p class="text-center text-muted py-4">No messages yet.</p>'
+                ? '<p class="text-center text-muted py-4">No messages yet. Click Refresh to fetch from WhatsApp.</p>'
                 : messages.map(msg => `
-                  <div class="d-flex justify-content-between align-items-start mb-2 p-2 border rounded">
-                    <div>
-                      <strong>${msg.to || '-'}</strong>
-                      <p class="mb-0 text-muted small">${msg.body || '(template message)'}</p>
+                  <div class="d-flex mb-2 p-2 border rounded ${msg.type === 'incoming' ? 'bg-light' : ''}">
+                    <div class="me-2">
+                      <i class="fas fa-arrow-${msg.type === 'incoming' ? 'down text-info' : 'up text-success'}"></i>
                     </div>
-                    <div class="text-end">
-                      <span class="badge bg-success">outgoing</span>
-                      <br><small class="text-muted">${msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleString() : '-'}</small>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between">
+                        <strong>${msg.from || msg.to || '-'}</strong>
+                        <small class="text-muted">${msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleString() : '-'}</small>
+                      </div>
+                      <p class="mb-0 small">${msg.body || '(media)'}</p>
+                      <span class="badge bg-${msg.type === 'incoming' ? 'info' : 'success'}">${msg.type || 'outgoing'}</span>
                     </div>
                   </div>
                 `).join('')
@@ -64,26 +72,17 @@ const Chats = {
     if (!phone) return alert('Please enter a phone number!');
     if (!message) return alert('Please enter a message!');
 
-    // Auto-correct phone number
-    phone = phone.replace(/\s|-/g, '');
-    if (!phone.startsWith('+') && phone.length === 10) {
-      phone = '+91' + phone;
-    }
-    if (phone.startsWith('91') && phone.length === 12) {
-      phone = '+' + phone;
-    }
+    phone = phone.replace(/[^0-9+]/g, '');
+    if (!phone.startsWith('+') && phone.length === 10) phone = '+91' + phone;
+    if (phone.startsWith('91') && phone.length === 12) phone = '+' + phone;
 
     let config = {};
     try {
       const doc = await db.collection('settings').doc('whatsapp').get();
       if (doc.exists) config = doc.data();
-    } catch (err) {
-      console.error('Config error:', err);
-    }
+    } catch (err) { console.error('Config error:', err); }
 
-    if (!config.phoneNumberId || !config.accessToken) {
-      return alert('WhatsApp not configured. Please setup first.');
-    }
+    if (!config.phoneNumberId || !config.accessToken) return alert('WhatsApp not configured.');
 
     document.getElementById('chatResult').innerHTML = '<span class="text-info">Sending...</span>';
 
@@ -110,8 +109,10 @@ const Chats = {
       if (response.ok && result.messages) {
         await db.collection('messages').add({
           to: phone,
+          from: config.phoneNumberId,
           body: message,
           type: 'outgoing',
+          waMessageId: result.messages[0]?.id || '',
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('chatResult').innerHTML = '<span class="text-success">✅ Sent successfully!</span>';
@@ -121,6 +122,73 @@ const Chats = {
       }
     } catch (err) {
       document.getElementById('chatResult').innerHTML = '<span class="text-danger">❌ ' + err.message + '</span>';
+    }
+  },
+
+  async refreshFromMeta() {
+    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
+    if (!cfg?.accessToken || !cfg?.phoneNumberId) return alert('WhatsApp not configured.');
+
+    document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Refreshing from WhatsApp...</p>';
+
+    try {
+      // Outgoing messages fetch करें
+      const outRes = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages?limit=30`, {
+        headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
+      });
+      const outData = await outRes.json();
+
+      if (outData.data) {
+        for (const msg of outData.data) {
+          const existing = await db.collection('messages').where('waMessageId', '==', msg.id).get();
+          if (existing.empty) {
+            await db.collection('messages').add({
+              from: msg.from,
+              to: msg.to,
+              body: msg.text?.body || '(media/template)',
+              type: msg.from === cfg.phoneNumberId ? 'outgoing' : 'incoming',
+              waMessageId: msg.id,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+        }
+      }
+
+      // Incoming messages के लिए conversations endpoint
+      try {
+        const convRes = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/conversations?limit=10`, {
+          headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
+        });
+        const convData = await convRes.json();
+        if (convData.data) {
+          for (const conv of convData.data) {
+            const msgRes = await fetch(`https://graph.facebook.com/v22.0/${conv.id}/messages?limit=10`, {
+              headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
+            });
+            const msgData = await msgRes.json();
+            if (msgData.data) {
+              for (const msg of msgData.data) {
+                const existing = await db.collection('messages').where('waMessageId', '==', msg.id).get();
+                if (existing.empty) {
+                  await db.collection('messages').add({
+                    from: msg.from,
+                    to: msg.to,
+                    body: msg.text?.body || '(media)',
+                    type: msg.from === cfg.phoneNumberId ? 'outgoing' : 'incoming',
+                    waMessageId: msg.id,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (e) { console.log('Conversations fetch skipped:', e.message); }
+
+      alert('✅ Refreshed!'); this.render();
+    } catch (err) {
+      alert('Error: ' + err.message);
+      this.render();
     }
   }
 };
