@@ -1,1 +1,70 @@
+:root {
+  --sidebar-width: 260px;
+  --primary: #2563eb;
+}
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: radial-gradient(circle at top left, rgba(37,99,235,0.12), transparent 30%),
+              radial-gradient(circle at top right, rgba(245,158,11,0.1), transparent 26%),
+              linear-gradient(180deg, #f7fafc 0%, #eef4fb 100%);
+  min-height: 100vh;
+}
+.sidebar {
+  width: var(--sidebar-width);
+  background: #fff;
+  box-shadow: 0 0 30px rgba(0,0,0,0.05);
+  position: fixed;
+  top: 0; left: 0; height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 20px 0;
+}
+.sidebar .brand {
+  padding: 0 20px 20px;
+  font-weight: 800;
+  font-size: 1.4rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+.sidebar .section-title {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+  color: #94a3b8; padding: 15px 20px 5px;
+}
+.sidebar .nav-item { padding: 4px 20px; }
+.sidebar .nav-link {
+  color: #334155; font-weight: 500; border-radius: 12px;
+  padding: 10px 16px; transition: all 0.2s;
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; cursor: pointer;
+}
+.sidebar .nav-link:hover, .sidebar .nav-link.active {
+  background: #f1f5f9; color: #0f172a; font-weight: 600;
+}
+.main-area {
+  margin-left: var(--sidebar-width);
+  padding: 20px; min-height: 100vh;
+}
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+  border-radius: 14px; padding: 10px 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 25px;
+}
+.card-widget {
+  background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+  transition: transform 0.2s; margin-bottom: 20px;
+}
+.card-widget:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(0,0,0,0.08); }
+.section-page { display: none; }
+.section-page.active { display: block; }
 
+@media (max-width: 768px) {
+  .sidebar { width: 100%; height: auto; position: relative; display: none; }
+  .sidebar.mobile-open { display: block; }
+  .main-area { margin-left: 0; }
+  .bottom-nav { display: flex; justify-content: space-around; position: fixed; bottom:0; left:0; right:0; background:#fff; box-shadow:0 -4px 12px rgba(0,0,0,0.05); padding:8px 0; z-index:999; }
+  .bottom-nav .nav-item { text-align:center; font-size:0.75rem; color:#64748b; text-decoration:none; }
+  .bottom-nav .nav-item.active { color:#2563eb; font-weight:600; }
+}
+.chart-box { height: 250px; }
