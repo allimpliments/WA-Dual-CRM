@@ -21,9 +21,7 @@ const Templates = {
             <i class="fas fa-plus me-1"></i> Create Template
           </button>
         </div>
-
         <div id="templateBuilderContainer"></div>
-
         <div class="table-responsive mt-3">
           <table class="table table-hover">
             <thead class="table-light">
@@ -31,7 +29,7 @@ const Templates = {
             </thead>
             <tbody>
               ${templates.length === 0
-                ? '<tr><td colspan="5" class="text-center text-muted py-4">No templates yet. Create your first template!</td></tr>'
+                ? '<tr><td colspan="5" class="text-center text-muted py-4">No templates yet.</td></tr>'
                 : templates.map(tpl => `
                   <tr>
                     <td><strong>${tpl.name || '-'}</strong></td>
@@ -39,8 +37,8 @@ const Templates = {
                     <td>${tpl.language || 'en'}</td>
                     <td><span class="badge bg-${tpl.status==='Approved'?'success':'warning'}">${tpl.status || 'Draft'}</span></td>
                     <td>
-                      <button class="btn btn-sm btn-outline-info me-1" onclick="Templates.showBuilder('${tpl.id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                      <button class="btn btn-sm btn-success me-1" onclick="Templates.sendTemplate('${tpl.id}')" title="Send Test"><i class="fab fa-whatsapp"></i></button>
+                      <button class="btn btn-sm btn-outline-info me-1" onclick="Templates.showBuilder('${tpl.id}')"><i class="fas fa-edit"></i></button>
+                      <button class="btn btn-sm btn-success me-1" onclick="Templates.sendTemplate('${tpl.id}')"><i class="fab fa-whatsapp"></i></button>
                       <button class="btn btn-sm btn-outline-danger" onclick="Templates.deleteTemplate('${tpl.id}')"><i class="fas fa-trash"></i></button>
                     </td>
                   </tr>
@@ -63,12 +61,53 @@ const Templates = {
     }
 
     const html = `
+      <style>
+        .wa-preview-phone {
+          width: 280px; margin: 0 auto; background: #e5ddd5; border-radius: 24px; padding: 12px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .wa-preview-msg {
+          background: #fff; border-radius: 8px; padding: 10px 12px; max-width: 100%;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative;
+        }
+        .wa-preview-msg .wa-header-img {
+          width: 100%; height: 140px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;
+          background: #dcf8c6;
+        }
+        .wa-preview-msg .wa-header-video {
+          width: 100%; height: 140px; border-radius: 6px; margin-bottom: 6px;
+          background: #000; display: flex; align-items: center; justify-content: center; color: #fff;
+        }
+        .wa-preview-msg .wa-header-doc {
+          display: flex; align-items: center; gap: 8px; padding: 8px; background: #f0f0f0;
+          border-radius: 6px; margin-bottom: 6px;
+        }
+        .wa-preview-msg .wa-header-text {
+          font-weight: 700; font-size: 15px; margin-bottom: 4px; color: #111b21;
+        }
+        .wa-preview-msg .wa-body {
+          font-size: 14px; color: #111b21; white-space: pre-wrap; line-height: 1.4;
+        }
+        .wa-preview-msg .wa-footer {
+          font-size: 12px; color: #667781; margin-top: 4px;
+        }
+        .wa-preview-msg .wa-buttons {
+          margin-top: 8px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .wa-preview-msg .wa-btn {
+          display: block; text-align: center; padding: 8px; border-radius: 20px;
+          font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
+        }
+        .wa-btn-primary { background: #fff; color: #008069; border: 1px solid #008069; }
+        .wa-btn-outline { background: transparent; color: #008069; border: 1px solid #008069; }
+        .wa-btn-copy { background: #008069; color: #fff; border: none; display: flex; align-items: center; justify-content: center; gap: 4px; }
+      </style>
+
       <div class="row g-3">
         <div class="col-md-7">
           <div class="card border-info">
             <div class="card-body p-3">
               <h5 class="mb-3">Create Template</h5>
-
               <div class="row g-2 mb-2">
                 <div class="col-md-6">
                   <label class="form-label small fw-bold">Template Name</label>
@@ -92,7 +131,7 @@ const Templates = {
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small fw-bold">Header Type</label>
-                  <select id="tplHeaderType" class="form-select form-select-sm" onchange="Templates.toggleHeaderFields()">
+                  <select id="tplHeaderType" class="form-select form-select-sm" onchange="Templates.toggleHeaderFields(); Templates.updatePreview();">
                     <option value="none" ${tpl.headerType==='none'?'selected':''}>None</option>
                     <option value="text" ${tpl.headerType==='text'?'selected':''}>Text</option>
                     <option value="image" ${tpl.headerType==='image'?'selected':''}>Image</option>
@@ -100,65 +139,47 @@ const Templates = {
                     <option value="document" ${tpl.headerType==='document'?'selected':''}>Document/PDF</option>
                   </select>
                 </div>
-
-                <!-- Text Header Field -->
                 <div class="col-md-6" id="headerTextField" style="display:${tpl.headerType==='text'?'block':'none'}">
                   <label class="form-label small fw-bold">Header Text</label>
-                  <input type="text" id="tplHeaderValue" class="form-control form-control-sm" value="${tpl.headerType==='text'?tpl.headerValue||'':''}" placeholder="Order Update">
+                  <input type="text" id="tplHeaderValue" class="form-control form-control-sm" value="${tpl.headerType==='text'?tpl.headerValue||'':''}" placeholder="Order Update" oninput="Templates.updatePreview()">
                 </div>
-
-                <!-- Media Upload Field -->
                 <div class="col-md-6" id="headerMediaField" style="display:${(tpl.headerType==='image'||tpl.headerType==='video'||tpl.headerType==='document')?'block':'none'}">
                   <label class="form-label small fw-bold">Upload sample media for Meta approval</label>
-                  <small class="text-muted d-block mb-1">This reduces rejection for media templates.</small>
-                  <input type="file" id="tplMediaFile" class="form-control form-control-sm" accept="${tpl.headerType==='image'?'image/*':tpl.headerType==='video'?'video/*':tpl.headerType==='document'?'.pdf,.doc,.docx':''}">
-                  ${tpl.headerValue && tpl.headerType!=='text' ? `<small class="text-success">Current: ${tpl.headerValue}</small>` : ''}
+                  <input type="file" id="tplMediaFile" class="form-control form-control-sm" accept="${tpl.headerType==='image'?'image/*':tpl.headerType==='video'?'video/*':tpl.headerType==='document'?'.pdf,.doc,.docx':''}" onchange="Templates.updatePreview()">
                 </div>
               </div>
 
               <div class="d-flex gap-2 my-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormat('bold')"><strong>B</strong> Bold</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormat('italic')"><em>I</em> Italic</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormat('bold')"><strong>B</strong></button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormat('italic')"><em>I</em></button>
               </div>
 
               <div class="mb-2">
                 <label class="form-label small fw-bold">Body</label>
-                <textarea id="tplBody" class="form-control form-control-sm" rows="7" placeholder="Hi {{1}}, your order *{{2}}* is ready.">${tpl.body}</textarea>
-              </div>
-
-              <div class="alert alert-light border small py-2 px-3">
-                <strong>How to use variables</strong>
-                <p class="mb-1">Variables are dynamic values that change per customer.</p>
-                <span class="badge bg-warning text-dark me-1">{{1}} = Customer Name</span>
-                <span class="badge bg-warning text-dark me-1">{{2}} = Order Number</span>
-                <span class="badge bg-warning text-dark me-1">{{3}} = Delivery Date</span>
-                <p class="mt-1 mb-0">Example: <code>Hi {{1}}, your order *{{2}}* will arrive on {{3}}.</code></p>
-                <p class="mb-0">Text style tips: <code>*bold*</code>, <code>_italic_</code></p>
+                <textarea id="tplBody" class="form-control form-control-sm" rows="5" placeholder="Hi {{1}}, your order is ready." oninput="Templates.updatePreview()">${tpl.body}</textarea>
               </div>
 
               <div class="border rounded p-2 mb-2 bg-light">
-                <strong>Variable List (Type Your Own Variable Name)</strong>
-                <p class="small text-muted mb-1">Type normal name (example: <code>customer name</code>). System auto-maps to Meta format like <code>{{3}}</code>.</p>
-                <div class="input-group input-group-sm">
-                  <input type="text" id="varName" class="form-control" placeholder="your variable name">
-                  <button class="btn btn-outline-primary" onclick="Templates.insertVariable()">Insert Variable</button>
+                <strong>Variable List</strong>
+                <div class="input-group input-group-sm mt-1">
+                  <input type="text" id="varName" class="form-control" placeholder="variable name">
+                  <button class="btn btn-outline-primary" onclick="Templates.insertVariable()">Insert</button>
                 </div>
-                <small class="text-muted">These values can be mapped at send time from lead fields, CSV columns, or manual input.</small>
               </div>
 
               <div class="mb-2">
                 <label class="form-label small fw-bold">Footer (Optional)</label>
-                <input type="text" id="tplFooter" class="form-control form-control-sm" value="${tpl.footer||''}" placeholder="Reply STOP to opt out.">
+                <input type="text" id="tplFooter" class="form-control form-control-sm" value="${tpl.footer||''}" placeholder="Reply STOP to opt out." oninput="Templates.updatePreview()">
               </div>
 
               <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="tplQuickReply">
+                <input class="form-check-input" type="checkbox" id="tplQuickReply" onchange="Templates.updatePreview()">
                 <label class="form-check-label small fw-bold">Add Quick Reply Buttons</label>
               </div>
 
               <div class="mb-2">
                 <label class="form-label small fw-bold">Call-to-Action</label>
-                <select id="tplButtonType" class="form-select form-select-sm" onchange="Templates.toggleCTAFields()">
+                <select id="tplButtonType" class="form-select form-select-sm" onchange="Templates.toggleCTAFields(); Templates.updatePreview();">
                   <option value="none" ${tpl.buttonType==='none'?'selected':''}>No CTA</option>
                   <option value="visit" ${tpl.buttonType==='visit'?'selected':''}>Visit Website</option>
                   <option value="call" ${tpl.buttonType==='call'?'selected':''}>Call Number</option>
@@ -168,24 +189,12 @@ const Templates = {
 
               <div id="ctaFields" style="display:${tpl.buttonType!=='none'?'block':'none'}">
                 <div class="row g-2" id="ctaVisitFields" style="display:${(tpl.buttonType==='visit'||tpl.buttonType==='both')?'flex':'none'}">
-                  <div class="col-md-6">
-                    <label class="form-label small">Website Button Text</label>
-                    <input type="text" id="tplButtonText" class="form-control form-control-sm" value="${tpl.buttonText||''}" placeholder="Track Order">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label small">Website URL</label>
-                    <input type="text" id="tplButtonUrl" class="form-control form-control-sm" value="${tpl.buttonUrl||''}" placeholder="https://example.com/track">
-                  </div>
+                  <div class="col-6"><input type="text" id="tplButtonText" class="form-control form-control-sm" value="${tpl.buttonText||''}" placeholder="Button Text" oninput="Templates.updatePreview()"></div>
+                  <div class="col-6"><input type="text" id="tplButtonUrl" class="form-control form-control-sm" value="${tpl.buttonUrl||''}" placeholder="URL" oninput="Templates.updatePreview()"></div>
                 </div>
                 <div class="row g-2 mt-1" id="ctaCallFields" style="display:${(tpl.buttonType==='call'||tpl.buttonType==='both')?'flex':'none'}">
-                  <div class="col-md-6">
-                    <label class="form-label small">Call Button Text</label>
-                    <input type="text" id="tplButtonPhone" class="form-control form-control-sm" value="${tpl.buttonPhone||''}" placeholder="Call Support">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label small">Phone Number</label>
-                    <input type="text" id="tplButtonPhone2" class="form-control form-control-sm" value="${tpl.buttonPhone2||''}" placeholder="+91XXXXXXXXXX">
-                  </div>
+                  <div class="col-6"><input type="text" id="tplButtonPhone" class="form-control form-control-sm" value="${tpl.buttonPhone||''}" placeholder="Call Text" oninput="Templates.updatePreview()"></div>
+                  <div class="col-6"><input type="text" id="tplButtonPhone2" class="form-control form-control-sm" value="${tpl.buttonPhone2||''}" placeholder="+91..." oninput="Templates.updatePreview()"></div>
                 </div>
               </div>
 
@@ -200,51 +209,82 @@ const Templates = {
 
         <div class="col-md-5">
           <div class="card border-light">
-            <div class="card-body">
-              <h6>Live Preview</h6>
-              <div class="border rounded p-3 bg-light" id="previewArea">
-                <p class="text-muted mb-0">Your message preview will appear here.</p>
-              </div>
+            <div class="card-body text-center">
+              <h6 class="mb-2">Template Preview</h6>
+              <p class="text-muted small mb-2">Template areas that you can view and customise<br>Media, header, body, footer, button</p>
+              <div class="wa-preview-phone" id="previewPhone"></div>
+              <p class="text-muted small mt-2">This template is good for<br>Welcome messages, promotions, offers, coupons, newsletters, announcements</p>
               <h6 class="mt-3">Approval Checklist</h6>
-              <ul class="small" id="checklist" style="color:#991b1b;"></ul>
+              <ul class="small text-start" id="checklist" style="color:#991b1b;"></ul>
             </div>
           </div>
         </div>
       </div>
     `;
     document.getElementById('templateBuilderContainer').innerHTML = html;
+    setTimeout(() => Templates.updatePreview(), 100);
+  },
 
-    const updatePreviewAndChecklist = () => {
-      const headerType = document.getElementById('tplHeaderType').value;
-      const headerVal = document.getElementById('tplHeaderValue')?.value || '';
-      const body = document.getElementById('tplBody').value;
-      const footer = document.getElementById('tplFooter').value;
-      const btnType = document.getElementById('tplButtonType').value;
-      const btnUrl = document.getElementById('tplButtonUrl')?.value || '';
-      const btnPhone = document.getElementById('tplButtonPhone2')?.value || '';
+  updatePreview() {
+    const headerType = document.getElementById('tplHeaderType')?.value || 'none';
+    const headerVal = document.getElementById('tplHeaderValue')?.value || '';
+    const body = document.getElementById('tplBody')?.value || '';
+    const footer = document.getElementById('tplFooter')?.value || '';
+    const btnType = document.getElementById('tplButtonType')?.value || 'none';
+    const btnText = document.getElementById('tplButtonText')?.value || 'Visit';
+    const btnUrl = document.getElementById('tplButtonUrl')?.value || '#';
+    const btnCall = document.getElementById('tplButtonPhone')?.value || 'Call';
+    const btnCallNum = document.getElementById('tplButtonPhone2')?.value || '';
+    const fileEl = document.getElementById('tplMediaFile');
+    const phone = document.getElementById('previewPhone');
+    if (!phone) return;
 
-      let prev = '';
-      if (headerType === 'text' && headerVal) prev += `<p class="fw-bold mb-1">${headerVal}</p>`;
-      else if (headerType === 'image') prev += `<p class="fst-italic mb-1">[Image Header]</p>`;
-      else if (headerType === 'video') prev += `<p class="fst-italic mb-1">[Video Header]</p>`;
-      else if (headerType === 'document') prev += `<p class="fst-italic mb-1">[Document Header]</p>`;
-      prev += `<p class="mb-1">${body || 'Your message preview will appear here.'}</p>`;
-      if (footer) prev += `<small class="text-muted">${footer}</small>`;
-      document.getElementById('previewArea').innerHTML = prev || '<p class="text-muted mb-0">Your message preview will appear here.</p>';
+    let headerHtml = '';
+    if (headerType === 'text' && headerVal) {
+      headerHtml = `<div class="wa-header-text">${headerVal}</div>`;
+    } else if (headerType === 'image') {
+      if (fileEl?.files[0]) {
+        const url = URL.createObjectURL(fileEl.files[0]);
+        headerHtml = `<img class="wa-header-img" src="${url}" alt="Header">`;
+      } else {
+        headerHtml = `<img class="wa-header-img" src="https://static.xx.fbcdn.net/rsrc.php/yV/r/CK4w8uZmN56.webp" alt="Sample">`;
+      }
+    } else if (headerType === 'video') {
+      headerHtml = `<div class="wa-header-video">▶ Video Preview</div>`;
+    } else if (headerType === 'document') {
+      headerHtml = `<div class="wa-header-doc">📄 Document.pdf <small>2.3 MB</small></div>`;
+    }
 
-      const checks = [];
-      if (!body) checks.push('Body message is required.');
-      if (headerType === 'text' && !headerVal) checks.push('Header text is required when header type is Text.');
-      if ((btnType === 'visit' || btnType === 'both') && !btnUrl) checks.push('CTA website URL is required.');
-      if ((btnType === 'call' || btnType === 'both') && !btnPhone) checks.push('CTA phone number is required.');
-      document.getElementById('checklist').innerHTML = checks.map(c => `<li>${c}</li>`).join('');
-    };
+    let btnHtml = '';
+    if (btnType === 'visit') {
+      btnHtml = `<a class="wa-btn wa-btn-primary" href="${btnUrl}" target="_blank">${btnText}</a>`;
+    } else if (btnType === 'call') {
+      btnHtml = `<a class="wa-btn wa-btn-outline" href="tel:${btnCallNum}">${btnCall}</a>`;
+    } else if (btnType === 'both') {
+      btnHtml = `<a class="wa-btn wa-btn-primary" href="${btnUrl}" target="_blank">${btnText}</a><a class="wa-btn wa-btn-outline" href="tel:${btnCallNum}">${btnCall}</a>`;
+    }
 
-    ['tplBody', 'tplHeaderValue', 'tplFooter', 'tplHeaderType', 'tplButtonType', 'tplButtonUrl', 'tplButtonPhone2'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', updatePreviewAndChecklist);
-    });
-    updatePreviewAndChecklist();
+    const quickChecked = document.getElementById('tplQuickReply')?.checked;
+    if (quickChecked) {
+      btnHtml += `<div class="wa-btn wa-btn-outline">Quick Reply</div><div class="wa-btn wa-btn-outline">Another Option</div>`;
+    }
+
+    phone.innerHTML = `
+      <div class="wa-preview-msg">
+        ${headerHtml}
+        <div class="wa-body">${body || 'Your message will appear here.'}</div>
+        ${footer ? `<div class="wa-footer">${footer}</div>` : ''}
+        ${btnHtml ? `<div class="wa-buttons">${btnHtml}</div>` : ''}
+      </div>
+    `;
+
+    const checks = [];
+    if (!body) checks.push('Body message is required.');
+    if (headerType === 'text' && !headerVal) checks.push('Header text is required.');
+    if ((btnType === 'visit' || btnType === 'both') && !btnUrl) checks.push('CTA website URL is required.');
+    if ((btnType === 'call' || btnType === 'both') && !btnCallNum) checks.push('CTA phone number is required.');
+    const cl = document.getElementById('checklist');
+    if (cl) cl.innerHTML = checks.map(c => `<li>${c}</li>`).join('') || '<li class="text-success">All checks passed!</li>';
   },
 
   toggleHeaderFields() {
@@ -266,6 +306,7 @@ const Templates = {
     const txt = el.value.substring(s, e);
     const fmt = type === 'bold' ? '*' + txt + '*' : '_' + txt + '_';
     el.value = el.value.substring(0, s) + fmt + el.value.substring(e);
+    Templates.updatePreview();
   },
 
   insertVariable() {
@@ -274,27 +315,17 @@ const Templates = {
     const el = document.getElementById('tplBody');
     const num = (el.value.match(/{{/g) || []).length + 1;
     el.value += ` {{${num}}}`;
+    Templates.updatePreview();
   },
 
   async saveTemplate(editId, status) {
     const headerType = document.getElementById('tplHeaderType').value;
-    let headerValue = '';
-
-    if (headerType === 'text') {
-      headerValue = document.getElementById('tplHeaderValue')?.value?.trim() || '';
-    } else if (headerType === 'image' || headerType === 'video' || headerType === 'document') {
-      const fileInput = document.getElementById('tplMediaFile');
-      if (fileInput?.files[0]) {
-        headerValue = fileInput.files[0].name; // Real app me Firebase Storage me upload karna
-      }
-    }
-
+    let headerValue = document.getElementById('tplHeaderValue')?.value?.trim() || '';
     const data = {
       name: document.getElementById('tplName').value.trim(),
       category: document.getElementById('tplCategory').value,
       language: document.getElementById('tplLanguage').value,
-      headerType,
-      headerValue,
+      headerType, headerValue,
       body: document.getElementById('tplBody').value.trim(),
       footer: document.getElementById('tplFooter').value.trim(),
       buttonType: document.getElementById('tplButtonType').value,
@@ -303,68 +334,36 @@ const Templates = {
       buttonPhone: document.getElementById('tplButtonPhone')?.value?.trim() || '',
       buttonPhone2: document.getElementById('tplButtonPhone2')?.value?.trim() || '',
       quickReply: document.getElementById('tplQuickReply')?.checked || false,
-      status,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      status, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-
-    if (!data.name) return alert('Template Name is required!');
-    if (!data.body) return alert('Body is required!');
-
+    if (!data.name || !data.body) return alert('Name & Body required!');
     try {
-      if (editId) {
-        await db.collection('templates').doc(editId).update(data);
-      } else {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await db.collection('templates').add(data);
-      }
-      alert('✅ Template ' + (status === 'Draft' ? 'saved!' : 'submitted!'));
-      this.render();
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+      if (editId) await db.collection('templates').doc(editId).update(data);
+      else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection('templates').add(data); }
+      alert('✅ Saved!'); this.render();
+    } catch (err) { alert('Error: ' + err.message); }
   },
 
   async sendTemplate(id) {
-    let phone = prompt('Enter phone number (+91 or 10-digit):');
-    if (!phone) return;
-    phone = phone.replace(/\s|-/g, '');
-    if (!phone.startsWith('+') && phone.length === 10) phone = '+91' + phone;
-    if (phone.startsWith('91') && phone.length === 12) phone = '+' + phone;
-
-    const doc = await db.collection('templates').doc(id).get();
-    const tpl = doc.data();
-    let config = {};
+    let phone = prompt('Enter phone number:'); if (!phone) return;
+    phone = phone.replace(/[^0-9+]/g, '');
+    const doc = await db.collection('templates').doc(id).get(), tpl = doc.data();
+    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
+    if (!cfg?.phoneNumberId) return alert('WhatsApp not configured.');
     try {
-      const snap = await db.collection('settings').doc('whatsapp').get();
-      if (snap.exists) config = snap.data();
-    } catch (err) {}
-    if (!config.phoneNumberId || !config.accessToken) return alert('WhatsApp not configured.');
-
-    try {
-      const payload = {
-        messaging_product: 'whatsapp', to: phone, type: 'template',
-        template: { name: tpl.name, language: { code: tpl.language || 'en' } }
-      };
-      const res = await fetch(`https://graph.facebook.com/v22.0/${config.phoneNumberId}/messages`, {
+      const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + config.accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name: tpl.name, language: { code: tpl.language || 'en' } } })
       });
       const result = await res.json();
-      alert(res.ok && result.messages ? '✅ Sent!' : '❌ ' + (result.error?.message || 'Failed'));
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+      alert(res.ok ? '✅ Sent!' : '❌ ' + (result.error?.message || 'Failed'));
+    } catch (err) { alert('Error: ' + err.message); }
   },
 
   async deleteTemplate(id) {
-    if (!confirm('Delete this template?')) return;
-    try {
-      await db.collection('templates').doc(id).delete();
-      alert('Template deleted.');
-      this.render();
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+    if (!confirm('Delete?')) return;
+    await db.collection('templates').doc(id).delete();
+    alert('Deleted.'); this.render();
   }
 };
