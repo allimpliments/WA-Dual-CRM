@@ -9,31 +9,41 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Emergency fix – login screen should never show when app is visible */
+    body.app-visible #loginScreen {
+      display: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+  </style>
 </head>
 <body>
+
   <!-- LOGIN SCREEN -->
-  <div id="loginScreen" class="d-flex align-items-center justify-content-center vh-100">
+  <div id="loginScreen" style="display:flex; align-items:center; justify-content:center; height:100vh; width:100%;">
     <div class="card p-4 shadow" style="max-width: 400px; width:100%">
       <h3 class="text-center mb-3"><i class="fab fa-whatsapp text-success"></i> 11 Avatar WA CRM</h3>
       <div id="loginForm">
         <div class="mb-3">
-          <input type="email" id="loginEmail" class="form-control" placeholder="Email" required>
+          <input type="email" id="loginEmail" class="form-control" placeholder="Email">
         </div>
         <div class="mb-3">
-          <input type="password" id="loginPassword" class="form-control" placeholder="Password" required>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Password">
         </div>
         <button id="loginBtn" class="btn btn-dark w-100">Login</button>
         <p class="mt-2 text-center"><small>No account? <a href="#" id="showRegister">Register</a></small></p>
       </div>
       <div id="registerForm" style="display:none">
         <div class="mb-3">
-          <input type="text" id="regName" class="form-control" placeholder="Full Name" required>
+          <input type="text" id="regName" class="form-control" placeholder="Full Name">
         </div>
         <div class="mb-3">
-          <input type="email" id="regEmail" class="form-control" placeholder="Email" required>
+          <input type="email" id="regEmail" class="form-control" placeholder="Email">
         </div>
         <div class="mb-3">
-          <input type="password" id="regPassword" class="form-control" placeholder="Password (min 6 chars)" required>
+          <input type="password" id="regPassword" class="form-control" placeholder="Password (min 6)">
         </div>
         <button id="registerBtn" class="btn btn-success w-100">Register</button>
         <p class="mt-2 text-center"><small>Already have account? <a href="#" id="showLogin">Login</a></small></p>
@@ -45,7 +55,6 @@
   <div id="appMain" style="display:none">
     <aside class="sidebar" id="sidebar">
       <div class="brand"><i class="fab fa-whatsapp text-success fs-3"></i> Panel</div>
-      <!-- Nav injected by app.js -->
     </aside>
     <div class="main-area">
       <div class="topbar">
@@ -54,7 +63,7 @@
           <strong id="currentSectionTitle">Dashboard</strong>
         </div>
         <div>
-          <span class="badge bg-success" id="waStatus">WhatsApp Connected</span>
+          <span class="badge bg-success">WhatsApp Connected</span>
           <i class="fas fa-user-circle ms-2 fs-5"></i>
           <small id="userRoleBadge" class="ms-1 text-muted"></small>
         </div>
