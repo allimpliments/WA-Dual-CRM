@@ -38,6 +38,7 @@ const Templates = {
                     <td><span class="badge bg-${tpl.status==='Approved'?'success':'warning'}">${tpl.status || 'Draft'}</span></td>
                     <td><span class="badge bg-${tpl.metaStatus==='APPROVED'?'success':tpl.metaStatus==='PENDING'?'warning':tpl.metaStatus==='REJECTED'?'danger':'secondary'}">${tpl.metaStatus || '-'}</span></td>
                     <td>
+                      <button class="btn btn-sm btn-outline-primary me-1" onclick="Templates.refreshMetaStatus('${tpl.id}')" title="Refresh"><i class="fas fa-sync-alt"></i></button>
                       <button class="btn btn-sm btn-outline-info me-1" onclick="Templates.showBuilder('${tpl.id}')"><i class="fas fa-edit"></i></button>
                       <button class="btn btn-sm btn-success me-1" onclick="Templates.sendTemplate('${tpl.id}')"><i class="fab fa-whatsapp"></i></button>
                       <button class="btn btn-sm btn-outline-danger" onclick="Templates.deleteTemplate('${tpl.id}')"><i class="fas fa-trash"></i></button>
@@ -176,6 +177,7 @@ const Templates = {
                 <button class="btn btn-outline-secondary btn-sm" onclick="Templates.saveTemplate('${editId||''}','Draft')"><i class="far fa-save me-1"></i> Save Draft</button>
                 <button class="btn btn-success btn-sm" onclick="Templates.saveTemplate('${editId||''}','Pending')"><i class="fas fa-paper-plane me-1"></i> Send For Approval</button>
                 ${editId ? `<button class="btn btn-warning btn-sm" onclick="Templates.submitToMeta('${editId}')"><i class="fab fa-meta me-1"></i> Submit to Meta</button>` : ''}
+                ${editId ? `<button class="btn btn-outline-primary btn-sm" onclick="Templates.refreshMetaStatus('${editId}')"><i class="fas fa-sync-alt me-1"></i> Refresh</button>` : ''}
                 <button class="btn btn-light btn-sm ms-auto" onclick="Templates.render()">Cancel</button>
               </div>
             </div>
@@ -205,7 +207,6 @@ const Templates = {
     const footer = document.getElementById('tplFooter')?.value || '';
     const btnType = document.getElementById('tplButtonType')?.value || 'none';
     const btnText = document.getElementById('tplButtonText')?.value || 'Visit';
-    const btnUrl = document.getElementById('tplButtonUrl')?.value || '#';
     const btnCall = document.getElementById('tplButtonPhone')?.value || 'Call';
     const fileEl = document.getElementById('tplMediaFile');
     const phone = document.getElementById('previewPhone');
@@ -215,11 +216,7 @@ const Templates = {
     if (headerType === 'text' && headerVal) {
       headerHtml = `<div class="wa-header-text">${headerVal}</div>`;
     } else if (headerType === 'image') {
-      if (fileEl?.files[0]) {
-        headerHtml = `<img class="wa-header-img" src="${URL.createObjectURL(fileEl.files[0])}" alt="Header">`;
-      } else {
-        headerHtml = `<img class="wa-header-img" src="https://static.xx.fbcdn.net/rsrc.php/yV/r/CK4w8uZmN56.webp" alt="Sample">`;
-      }
+      headerHtml = fileEl?.files[0] ? `<img class="wa-header-img" src="${URL.createObjectURL(fileEl.files[0])}" alt="Header">` : `<img class="wa-header-img" src="https://static.xx.fbcdn.net/rsrc.php/yV/r/CK4w8uZmN56.webp" alt="Sample">`;
     } else if (headerType === 'video') {
       headerHtml = `<div class="wa-header-video">▶ Video Preview</div>`;
     } else if (headerType === 'document') {
@@ -240,11 +237,13 @@ const Templates = {
       </div>
     `;
 
+    const btnUrl = document.getElementById('tplButtonUrl')?.value || '';
+    const btnCallNum = document.getElementById('tplButtonPhone2')?.value || '';
     const checks = [];
     if (!body) checks.push('Body message is required.');
     if (headerType === 'text' && !headerVal) checks.push('Header text is required.');
     if ((btnType === 'visit' || btnType === 'both') && !btnUrl) checks.push('CTA website URL is required.');
-    if ((btnType === 'call' || btnType === 'both') && !btnCall) checks.push('CTA phone number is required.');
+    if ((btnType === 'call' || btnType === 'both') && !btnCallNum) checks.push('CTA phone number is required.');
     const cl = document.getElementById('checklist');
     if (cl) cl.innerHTML = checks.map(c => `<li>${c}</li>`).join('') || '<li class="text-success">All checks passed!</li>';
   },
@@ -311,33 +310,20 @@ const Templates = {
     if (!cfg?.accessToken) return alert('WhatsApp not configured.');
 
     const wabaId = '342856675576986';
-    const url = `https://graph.facebook.com/v22.0/${wabaId}/message_templates`;
     const components = [];
 
-    if (tpl.headerType === 'text' && tpl.headerValue) {
-      components.push({ type: 'HEADER', format: 'TEXT', text: tpl.headerValue });
-    } else if (tpl.headerType === 'image') {
-      components.push({ type: 'HEADER', format: 'IMAGE', example: { header_handle: [tpl.headerValue || 'https://example.com/img.jpg'] } });
-    } else if (tpl.headerType === 'video') {
-      components.push({ type: 'HEADER', format: 'VIDEO', example: { header_handle: [tpl.headerValue || 'https://example.com/vid.mp4'] } });
-    } else if (tpl.headerType === 'document') {
-      components.push({ type: 'HEADER', format: 'DOCUMENT', example: { header_handle: [tpl.headerValue || 'https://example.com/doc.pdf'] } });
-    }
+    if (tpl.headerType === 'text' && tpl.headerValue) components.push({ type: 'HEADER', format: 'TEXT', text: tpl.headerValue });
+    else if (tpl.headerType === 'image') components.push({ type: 'HEADER', format: 'IMAGE', example: { header_handle: [tpl.headerValue || 'https://example.com/img.jpg'] } });
+    else if (tpl.headerType === 'video') components.push({ type: 'HEADER', format: 'VIDEO', example: { header_handle: [tpl.headerValue || 'https://example.com/vid.mp4'] } });
+    else if (tpl.headerType === 'document') components.push({ type: 'HEADER', format: 'DOCUMENT', example: { header_handle: [tpl.headerValue || 'https://example.com/doc.pdf'] } });
 
     components.push({ type: 'BODY', text: tpl.body });
-
     if (tpl.footer) components.push({ type: 'FOOTER', text: tpl.footer });
 
     const buttons = [];
-    if (tpl.quickReply) {
-      buttons.push({ type: 'QUICK_REPLY', text: 'Yes' }, { type: 'QUICK_REPLY', text: 'No' });
-    }
-    if (tpl.buttonType === 'visit' || tpl.buttonType === 'both') {
-      buttons.push({ type: 'URL', text: tpl.buttonText || 'Visit', url: tpl.buttonUrl || 'https://example.com' });
-    }
-    if (tpl.buttonType === 'call' || tpl.buttonType === 'both') {
-      buttons.push({ type: 'PHONE_NUMBER', text: tpl.buttonPhone || 'Call', phone_number: tpl.buttonPhone2 || '+919999999999' });
-    }
+    if (tpl.quickReply) { buttons.push({ type: 'QUICK_REPLY', text: 'Yes' }, { type: 'QUICK_REPLY', text: 'No' }); }
+    if (tpl.buttonType === 'visit' || tpl.buttonType === 'both') buttons.push({ type: 'URL', text: tpl.buttonText || 'Visit', url: tpl.buttonUrl || 'https://example.com' });
+    if (tpl.buttonType === 'call' || tpl.buttonType === 'both') buttons.push({ type: 'PHONE_NUMBER', text: tpl.buttonPhone || 'Call', phone_number: tpl.buttonPhone2 || '+919999999999' });
     if (buttons.length) components.push({ type: 'BUTTONS', buttons });
 
     const payload = {
@@ -348,7 +334,7 @@ const Templates = {
     };
 
     try {
-      const res = await fetch(url, {
+      const res = await fetch(`https://graph.facebook.com/v22.0/${wabaId}/message_templates`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -364,6 +350,33 @@ const Templates = {
         this.render();
       } else {
         alert('❌ Error: ' + JSON.stringify(result.error || result));
+      }
+    } catch (err) { alert('Error: ' + err.message); }
+  },
+
+  async refreshMetaStatus(templateId) {
+    const doc = await db.collection('templates').doc(templateId).get();
+    const tpl = doc.data();
+    if (!tpl.name) return alert('Template name not found.');
+    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
+    if (!cfg?.accessToken) return alert('WhatsApp not configured.');
+
+    try {
+      const res = await fetch(`https://graph.facebook.com/v22.0/342856675576986/message_templates?name=${tpl.name}`, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
+      });
+      const result = await res.json();
+      if (res.ok && result.data && result.data.length > 0) {
+        const metaTpl = result.data[0];
+        await db.collection('templates').doc(templateId).update({
+          metaStatus: metaTpl.status || 'PENDING',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert('✅ Status refreshed: ' + metaTpl.status);
+        this.render();
+      } else {
+        alert('⚠️ Template not found on Meta yet.');
       }
     } catch (err) { alert('Error: ' + err.message); }
   },
