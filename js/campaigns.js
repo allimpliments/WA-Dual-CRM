@@ -34,6 +34,9 @@ const Campaigns = {
                     <td>${campaign.sent || 0}</td>
                     <td>${campaign.delivered || 0}</td>
                     <td>
+                      <button class="btn btn-sm btn-success me-1" onclick="Campaigns.sendCampaign('${campaign.id}')" title="Send via WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                      </button>
                       <button class="btn btn-sm btn-outline-danger" onclick="Campaigns.deleteCampaign('${campaign.id}')" title="Delete">
                         <i class="fas fa-trash"></i>
                       </button>
@@ -60,16 +63,10 @@ const Campaigns = {
             </div>
             <div class="col-md-6">
               <select id="campaignStatus" class="form-select form-select-sm">
+                <option value="Draft">Draft</option>
                 <option value="Running">Running</option>
                 <option value="Completed">Completed</option>
-                <option value="Scheduled">Scheduled</option>
               </select>
-            </div>
-            <div class="col-md-6">
-              <input type="number" id="campaignSent" class="form-control form-control-sm" placeholder="Messages Sent" value="0">
-            </div>
-            <div class="col-md-6">
-              <input type="number" id="campaignDelivered" class="form-control form-control-sm" placeholder="Messages Delivered" value="0">
             </div>
             <div class="col-12 mt-2">
               <button class="btn btn-success btn-sm me-2" onclick="Campaigns.addCampaign()"><i class="fas fa-save me-1"></i> Save Campaign</button>
@@ -85,18 +82,82 @@ const Campaigns = {
   async addCampaign() {
     const name = document.getElementById('campaignName').value.trim();
     const status = document.getElementById('campaignStatus').value;
-    const sent = parseInt(document.getElementById('campaignSent').value) || 0;
-    const delivered = parseInt(document.getElementById('campaignDelivered').value) || 0;
 
     if (!name) return alert('Campaign Name is required!');
 
     try {
       await db.collection('campaigns').add({
-        name, status, sent, delivered,
+        name, status, sent: 0, delivered: 0,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       alert('Campaign added successfully!');
       this.render();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
+  async sendCampaign(id) {
+    // WhatsApp config लोड करें
+    let config = {};
+    try {
+      const doc = await db.collection('settings').doc('whatsapp').get();
+      if (doc.exists) config = doc.data();
+    } catch (err) {}
+
+    if (!config.phoneNumberId || !config.accessToken) {
+      return alert('WhatsApp not configured. Please setup WhatsApp first.');
+    }
+
+    // सारे Contacts लोड करें
+    let contacts = [];
+    try {
+      const snap = await db.collection('contacts').get();
+      contacts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {}
+
+    if (contacts.length === 0) return alert('No contacts found. Add contacts first.');
+
+    const phone = prompt('Enter a single phone number to send test (with country code, e.g. 919810012345):');
+    if (!phone) return;
+
+    try {
+      const url = `https://graph.facebook.com/v22.0/${config.phoneNumberId}/messages`;
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'template',
+        template: {
+          name: 'hello_world',
+          language: { code: 'en_US' }
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Campaign stats update करें
+        const campDoc = await db.collection('campaigns').doc(id).get();
+        const campData = campDoc.data();
+        await db.collection('campaigns').doc(id).update({
+          sent: (campData.sent || 0) + 1,
+          delivered: (campData.delivered || 0) + 1,
+          status: 'Running'
+        });
+        alert('Message sent successfully!');
+        this.render();
+      } else {
+        alert('Error: ' + (result.error?.message || 'Unknown error'));
+      }
     } catch (err) {
       alert('Error: ' + err.message);
     }
