@@ -4,36 +4,58 @@ const menuToggle = document.getElementById('menuToggle');
 const currentSectionTitle = document.getElementById('currentSectionTitle');
 
 const navSections = [
-  { title: 'Main', items: [
-    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client'] }
-  ]},
-  { title: 'Setup', items: [
-    { name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }
-  ]},
-  { title: 'Communication', items: [
-    { name: 'All Chats', icon: 'fa-comments', section: 'chats', roles: ['admin','team'] },
-    { name: 'Contacts', icon: 'fa-users', section: 'contacts', roles: ['admin','team'] },
-    { name: 'Templates', icon: 'fa-layer-group', section: 'templates', roles: ['admin','team'] },
-    { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', roles: ['admin','team'] },
-    { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin','team'] }
-  ]},
-  { title: 'E‑commerce', items: [
-    { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
-  ]},
-  { title: 'Automation', items: [
-    { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin','team'] },
-    { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
-  ]},
-  { title: 'Management', items: [
-    { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin'] },
-    { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin'] },
-    { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin','team'] },
-    { name: 'Social Posting', icon: 'fa-share-alt', section: 'social', roles: ['admin','team'] }
-  ]},
-  { title: 'Account', items: [
-    { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client'] },
-    { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin','team','client'] }
-  ]}
+  {
+    title: 'Main',
+    items: [
+      { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin', 'team', 'client'] }
+    ]
+  },
+  {
+    title: 'Setup',
+    items: [
+      { name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }
+    ]
+  },
+  {
+    title: 'Communication',
+    items: [
+      { name: 'All Chats', icon: 'fa-comments', section: 'chats', roles: ['admin', 'team'] },
+      { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads', roles: ['admin', 'team'] },
+      { name: 'Contacts', icon: 'fa-users', section: 'contacts', roles: ['admin', 'team'] },
+      { name: 'Templates', icon: 'fa-layer-group', section: 'templates', roles: ['admin', 'team'] },
+      { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', roles: ['admin', 'team'] },
+      { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin', 'team'] }
+    ]
+  },
+  {
+    title: 'E-commerce',
+    items: [
+      { name: 'E-commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
+    ]
+  },
+  {
+    title: 'Automation',
+    items: [
+      { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin', 'team'] },
+      { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
+    ]
+  },
+  {
+    title: 'Management',
+    items: [
+      { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin'] },
+      { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin'] },
+      { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin', 'team'] },
+      { name: 'Social Posting', icon: 'fa-share-alt', section: 'social', roles: ['admin', 'team'] }
+    ]
+  },
+  {
+    title: 'Account',
+    items: [
+      { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin', 'team', 'client'] },
+      { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin', 'team', 'client'] }
+    ]
+  }
 ];
 
 function buildSidebar(role) {
@@ -67,9 +89,10 @@ function buildSidebar(role) {
 
 function loadSection(section) {
   contentArea.innerHTML = '';
-  switch(section) {
+  switch (section) {
     case 'dashboard': Dashboard.render(); break;
-    // बाकी सेक्शन बाद में जोड़ेंगे
+    case 'leads': Leads.render(); break;
+    case 'contacts': Contacts.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
   document.querySelectorAll('.sidebar .nav-link').forEach(l => {
@@ -83,12 +106,10 @@ function initApp(role) {
   loadSection('dashboard');
 }
 
-// Mobile menu toggle
 menuToggle.addEventListener('click', () => {
   sidebar.classList.toggle('mobile-open');
 });
 
-// Mobile bottom nav (पहले जैसा)
 function addMobileNav() {
   if (window.innerWidth < 768) {
     const nav = document.createElement('div');
@@ -97,7 +118,7 @@ function addMobileNav() {
       <a href="#" class="nav-item active" data-mob="dashboard"><i class="fas fa-home"></i><br>Home</a>
       <a href="#" class="nav-item" data-mob="chats"><i class="fas fa-comment"></i><br>Chats</a>
       <a href="#" class="nav-item" data-mob="contacts"><i class="fas fa-users"></i><br>Contacts</a>
-      <a href="#" class="nav-item" data-mob="leads"><i class="fas fa-funnel"></i><br>Leads</a>
+      <a href="#" class="nav-item" data-mob="leads"><i class="fas fa-funnel-dollar"></i><br>Leads</a>
       <a href="#" class="nav-item" data-mob="settings"><i class="fas fa-cog"></i><br>Setup</a>
     `;
     document.body.appendChild(nav);
