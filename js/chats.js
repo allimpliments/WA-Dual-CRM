@@ -17,7 +17,7 @@ const Chats = {
             <h5><i class="fab fa-whatsapp text-success me-2"></i>Send Message</h5>
             <div class="mb-3">
               <label class="form-label">Phone Number</label>
-              <input type="text" id="chatPhone" class="form-control form-control-sm" placeholder="919810012345">
+              <input type="text" id="chatPhone" class="form-control form-control-sm" placeholder="+919810012345 or 9810012345">
             </div>
             <div class="mb-3">
               <label class="form-label">Message</label>
@@ -58,11 +58,20 @@ const Chats = {
   },
 
   async sendMessage() {
-    const phone = document.getElementById('chatPhone').value.trim();
+    let phone = document.getElementById('chatPhone').value.trim();
     const message = document.getElementById('chatMessage').value.trim();
 
     if (!phone) return alert('Please enter a phone number!');
     if (!message) return alert('Please enter a message!');
+
+    // Auto-correct phone number
+    phone = phone.replace(/\s|-/g, '');
+    if (!phone.startsWith('+') && phone.length === 10) {
+      phone = '+91' + phone;
+    }
+    if (phone.startsWith('91') && phone.length === 12) {
+      phone = '+' + phone;
+    }
 
     let config = {};
     try {
