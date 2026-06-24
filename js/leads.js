@@ -18,9 +18,7 @@ const Leads = {
             <i class="fas fa-plus me-1"></i> Add Lead
           </button>
         </div>
-
         <div id="leadFormContainer"></div>
-
         <div class="table-responsive">
           <table class="table table-hover">
             <thead class="table-light">
@@ -35,7 +33,7 @@ const Leads = {
                     <td>${lead.phone || '-'}</td>
                     <td>${lead.email || '-'}</td>
                     <td><span class="badge bg-info">${lead.source || 'Unknown'}</span></td>
-                    <td><span class="badge bg-${lead.status === 'New' ? 'warning' : lead.status === 'Contacted' ? 'primary' : 'success'}">${lead.status || 'New'}</span></td>
+                    <td><span class="badge bg-warning">${lead.status || 'New'}</span></td>
                     <td>
                       <button class="btn btn-sm btn-outline-danger" onclick="Leads.deleteLead('${lead.id}')" title="Delete">
                         <i class="fas fa-trash"></i>
@@ -49,7 +47,6 @@ const Leads = {
         </div>
       </div>
     `;
-
     contentArea.innerHTML = html;
   },
 
@@ -77,7 +74,7 @@ const Leads = {
                 <option value="Other">Other</option>
               </select>
             </div>
-            <div class="col-12">
+            <div class="col-12 mt-2">
               <button class="btn btn-success btn-sm me-2" onclick="Leads.addLead()"><i class="fas fa-save me-1"></i> Save Lead</button>
               <button class="btn btn-secondary btn-sm" onclick="Leads.render()">Cancel</button>
             </div>
