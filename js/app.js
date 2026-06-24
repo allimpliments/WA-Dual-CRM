@@ -93,6 +93,7 @@ function loadSection(section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
     case 'contacts': Contacts.render(); break;
+    case 'campaigns': Campaigns.render(); break;   // ← यह जोड़ें
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
   document.querySelectorAll('.sidebar .nav-link').forEach(l => {
