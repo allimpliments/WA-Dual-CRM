@@ -1,5 +1,5 @@
 // Cloudflare Worker – WhatsApp Webhook for 11 Avatar WA Dual CRM
-// Receives Meta webhooks and stores incoming messages in Firestore
+// Final production code with full logging
 
 const SERVICE_ACCOUNT = {
   client_email: "firebase-adminsdk-fbsvc@avatar-wa-dual-crm.iam.gserviceaccount.com",
@@ -12,7 +12,6 @@ const PHONE_NUMBER_ID = "342354115627791";
 const WHATSAPP_TOKEN = "EAA1OYCPXuvoBR2EO28cL1FgY7dZBfGohYPZByXicxZCE30QyaLhnMtvgaxRPi7mhVCzVmCLZBAiLU6XHT0420fFNsw2ZAwesmG0z9egSckC7WZCq4ja2MoZBvwR8dCY9IAdSpTzzaaNyTk71I4l2xjQ8DtFA7q9KN7scIU4cTTZBciySmKesOMqPgsqxM3g7cAZDZD";
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${SERVICE_ACCOUNT.project_id}/databases/(default)/documents`;
 
-// ========== AUTH ==========
 async function getAccessToken() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
@@ -58,7 +57,6 @@ function str2ab(str) {
   return buf;
 }
 
-// ========== FIRESTORE ==========
 async function saveMessage(msg) {
   try {
     const token = await getAccessToken();
@@ -68,7 +66,7 @@ async function saveMessage(msg) {
       fields: {
         from: { stringValue: msg.from || "" },
         to: { stringValue: PHONE_NUMBER_ID },
-        body: { stringValue: msg.text?.body || "(media)" },
+        body: { stringValue: msg.text?.body || msg.button?.text || msg.interactive?.body?.text || "(media)" },
         type: { stringValue: "incoming" },
         waMessageId: { stringValue: msg.id || "" },
         createdAt: { timestampValue: new Date().toISOString() }
@@ -79,14 +77,32 @@ async function saveMessage(msg) {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
-    const result = await res.text();
-    console.log("Firestore save:", res.status, result.substring(0, 200));
+    const text = await res.text();
+    console.log("Firestore Save:", res.status, text.substring(0, 200));
   } catch (e) {
-    console.error("saveMessage error:", e.message);
+    console.error("Firestore Save Error:", e.message);
   }
 }
 
-// ========== AUTO-REPLY ==========
+async function logPayload(data) {
+  try {
+    const token = await getAccessToken();
+    const docId = `log-${Date.now()}`;
+    const url = `${FIRESTORE_BASE}/webhook_logs?documentId=${encodeURIComponent(docId)}`;
+    const body = {
+      fields: {
+        payload: { stringValue: JSON.stringify(data).substring(0, 5000) },
+        createdAt: { timestampValue: new Date().toISOString() }
+      }
+    };
+    await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {}
+}
+
 function getAutoReply(body) {
   const msg = (body || "").toLowerCase();
   if (msg.includes("price") || msg.includes("pricing")) return "Our plans start at ₹999/month. Visit our website for details!";
@@ -97,31 +113,41 @@ function getAutoReply(body) {
 
 async function sendReply(to, text) {
   try {
-    const res = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+    await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: to,
-        type: "text",
-        text: { body: text }
-      })
+      headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text } })
     });
-    const result = await res.text();
-    console.log("Reply sent:", res.status, result.substring(0, 100));
-  } catch (e) {
-    console.error("sendReply error:", e.message);
-  }
+  } catch (e) { console.error("Reply Error:", e.message); }
 }
 
-// ========== MAIN ==========
 async function handleRequest(request) {
   const url = new URL(request.url);
 
-  // GET = Meta webhook verification
+  if (request.method === "GET" && url.pathname === "/test-firestore") {
+    try {
+      const token = await getAccessToken();
+      const id = "test-" + Date.now();
+      const res = await fetch(`${FIRESTORE_BASE}/messages?documentId=${id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fields: {
+            from: { stringValue: "test" },
+            to: { stringValue: "test" },
+            body: { stringValue: "Worker OK" },
+            type: { stringValue: "incoming" },
+            waMessageId: { stringValue: id },
+            createdAt: { timestampValue: new Date().toISOString() }
+          }
+        })
+      });
+      return new Response(`Status: ${res.status}`, { status: res.ok ? 200 : 500 });
+    } catch (e) {
+      return new Response(`Error: ${e.message}`, { status: 500 });
+    }
+  }
+
   if (request.method === "GET") {
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
@@ -132,24 +158,35 @@ async function handleRequest(request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // POST = incoming WhatsApp event
   if (request.method === "POST") {
     try {
       const body = await request.json();
-      console.log("Webhook received");
+      
+      // Log the full payload for debugging
+      event.waitUntil(logPayload(body));
 
       if (body.object === "whatsapp_business_account") {
         for (const entry of body.entry) {
           for (const change of entry.changes) {
-            if (change.value.messages) {
-              for (const msg of change.value.messages) {
+            const value = change.value || {};
+            
+            // Handle incoming messages
+            if (value.messages && value.messages.length > 0) {
+              for (const msg of value.messages) {
                 console.log("Message from:", msg.from, "body:", (msg.text?.body || "").substring(0, 50));
                 event.waitUntil(saveMessage(msg));
-
+                
                 const replyText = getAutoReply(msg.text?.body || "");
                 if (replyText) {
                   event.waitUntil(sendReply(msg.from, replyText));
                 }
+              }
+            }
+            
+            // Handle status updates (sent, delivered, read)
+            if (value.statuses && value.statuses.length > 0) {
+              for (const status of value.statuses) {
+                console.log("Status update:", status.status, "for:", status.id);
               }
             }
           }
@@ -157,7 +194,7 @@ async function handleRequest(request) {
       }
       return new Response("OK", { status: 200 });
     } catch (err) {
-      console.error("Handler error:", err.message);
+      console.error("Handler Error:", err.message);
       return new Response("Error: " + err.message, { status: 500 });
     }
   }
