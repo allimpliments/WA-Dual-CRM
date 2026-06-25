@@ -4,9 +4,19 @@ const Social = {
   activePlatforms: { facebook: true, instagram: true },
   activeEditorTab: 'facebook',
   previewDevice: 'desktop',
+  customizeEnabled: false,
+  storyEnabled: false,
 
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading social...</p>';
+
+    let fbConfig = {}, igConfig = {};
+    try {
+      const fbDoc = await db.collection('settings').doc('facebook').get();
+      if (fbDoc.exists) fbConfig = fbDoc.data();
+      const igDoc = await db.collection('settings').doc('instagram').get();
+      if (igDoc.exists) igConfig = igDoc.data();
+    } catch (err) { console.error(err); }
 
     let posts = [];
     try {
@@ -27,12 +37,13 @@ const Social = {
         .meta-helper { font-size: 12px; color: #65676b; margin-top: 4px; }
         .meta-btn { height: 36px; padding: 0 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; }
         .meta-btn-primary { background: #1877f2; color: #fff; }
+        .meta-btn-primary:hover { background: #166fe5; }
         .meta-btn-outline { background: #fff; color: #1877f2; border: 1px solid #dadde1; }
         .meta-btn-outline:hover { background: #f5f6f7; }
         .meta-preview-panel { position: sticky; top: 20px; }
         .meta-preview-box { background: #f0f2f5; border-radius: 8px; padding: 16px; min-height: 300px; }
         .drop-zone { border: 2px dashed #dadde1; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafbfc; }
-        .drop-zone:hover, .drop-zone.drag-over { border-color: #1877f2; background: #e7f3ff; }
+        .drop-zone:hover { border-color: #1877f2; background: #e7f3ff; }
         .tab-bar { display: flex; border-bottom: 2px solid #dadde1; margin-bottom: 12px; }
         .tab-item { padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 14px; color: #65676b; border-bottom: 2px solid transparent; margin-bottom: -2px; }
         .tab-item.active { color: #1877f2; border-bottom-color: #1877f2; }
@@ -77,6 +88,8 @@ const Social = {
 
   openComposer() {
     this.uploadedFiles = [];
+    this.customizeEnabled = false;
+    this.storyEnabled = false;
     document.getElementById('composerContainer').innerHTML = `
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="Social.closeComposer()">
         <div class="meta-page" style="background:#f0f2f5;border-radius:16px;padding:24px;max-height:90vh;overflow-y:auto;width:95%;" onclick="event.stopPropagation()">
@@ -87,39 +100,40 @@ const Social = {
           
           <div class="meta-composer-layout">
             <div>
-              <!-- 1. Account Selection -->
+              <!-- Account Selection -->
               <div class="meta-card">
                 <div class="meta-card-title">Post to</div>
                 <div class="d-flex gap-3">
                   <div style="flex:1;border:2px solid ${this.activePlatforms.facebook?'#1877f2':'#dadde1'};border-radius:12px;padding:12px;cursor:pointer;background:${this.activePlatforms.facebook?'#e7f3ff':'#fff'};" onclick="Social.togglePlatform('facebook')">
-                    <div class="form-check"><input class="form-check-input" type="checkbox" ${this.activePlatforms.facebook?'checked':''}> <label class="form-check-label"><i class="fab fa-facebook text-primary me-1"></i> Facebook</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" ${this.activePlatforms.facebook?'checked':''} onclick="event.stopPropagation();"> <label class="form-check-label"><i class="fab fa-facebook text-primary me-1"></i> Facebook</label></div>
                     <small style="color:#65676b;">11 Avatar Digital Hub</small>
                   </div>
                   <div style="flex:1;border:2px solid ${this.activePlatforms.instagram?'#1877f2':'#dadde1'};border-radius:12px;padding:12px;cursor:pointer;background:${this.activePlatforms.instagram?'#e7f3ff':'#fff'};" onclick="Social.togglePlatform('instagram')">
-                    <div class="form-check"><input class="form-check-input" type="checkbox" ${this.activePlatforms.instagram?'checked':''}> <label class="form-check-label"><i class="fab fa-instagram text-danger me-1"></i> Instagram</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" ${this.activePlatforms.instagram?'checked':''} onclick="event.stopPropagation();"> <label class="form-check-label"><i class="fab fa-instagram text-danger me-1"></i> Instagram</label></div>
                     <small style="color:#65676b;">11avatardigitalhub</small>
                   </div>
                 </div>
               </div>
 
-              <!-- 2. Media Upload with Drag & Drop -->
+              <!-- Media Upload -->
               <div class="meta-card">
                 <div class="meta-card-title">Media</div>
                 <p class="meta-helper" style="margin-top:0;">Share photos or a video. Instagram posts can't exceed 10 photos.</p>
-                <div class="drop-zone" id="dropZone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="Social.handleDrop(event)">
+                <div class="drop-zone" id="dropZone" ondragover="event.preventDefault();this.style.borderColor='#1877f2';this.style.background='#e7f3ff';" ondragleave="this.style.borderColor='#dadde1';this.style.background='#fafbfc';" ondrop="Social.handleDrop(event)">
                   <i class="fas fa-cloud-upload-alt fa-2x" style="color:#1877f2;margin-bottom:8px;"></i>
                   <p style="font-weight:500;">Upload media</p>
                   <p class="meta-helper">Add photos or video by dragging and dropping.</p>
                   <div class="d-flex gap-2 justify-content-center mt-2">
-                    <button class="meta-btn meta-btn-outline" onclick="document.getElementById('composerFileInput').click()"><i class="fas fa-image me-1"></i> Add Photo</button>
-                    <button class="meta-btn meta-btn-outline" onclick="document.getElementById('composerFileInput').click()"><i class="fas fa-video me-1"></i> Add Video</button>
+                    <button class="meta-btn meta-btn-outline" onclick="event.stopPropagation();document.getElementById('composerFileInput').click();"><i class="fas fa-image me-1"></i> Add Photo</button>
+                    <button class="meta-btn meta-btn-outline" onclick="event.stopPropagation();document.getElementById('composerFileInput').click();"><i class="fas fa-video me-1"></i> Add Video</button>
                   </div>
                 </div>
                 <input type="file" id="composerFileInput" multiple accept="image/*,video/*" style="display:none" onchange="Social.handleComposerFiles(event)">
+                <div id="uploadProgress" style="font-size:12px;color:#1877f2;margin-top:8px;"></div>
                 <div id="composerMediaGrid" class="d-flex gap-2 mt-3 flex-wrap"></div>
               </div>
 
-              <!-- 3. Post Details with Tabs -->
+              <!-- Post Details -->
               <div class="meta-card">
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="meta-card-title" style="margin:0;">Post Details</div>
@@ -134,14 +148,14 @@ const Social = {
                 </div>
                 <textarea id="composerCaption" class="form-control" style="min-height:180px;border-radius:8px;border:1px solid #dadde1;padding:12px;font-size:14px;resize:vertical;" placeholder="What's on your mind?" oninput="Social.updatePreview()"></textarea>
                 <div class="d-flex gap-1 mt-2">
-                  <button class="btn btn-sm btn-light">😊</button>
-                  <button class="btn btn-sm btn-light">📍</button>
-                  <button class="btn btn-sm btn-light">@</button>
-                  <button class="btn btn-sm btn-light">#</button>
+                  <button class="btn btn-sm btn-light" onclick="Social.insertEmoji()">😊</button>
+                  <button class="btn btn-sm btn-light" onclick="Social.insertText('📍 ')">📍</button>
+                  <button class="btn btn-sm btn-light" onclick="Social.insertText('@')">@</button>
+                  <button class="btn btn-sm btn-light" onclick="Social.insertText('#')">#</button>
                 </div>
               </div>
 
-              <!-- 4. Schedule -->
+              <!-- Schedule -->
               <div class="meta-card">
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="meta-card-title" style="margin:0;">Schedule</div>
@@ -152,33 +166,33 @@ const Social = {
                 </div>
                 <div id="scheduleFields" style="display:none;margin-top:12px;">
                   <div class="row g-2">
-                    <div class="col-6"><label class="meta-helper">Date</label><input type="date" class="form-control form-control-sm" style="border-radius:8px;"></div>
-                    <div class="col-6"><label class="meta-helper">Time</label><input type="time" class="form-control form-control-sm" style="border-radius:8px;"></div>
+                    <div class="col-6"><label class="meta-helper">Date</label><input type="date" id="scheduleDate" class="form-control form-control-sm" style="border-radius:8px;"></div>
+                    <div class="col-6"><label class="meta-helper">Time</label><input type="time" id="scheduleTime" class="form-control form-control-sm" style="border-radius:8px;"></div>
                   </div>
                 </div>
               </div>
 
-              <!-- 5. Story Sharing -->
+              <!-- Story Sharing -->
               <div class="meta-card">
                 <div class="meta-card-title">Share To</div>
                 <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="storyToggle" onchange="Social.showStoryModal()">
+                  <input class="form-check-input" type="checkbox" id="storyToggle" onchange="Social.toggleStory()">
                   <label class="form-check-label" for="storyToggle">Facebook Story · Public</label>
                 </div>
               </div>
 
-              <!-- 6. Privacy -->
+              <!-- Privacy -->
               <div class="meta-card">
                 <div class="meta-card-title">Privacy Settings</div>
                 <p class="meta-helper" style="margin-top:0;">Adjust who can see your post.</p>
-                <div class="form-check"><input class="form-check-input" type="radio" name="privacy" checked> <label class="form-check-label">Public</label></div>
-                <div class="form-check"><input class="form-check-input" type="radio" name="privacy"> <label class="form-check-label">Restricted</label></div>
+                <div class="form-check"><input class="form-check-input" type="radio" name="privacy" value="public" checked> <label class="form-check-label">Public</label></div>
+                <div class="form-check"><input class="form-check-input" type="radio" name="privacy" value="restricted"> <label class="form-check-label">Restricted</label></div>
               </div>
 
               <button class="meta-btn meta-btn-primary w-100" style="height:44px;font-size:16px;" onclick="Social.publishFromComposer()">Publish</button>
             </div>
 
-            <!-- 7. Preview Panel -->
+            <!-- Preview -->
             <div class="meta-preview-panel">
               <div class="meta-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -189,40 +203,48 @@ const Social = {
                   </div>
                 </div>
                 <div class="meta-preview-box" id="composerPreview" style="${this.previewDevice==='mobile'?'max-width:375px;margin:0 auto;':''}">
-                  ${this.renderFacebookPreview()}
+                  ${this.getFacebookPreviewHTML()}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Story Confirmation Modal -->
-      <div id="storyModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:none;align-items:center;justify-content:center;" onclick="Social.hideStoryModal()">
-        <div class="meta-card" style="max-width:440px;width:90%;" onclick="event.stopPropagation()">
-          <h5 style="margin:0 0 16px 0;">Share to Facebook Story</h5>
-          <div class="form-check mb-2"><input class="form-check-input" type="radio" name="storyOption" checked> <label class="form-check-label">Share this story</label></div>
-          <div class="form-check mb-3"><input class="form-check-input" type="radio" name="storyOption"> <label class="form-check-label">Always share stories</label></div>
-          <div class="d-flex gap-2 justify-content-end">
-            <button class="meta-btn meta-btn-outline" onclick="Social.hideStoryModal()">Cancel</button>
-            <button class="meta-btn meta-btn-primary" onclick="Social.confirmStory()">Confirm</button>
-          </div>
-        </div>
-      </div>
     `;
-    document.getElementById('storyModal').style.display = 'none';
   },
 
-  renderFacebookPreview() {
-    const caption = document.getElementById?.('composerCaption')?.value || '';
+  getFacebookPreviewHTML() {
     return `
       <div style="background:#fff;border-radius:8px;padding:12px;width:100%;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="width:36px;height:36px;border-radius:50%;background:#1877f2;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;">A</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:#1877f2;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:14px;">A</div>
           <div><strong style="font-size:14px;">11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now · 🌍</small></div>
         </div>
-        <p style="font-size:14px;margin:8px 0;">${caption || 'Your caption...'}</p>
-        ${this.uploadedFiles.map(url => `<img src="${url}" style="width:100%;border-radius:8px;margin-bottom:4px;">`).join('')}
+        <p style="font-size:14px;margin:8px 0;">Start writing...</p>
+        <div style="display:flex;justify-content:space-between;color:#65676b;font-size:13px;border-top:1px solid #dadde1;padding-top:8px;">
+          <span>👍 Like</span><span>💬 Comment</span><span>↗ Share</span>
+        </div>
+      </div>
+    `;
+  },
+
+  updatePreview() {
+    const preview = document.getElementById('composerPreview');
+    if (!preview) return;
+    const caption = document.getElementById('composerCaption')?.value || 'Start writing...';
+    let mediaHTML = this.uploadedFiles.map(url => 
+      url.includes('.mp4') || url.includes('.mov') 
+        ? `<video src="${url}" controls style="width:100%;border-radius:8px;margin-bottom:4px;"></video>`
+        : `<img src="${url}" style="width:100%;border-radius:8px;margin-bottom:4px;">`
+    ).join('');
+    preview.innerHTML = `
+      <div style="background:#fff;border-radius:8px;padding:12px;width:100%;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#1877f2;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:14px;">A</div>
+          <div><strong style="font-size:14px;">11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now · 🌍</small></div>
+        </div>
+        <p style="font-size:14px;margin:8px 0;">${caption}</p>
+        ${mediaHTML}
         <div style="display:flex;justify-content:space-between;color:#65676b;font-size:13px;border-top:1px solid #dadde1;padding-top:8px;">
           <span>👍 Like</span><span>💬 Comment</span><span>↗ Share</span>
         </div>
@@ -232,24 +254,74 @@ const Social = {
 
   setPreviewDevice(device) {
     this.previewDevice = device;
-    this.openComposer();
+    const preview = document.getElementById('composerPreview');
+    if (preview) {
+      preview.parentElement.style.maxWidth = device === 'mobile' ? '375px' : '100%';
+      preview.parentElement.style.margin = device === 'mobile' ? '0 auto' : '0';
+    }
+    document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.device-btn').forEach(b => {
+      if (b.textContent.toLowerCase().includes(device)) b.classList.add('active');
+    });
+  },
+
+  toggleCustomize() {
+    this.customizeEnabled = !this.customizeEnabled;
+    const tabs = document.getElementById('editorTabs');
+    if (tabs) tabs.style.display = this.customizeEnabled ? 'flex' : 'none';
+  },
+
+  toggleSchedule() {
+    const fields = document.getElementById('scheduleFields');
+    if (fields) fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
+  },
+
+  toggleStory() {
+    this.storyEnabled = !this.storyEnabled;
+    if (this.storyEnabled) {
+      alert('✅ Story sharing enabled! Your post will also appear in Facebook Story.');
+    }
+  },
+
+  switchEditorTab(tab) {
+    this.activeEditorTab = tab;
+    document.querySelectorAll('#editorTabs .tab-item').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#editorTabs .tab-item').forEach(t => {
+      if (t.textContent.toLowerCase().includes(tab)) t.classList.add('active');
+    });
+  },
+
+  insertEmoji() {
+    const ta = document.getElementById('composerCaption');
+    if (ta) { ta.value += ' 😊'; this.updatePreview(); }
+  },
+
+  insertText(text) {
+    const ta = document.getElementById('composerCaption');
+    if (ta) { ta.value += text; this.updatePreview(); }
+  },
+
+  togglePlatform(plat) {
+    this.activePlatforms[plat] = !this.activePlatforms[plat];
+    // Update the card visually
+    const cards = document.querySelectorAll('[style*="border:2px solid"]');
+    cards.forEach(card => {
+      if (card.textContent.toLowerCase().includes(plat)) {
+        card.style.borderColor = this.activePlatforms[plat] ? '#1877f2' : '#dadde1';
+        card.style.background = this.activePlatforms[plat] ? '#e7f3ff' : '#fff';
+        const cb = card.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = this.activePlatforms[plat];
+      }
+    });
   },
 
   closeComposer() { document.getElementById('composerContainer').innerHTML = ''; },
-  togglePlatform(plat) { this.activePlatforms[plat] = !this.activePlatforms[plat]; this.openComposer(); },
-  toggleSchedule() { const f = document.getElementById('scheduleFields'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; },
-  toggleCustomize() { const t = document.getElementById('editorTabs'); if (t) t.style.display = t.style.display === 'none' ? 'flex' : 'none'; },
-  switchEditorTab(tab) { this.activeEditorTab = tab; this.openComposer(); },
-  showStoryModal() { const m = document.getElementById('storyModal'); if (m) m.style.display = 'flex'; },
-  hideStoryModal() { const m = document.getElementById('storyModal'); if (m) m.style.display = 'none'; },
-  confirmStory() { this.hideStoryModal(); alert('✅ Story sharing enabled!'); },
-  updatePreview() { const preview = document.getElementById('composerPreview'); if (preview) preview.innerHTML = this.renderFacebookPreview(); },
 
   async handleDrop(event) {
     event.preventDefault();
-    event.target.classList.remove('drag-over');
-    const files = event.dataTransfer.files;
-    await this.uploadFiles(files);
+    event.target.style.borderColor = '#dadde1';
+    event.target.style.background = '#fafbfc';
+    await this.uploadFiles(event.dataTransfer.files);
   },
 
   async handleComposerFiles(event) {
@@ -257,13 +329,16 @@ const Social = {
   },
 
   async uploadFiles(files) {
+    const progressEl = document.getElementById('uploadProgress');
     for (const file of files) {
       if (this.uploadedFiles.length >= 10) { alert('Max 10 files'); break; }
+      if (progressEl) progressEl.innerText = `Uploading ${file.name}...`;
       const storageRef = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
       await storageRef.put(file);
       const url = await storageRef.ref.getDownloadURL();
       this.uploadedFiles.push(url);
     }
+    if (progressEl) progressEl.innerText = '';
     this.refreshComposerMedia();
   },
 
@@ -272,7 +347,9 @@ const Social = {
     if (!grid) return;
     grid.innerHTML = this.uploadedFiles.map((url, i) => `
       <div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;">
-        <img src="${url}" style="width:100%;height:100%;object-fit:cover;">
+        ${url.includes('.mp4') || url.includes('.mov') 
+          ? `<video src="${url}" style="width:100%;height:100%;object-fit:cover;"></video>`
+          : `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`}
         <button style="position:absolute;top:2px;right:2px;background:#fa3e3e;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;" onclick="Social.removeComposerMedia(${i})">×</button>
       </div>
     `).join('');
@@ -285,19 +362,83 @@ const Social = {
   },
 
   async publishFromComposer() {
-    const message = document.getElementById('composerCaption')?.value || '';
-    await db.collection('socialPosts').add({
-      platform: 'facebook', message, media: this.uploadedFiles,
-      postType: this.uploadedFiles.length > 0 ? 'photo' : 'text',
-      status: 'published',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    const message = document.getElementById('composerCaption')?.value?.trim() || '';
+    const scheduleDate = document.getElementById('scheduleDate')?.value;
+    const scheduleTime = document.getElementById('scheduleTime')?.value;
+    const isScheduled = scheduleDate && scheduleTime;
+    const privacy = document.querySelector('input[name="privacy"]:checked')?.value || 'public';
+
+    if (!this.activePlatforms.facebook && !this.activePlatforms.instagram) {
+      return alert('Select at least one platform!');
+    }
+
+    // Post to Facebook
+    if (this.activePlatforms.facebook) {
+      const cfg = (await db.collection('settings').doc('facebook').get()).data();
+      if (cfg?.pageAccessToken && cfg?.pageId) {
+        try {
+          const params = new URLSearchParams({ message, access_token: cfg.pageAccessToken });
+          if (this.uploadedFiles.length > 0) params.append('link', this.uploadedFiles[0]);
+          const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
+          const result = await res.json();
+          if (res.ok) {
+            await db.collection('socialPosts').add({
+              platform: 'facebook', message, media: this.uploadedFiles,
+              status: isScheduled ? 'scheduled' : 'published',
+              scheduledAt: isScheduled ? new Date(scheduleDate + 'T' + scheduleTime).toISOString() : null,
+              privacy, storyEnabled: this.storyEnabled,
+              platformId: result.id,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } else {
+            alert('Facebook Error: ' + (result.error?.message || 'Failed'));
+            return;
+          }
+        } catch (err) { alert('Facebook Error: ' + err.message); return; }
+      }
+    }
+
+    // Post to Instagram
+    if (this.activePlatforms.instagram) {
+      const cfg = (await db.collection('settings').doc('instagram').get()).data();
+      if (cfg?.accessToken && cfg?.accountId) {
+        try {
+          for (const url of this.uploadedFiles.slice(0, 10)) {
+            const params = new URLSearchParams({ caption: message, image_url: url, access_token: cfg.accessToken });
+            const createRes = await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media`, { method: 'POST', body: params });
+            const createData = await createRes.json();
+            if (createData.id) {
+              await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media_publish`, {
+                method: 'POST',
+                body: new URLSearchParams({ creation_id: createData.id, access_token: cfg.accessToken })
+              });
+            }
+          }
+          await db.collection('socialPosts').add({
+            platform: 'instagram', message, media: this.uploadedFiles,
+            status: isScheduled ? 'scheduled' : 'published',
+            scheduledAt: isScheduled ? new Date(scheduleDate + 'T' + scheduleTime).toISOString() : null,
+            privacy,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (err) { alert('Instagram Error: ' + err.message); return; }
+      }
+    }
+
     this.closeComposer();
     this.uploadedFiles = [];
     this.render();
-    alert('✅ Post published!');
+    alert(`✅ Post ${isScheduled ? 'scheduled' : 'published'} successfully!`);
   },
 
-  async publishDraft(id) { await db.collection('socialPosts').doc(id).update({ status: 'published' }); this.render(); },
-  async deletePost(id) { if (!confirm('Delete?')) return; await db.collection('socialPosts').doc(id).delete(); this.render(); }
+  async publishDraft(id) {
+    await db.collection('socialPosts').doc(id).update({ status: 'published' });
+    this.render();
+  },
+
+  async deletePost(id) {
+    if (!confirm('Delete this post?')) return;
+    await db.collection('socialPosts').doc(id).delete();
+    this.render();
+  }
 };
