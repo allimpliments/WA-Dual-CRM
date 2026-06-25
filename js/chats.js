@@ -1,5 +1,6 @@
 const Chats = {
   contactCache: {},
+  currentChatTab: 'whatsapp',
 
   async getContactName(number) {
     if (!number || number === 'unknown') return null;
@@ -41,6 +42,12 @@ const Chats = {
   },
 
   async render() {
+    if (this.currentChatTab === 'facebook') { this.renderSocialChat('facebook'); return; }
+    if (this.currentChatTab === 'instagram') { this.renderSocialChat('instagram'); return; }
+    this.renderWhatsApp();
+  },
+
+  async renderWhatsApp() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading chats...</p>';
 
     let messages = [];
@@ -55,13 +62,17 @@ const Chats = {
           await this.getContactName(msg.to);
         }
       }
-    } catch (err) {
-      console.error('Error loading messages:', err);
-    }
+    } catch (err) { console.error('Error loading messages:', err); }
 
     const displayMessages = messages.filter(msg => !this.isSystemMessage(msg));
 
     let html = `
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link ${this.currentChatTab==='whatsapp'?'active':''}" onclick="Chats.switchChatTab('whatsapp')"><i class="fab fa-whatsapp text-success me-1"></i>WhatsApp</a></li>
+        <li class="nav-item"><a class="nav-link ${this.currentChatTab==='facebook'?'active':''}" onclick="Chats.switchChatTab('facebook')"><i class="fab fa-facebook text-primary me-1"></i>Facebook</a></li>
+        <li class="nav-item"><a class="nav-link ${this.currentChatTab==='instagram'?'active':''}" onclick="Chats.switchChatTab('instagram')"><i class="fab fa-instagram text-danger me-1"></i>Instagram</a></li>
+      </ul>
+
       <div class="row g-3">
         <div class="col-md-4">
           <div class="card-widget">
@@ -143,9 +154,7 @@ const Chats = {
           ? '<p class="text-center text-muted py-4">No messages yet.</p>'
           : filtered.map(msg => `
             <div class="d-flex mb-2 p-2 border rounded message-row ${msg.type === 'incoming' ? 'bg-light' : ''}">
-              <div class="me-2">
-                <i class="fas fa-arrow-${msg.type === 'incoming' ? 'down text-info' : 'up text-success'}"></i>
-              </div>
+              <div class="me-2"><i class="fas fa-arrow-${msg.type === 'incoming' ? 'down text-info' : 'up text-success'}"></i></div>
               <div class="flex-grow-1">
                 <div class="d-flex justify-content-between">
                   <strong>${msg.type === 'incoming' ? (Chats.contactCache[msg.from] || msg.from || 'Unknown') : (Chats.contactCache[msg.to] || msg.to || 'Unknown')}</strong>
@@ -160,6 +169,74 @@ const Chats = {
       });
   },
 
+  async renderSocialChat(platform) {
+    contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
+
+    let config = {}, messages = [];
+    try {
+      const doc = await db.collection('settings').doc(platform).get();
+      if (doc.exists) config = doc.data();
+      const snap = await db.collection('socialMessages').where('platform', '==', platform).orderBy('createdAt', 'desc').limit(100).get();
+      messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) { console.error(err); }
+
+    const icon = platform === 'facebook' ? 'fa-facebook text-primary' : 'fa-instagram text-danger';
+    const name = platform === 'facebook' ? 'Facebook Messenger' : 'Instagram Direct';
+    const configured = platform === 'facebook' ? config.pageAccessToken : config.accessToken;
+
+    let html = `
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link ${this.currentChatTab==='whatsapp'?'active':''}" onclick="Chats.switchChatTab('whatsapp')"><i class="fab fa-whatsapp text-success me-1"></i>WhatsApp</a></li>
+        <li class="nav-item"><a class="nav-link ${this.currentChatTab==='facebook'?'active':''}" onclick="Chats.switchChatTab('facebook')"><i class="fab fa-facebook text-primary me-1"></i>Facebook</a></li>
+        <li class="nav-item"><a class="nav-link ${this.currentChatTab==='instagram'?'active':''}" onclick="Chats.switchChatTab('instagram')"><i class="fab fa-instagram text-danger me-1"></i>Instagram</a></li>
+      </ul>
+
+      <div class="card-widget">
+        <h5><i class="fab ${icon} me-2"></i>${name}</h5>
+        ${configured
+          ? '<div class="alert alert-success py-1 px-2 small">Connected ✅</div>'
+          : '<div class="alert alert-warning py-1 px-2 small">Not configured. Go to Social Posting → Settings.</div>'}
+        
+        <div style="max-height:400px;overflow-y:auto;" id="socialChatList">
+          ${messages.length === 0
+            ? '<p class="text-muted text-center py-3">No messages yet.</p>'
+            : messages.map(m => `
+              <div class="border rounded p-2 mb-1 ${m.type === 'incoming' ? 'bg-light' : ''}">
+                <strong>${m.from || 'User'}</strong>
+                <p class="mb-0 small">${m.body || '(media)'}</p>
+                <small class="text-muted">${m.createdAt ? new Date(m.createdAt.toDate()).toLocaleString() : ''}</small>
+              </div>
+            `).join('')}
+        </div>
+        
+        ${configured ? `
+          <div class="input-group mt-2">
+            <input id="socialMsgInput" class="form-control form-control-sm" placeholder="Type reply...">
+            <button class="btn btn-sm btn-${platform==='facebook'?'primary':'danger'}" onclick="Chats.sendSocialReply('${platform}')"><i class="fas fa-paper-plane"></i> Send</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+    contentArea.innerHTML = html;
+  },
+
+  switchChatTab(tab) {
+    this.currentChatTab = tab;
+    this.render();
+  },
+
+  async sendSocialReply(platform) {
+    const msg = document.getElementById('socialMsgInput')?.value?.trim();
+    if (!msg) return alert('Type a message!');
+    await db.collection('socialMessages').add({
+      platform, from: 'You', body: msg, type: 'outgoing',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('socialMsgInput').value = '';
+    this.renderSocialChat(platform);
+    alert('✅ Reply sent!');
+  },
+
   filterMessages() {
     const search = document.getElementById('chatSearch')?.value?.toLowerCase() || '';
     document.querySelectorAll('.message-row').forEach(row => {
@@ -171,47 +248,28 @@ const Chats = {
   async sendMessage() {
     let phone = document.getElementById('chatPhone').value.trim();
     const message = document.getElementById('chatMessage').value.trim();
-
-    if (!phone) return alert('Please enter a phone number!');
-    if (!message) return alert('Please enter a message!');
-
+    if (!phone || !message) return alert('Please enter both fields!');
     phone = phone.replace(/[^0-9+]/g, '');
     if (!phone.startsWith('+') && phone.length === 10) phone = '+91' + phone;
     if (phone.startsWith('91') && phone.length === 12) phone = '+' + phone;
-
     let config = {};
-    try {
-      const doc = await db.collection('settings').doc('whatsapp').get();
-      if (doc.exists) config = doc.data();
-    } catch (err) { console.error('Config error:', err); }
-
+    try { const doc = await db.collection('settings').doc('whatsapp').get(); if (doc.exists) config = doc.data(); } catch (err) {}
     if (!config.phoneNumberId || !config.accessToken) return alert('WhatsApp not configured.');
-
     document.getElementById('chatResult').innerHTML = '<span class="text-info">Sending...</span>';
-
     try {
-      const url = 'https://graph.facebook.com/v22.0/' + config.phoneNumberId + '/messages';
-      const payload = { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: message } };
-      const response = await fetch(url, {
+      const res = await fetch(`https://graph.facebook.com/v22.0/${config.phoneNumberId}/messages`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + config.accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: message } })
       });
-      const result = await response.json();
-
-      if (response.ok && result.messages) {
-        await db.collection('messages').add({
-          to: phone, from: config.phoneNumberId, body: message, type: 'outgoing',
-          waMessageId: result.messages[0]?.id || '',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+      const result = await res.json();
+      if (res.ok && result.messages) {
+        await db.collection('messages').add({ to: phone, from: config.phoneNumberId, body: message, type: 'outgoing', waMessageId: result.messages[0]?.id || '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
         document.getElementById('chatResult').innerHTML = '<span class="text-success">✅ Sent!</span>';
       } else {
         document.getElementById('chatResult').innerHTML = '<span class="text-danger">❌ ' + (result.error?.message || 'Failed') + '</span>';
       }
-    } catch (err) {
-      document.getElementById('chatResult').innerHTML = '<span class="text-danger">❌ ' + err.message + '</span>';
-    }
+    } catch (err) { document.getElementById('chatResult').innerHTML = '<span class="text-danger">❌ ' + err.message + '</span>'; }
   },
 
   async refreshFromMeta() {
@@ -220,28 +278,18 @@ const Chats = {
     contentArea.innerHTML = '<p class="text-center py-5">Refreshing...</p>';
     let added = 0;
     try {
-      const wabaId = '342856675576986';
-      const convRes = await fetch(`https://graph.facebook.com/v22.0/${wabaId}/conversations?limit=10`, {
-        headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
-      });
+      const convRes = await fetch('https://graph.facebook.com/v22.0/342856675576986/conversations?limit=10', { headers: { 'Authorization': 'Bearer ' + cfg.accessToken } });
       const convData = await convRes.json();
       if (convData.data) {
         for (const conv of convData.data) {
           try {
-            const msgRes = await fetch(`https://graph.facebook.com/v22.0/${conv.id}/messages?limit=20`, {
-              headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
-            });
+            const msgRes = await fetch(`https://graph.facebook.com/v22.0/${conv.id}/messages?limit=20`, { headers: { 'Authorization': 'Bearer ' + cfg.accessToken } });
             const msgData = await msgRes.json();
             if (msgData.data) {
               for (const msg of msgData.data) {
                 const existing = await db.collection('messages').where('waMessageId', '==', msg.id).get();
                 if (existing.empty) {
-                  await db.collection('messages').add({
-                    from: msg.from, to: msg.to, body: msg.text?.body || '(media)',
-                    type: msg.from === cfg.phoneNumberId ? 'outgoing' : 'incoming',
-                    waMessageId: msg.id,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                  });
+                  await db.collection('messages').add({ from: msg.from, to: msg.to, body: msg.text?.body || '(media)', type: msg.from === cfg.phoneNumberId ? 'outgoing' : 'incoming', waMessageId: msg.id, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                   added++;
                 }
               }
