@@ -1,5 +1,4 @@
 // Cloudflare Worker – WhatsApp Webhook for 11 Avatar WA Dual CRM
-// Debug version – logs every request to Firestore
 
 const SERVICE_ACCOUNT = {
   client_email: "firebase-adminsdk-fbsvc@avatar-wa-dual-crm.iam.gserviceaccount.com",
@@ -34,7 +33,7 @@ U9zgHs3EZPfAkxXe43z0SUm0
   project_id: "avatar-wa-dual-crm"
 };
 
-const PRIVATE_KEY = SERVICE_ACCOUNT.private_key.replace(/\\n/g, "\n");
+const PRIVATE_KEY = SERVICE_ACCOUNT.private_key;
 const VERIFY_TOKEN = "my_verify_token_123";
 const PHONE_NUMBER_ID = "342354115627791";
 const WHATSAPP_TOKEN = "EAA1OYCPXuvoBR2EO28cL1FgY7dZBfGohYPZByXicxZCE30QyaLhnMtvgaxRPi7mhVCzVmCLZBAiLU6XHT0420fFNsw2ZAwesmG0z9egSckC7WZCq4ja2MoZBvwR8dCY9IAdSpTzzaaNyTk71I4l2xjQ8DtFA7q9KN7scIU4cTTZBciySmKesOMqPgsqxM3g7cAZDZD";
@@ -42,6 +41,20 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${SERVICE_A
 
 async function getAccessToken() {
   const now = Math.floor(Date.now() / 1000);
+  const pemContents = PRIVATE_KEY
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\\n/g, "")
+    .replace(/\s+/g, "");
+  
+  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+  
+  const key = await crypto.subtle.importKey(
+    "pkcs8", binaryKey.buffer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false, ["sign"]
+  );
+
   const header = { alg: "RS256", typ: "JWT" };
   const claim = {
     iss: SERVICE_ACCOUNT.client_email,
@@ -50,7 +63,16 @@ async function getAccessToken() {
     exp: now + 3500,
     iat: now
   };
-  const jwt = await createJWT(header, claim);
+
+  const encoder = new TextEncoder();
+  const base64url = (str) => btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const headerB64 = base64url(JSON.stringify(header));
+  const payloadB64 = base64url(JSON.stringify(claim));
+  const toSign = `${headerB64}.${payloadB64}`;
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(toSign));
+  const sigB64 = base64url(String.fromCharCode(...new Uint8Array(sig)));
+  const jwt = `${toSign}.${sigB64}`;
+
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -60,69 +82,14 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-async function createJWT(header, payload) {
-  const encoder = new TextEncoder();
-  const pemContents = PRIVATE_KEY
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\s+/g, "");
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey(
-    "pkcs8", binaryKey.buffer,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false, ["sign"]
-  );
-  const base64url = (str) => btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const headerB64 = base64url(JSON.stringify(header));
-  const payloadB64 = base64url(JSON.stringify(payload));
-  const toSign = `${headerB64}.${payloadB64}`;
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(toSign));
-  const sigB64 = base64url(String.fromCharCode(...new Uint8Array(sig)));
-  return `${toSign}.${sigB64}`;
-}
-
-// Save incoming WhatsApp message
-async function saveMessage(msg) {
-  try {
-    const token = await getAccessToken();
-    const docId = `wa-${msg.id || Date.now()}`;
-    const url = `${FIRESTORE_BASE}/messages?documentId=${encodeURIComponent(docId)}`;
-    const body = {
-      fields: {
-        from: { stringValue: msg.from || "" },
-        to: { stringValue: PHONE_NUMBER_ID },
-        body: { stringValue: msg.text?.body || "(media)" },
-        type: { stringValue: "incoming" },
-        waMessageId: { stringValue: msg.id || "" },
-        createdAt: { timestampValue: new Date().toISOString() }
-      }
-    };
-    await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-  } catch (e) {}
-}
-
-// Save debug log to Firestore
-async function saveLog(data) {
-  try {
-    const token = await getAccessToken();
-    const docId = `log-${Date.now()}`;
-    const url = `${FIRESTORE_BASE}/webhook_logs?documentId=${encodeURIComponent(docId)}`;
-    const body = {
-      fields: {
-        payload: { stringValue: JSON.stringify(data).substring(0, 5000) },
-        createdAt: { timestampValue: new Date().toISOString() }
-      }
-    };
-    await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-  } catch (e) {}
+async function saveToFirestore(collection, docId, fields) {
+  const token = await getAccessToken();
+  const url = `${FIRESTORE_BASE}/${collection}?documentId=${encodeURIComponent(docId)}`;
+  await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields })
+  });
 }
 
 function getAutoReply(body) {
@@ -134,24 +101,36 @@ function getAutoReply(body) {
 }
 
 async function sendReply(to, text) {
-  try {
-    await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text } })
-    });
-  } catch (e) {}
+  await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text } })
+  });
 }
 
 async function handleRequest(request) {
   const url = new URL(request.url);
 
-  // Health check
   if (request.method === "GET" && url.pathname === "/health") {
     return new Response("OK", { status: 200 });
   }
 
-  // Meta webhook verification (GET)
+  if (request.method === "GET" && url.pathname === "/test-firestore") {
+    try {
+      await saveToFirestore("messages", "test-" + Date.now(), {
+        from: { stringValue: "test" },
+        to: { stringValue: "test" },
+        body: { stringValue: "Test OK" },
+        type: { stringValue: "incoming" },
+        waMessageId: { stringValue: "test-" + Date.now() },
+        createdAt: { timestampValue: new Date().toISOString() }
+      });
+      return new Response("Status: 200 OK", { status: 200 });
+    } catch (e) {
+      return new Response("Error: " + e.message, { status: 500 });
+    }
+  }
+
   if (request.method === "GET") {
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
@@ -162,18 +141,9 @@ async function handleRequest(request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // Meta webhook events (POST)
   if (request.method === "POST") {
     try {
       const body = await request.json();
-
-      // Log EVERY request for debugging
-      event.waitUntil(saveLog({
-        timestamp: new Date().toISOString(),
-        object: body.object,
-        entryCount: (body.entry || []).length,
-        sample: JSON.stringify(body).substring(0, 1000)
-      }));
 
       if (body.object === "whatsapp_business_account") {
         for (const entry of body.entry || []) {
@@ -181,7 +151,17 @@ async function handleRequest(request) {
             const value = change.value || {};
             if (value.messages && value.messages.length > 0) {
               for (const msg of value.messages) {
-                event.waitUntil(saveMessage(msg));
+                event.waitUntil(
+                  saveToFirestore("messages", "wa-" + (msg.id || Date.now()), {
+                    from: { stringValue: msg.from || "" },
+                    to: { stringValue: PHONE_NUMBER_ID },
+                    body: { stringValue: msg.text?.body || "(media)" },
+                    type: { stringValue: "incoming" },
+                    waMessageId: { stringValue: msg.id || "" },
+                    createdAt: { timestampValue: new Date().toISOString() }
+                  })
+                );
+
                 const replyText = getAutoReply(msg.text?.body || "");
                 if (replyText) {
                   event.waitUntil(sendReply(msg.from, replyText));
