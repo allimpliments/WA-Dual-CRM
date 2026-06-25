@@ -67,24 +67,24 @@ const Setup = {
         <div class="col-12">
           <div class="card-widget">
             <h5><i class="fas fa-qrcode text-dark me-2"></i>WhatsApp Device Connect (QR Scan)</h5>
-            <p class="text-muted">Optional: Connect your WhatsApp directly by QR or phone login.</p>
+            <p class="text-muted">Connect your WhatsApp directly by scanning QR code. Use your Node.js server.</p>
             <div class="alert alert-warning py-2 small">
-              <strong>⚠️ Experimental:</strong> This method is unofficial and may risk account ban. Use only for internal team.
+              <strong>⚠️ Experimental:</strong> Requires your Node.js server running on port 3100.
             </div>
             <div class="row g-2">
               <div class="col-md-6">
-                <label class="form-label small fw-bold">Device Name</label>
-                <input type="text" id="deviceName" class="form-control form-control-sm" placeholder="e.g. Sales Team Phone">
+                <label class="form-label small fw-bold">Server URL</label>
+                <input type="text" id="qrServerUrl" class="form-control form-control-sm" value="https://cloudwa.11avatardigitalhub.cloud:3100" placeholder="https://your-server:3100">
               </div>
               <div class="col-md-6 d-flex align-items-end">
                 <button class="btn btn-dark btn-sm" onclick="Setup.connectDevice()">
-                  <i class="fas fa-qrcode me-1"></i> Connect Device
+                  <i class="fas fa-qrcode me-1"></i> Generate QR Code
                 </button>
               </div>
             </div>
             <div id="qrCodeArea" class="mt-3 text-center" style="display:none;">
-              <p class="small text-muted">Scan this QR code with your WhatsApp (Linked Devices)</p>
-              <div id="qrCodeImage" style="background:#fff;padding:16px;display:inline-block;border-radius:12px;"></div>
+              <p class="small text-muted">Scan with WhatsApp → Linked Devices → Link a Device</p>
+              <div id="qrCodeImage" style="background:#fff;padding:16px;display:inline-block;border-radius:12px;min-width:256px;min-height:256px;"></div>
               <p id="qrStatus" class="small text-info mt-2"></p>
             </div>
           </div>
@@ -121,10 +121,8 @@ const Setup = {
             ${fbConfigured ? `
               <div class="alert alert-success">✅ Facebook Page Connected</div>
               <p class="small text-muted">Page ID: ${fbConfig.pageId}</p>
-              <p class="small text-muted">Use for: Messenger Chat & Post Publishing</p>
             ` : `
               <div class="alert alert-warning">⚠️ Not Configured</div>
-              <p class="small text-muted">Enter your Page ID and Token to connect.</p>
             `}
           </div>
         </div>
@@ -160,10 +158,8 @@ const Setup = {
             ${igConfigured ? `
               <div class="alert alert-success">✅ Instagram Connected</div>
               <p class="small text-muted">Account ID: ${igConfig.accountId}</p>
-              <p class="small text-muted">Use for: Direct Messages & Post Publishing</p>
             ` : `
               <div class="alert alert-warning">⚠️ Not Configured</div>
-              <p class="small text-muted">Enter your Account ID and Token to connect.</p>
             `}
           </div>
         </div>
@@ -238,23 +234,28 @@ const Setup = {
   },
 
   async connectDevice() {
-    const deviceName = document.getElementById('deviceName').value.trim() || 'CRM Device';
+    const serverUrl = document.getElementById('qrServerUrl').value.trim() || 'https://cloudwa.11avatardigitalhub.cloud:3100';
     document.getElementById('qrCodeArea').style.display = 'block';
-    document.getElementById('qrStatus').innerText = 'Generating QR code...';
+    document.getElementById('qrStatus').innerText = 'Connecting to server...';
     document.getElementById('qrCodeImage').innerHTML = '<div class="spinner-border text-dark"></div>';
     
     try {
-      const res = await fetch('https://cloudwa.11avatardigitalhub.cloud:3100/connect?device=' + encodeURIComponent(deviceName));
+      const res = await fetch(serverUrl + '/connect?device=CRM_Device', { 
+        method: 'GET',
+        mode: 'cors'
+      });
       const data = await res.json();
-      if (data.qr) {
-        document.getElementById('qrCodeImage').innerHTML = `<img src="${data.qr}" style="width:256px;height:256px;">`;
-        document.getElementById('qrStatus').innerText = '📱 Scan with WhatsApp → Linked Devices → Link a Device';
+      if (data.qr || data.qrcode) {
+        const qrData = data.qr || data.qrcode;
+        document.getElementById('qrCodeImage').innerHTML = `<img src="${qrData}" style="width:256px;height:256px;">`;
+        document.getElementById('qrStatus').innerText = '📱 Open WhatsApp → Linked Devices → Link a Device → Scan QR';
       } else {
-        document.getElementById('qrStatus').innerText = '❌ Failed to generate QR. Server may be offline.';
+        document.getElementById('qrCodeImage').innerHTML = '<p class="text-danger">No QR received</p>';
+        document.getElementById('qrStatus').innerText = '❌ Server responded but no QR code. Check server.';
       }
     } catch (err) {
-      document.getElementById('qrStatus').innerText = '⚠️ QR server not available. Use Cloud API instead.';
-      document.getElementById('qrCodeImage').innerHTML = '';
+      document.getElementById('qrCodeImage').innerHTML = '<p class="text-danger">Connection Failed</p>';
+      document.getElementById('qrStatus').innerText = '⚠️ Cannot reach server. Make sure Node.js server is running on port 3100.';
     }
   }
 };
