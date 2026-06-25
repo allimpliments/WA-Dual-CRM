@@ -2,13 +2,13 @@ const Chats = {
   contactCache: {},
 
   async getContactName(number) {
-    if (!number || number === 'unknown' || number === '342354115627791') return null;
+    if (!number || number === 'unknown') return null;
+    if (number === '342354115627791') return '11 Avatar Digital Hub';
     if (this.contactCache[number]) return this.contactCache[number];
 
     try {
       const clean = number.replace(/\+/g, '');
-      const snap = await db.collection('contacts')
-        .where('mobile', '==', clean).limit(1).get();
+      const snap = await db.collection('contacts').where('mobile', '==', clean).limit(1).get();
       if (!snap.empty) {
         const c = snap.docs[0].data();
         const name = `${c.firstName || ''} ${c.lastName || ''}`.trim();
@@ -19,8 +19,7 @@ const Chats = {
 
     try {
       const clean = number.replace(/\+/g, '');
-      const snap = await db.collection('leads')
-        .where('phone', '==', clean).limit(1).get();
+      const snap = await db.collection('leads').where('phone', '==', clean).limit(1).get();
       if (!snap.empty) {
         const name = snap.docs[0].data().name;
         this.contactCache[number] = name || number;
@@ -33,11 +32,11 @@ const Chats = {
   },
 
   isSystemMessage(msg) {
-    const body = (msg.body || '').toLowerCase();
-    if (body.includes('key advantages of being a meta verified')) return true;
-    if (body.includes('tech provider')) return true;
     if (!msg.from || msg.from === 'unknown') return true;
     if (msg.from === '342354115627791' && msg.type === 'incoming') return true;
+    const body = (msg.body || '').toLowerCase();
+    if (body.includes('key advantages') || body.includes('tech provider') || body.includes('verified')) return true;
+    if (msg.body === '(media)' && (!msg.from || msg.from === 'unknown')) return true;
     return false;
   },
 
@@ -48,7 +47,6 @@ const Chats = {
     try {
       const snap = await db.collection('messages').orderBy('createdAt', 'desc').limit(100).get();
       messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Preload contact names
       for (const msg of messages) {
         if (msg.from && msg.from !== 'unknown' && msg.from !== '342354115627791') {
           await this.getContactName(msg.from);
@@ -128,7 +126,6 @@ const Chats = {
     `;
     contentArea.innerHTML = html;
 
-    // Real-time listener
     if (window._chatUnsubscribe) window._chatUnsubscribe();
     window._chatUnsubscribe = db.collection('messages')
       .orderBy('createdAt', 'desc')
