@@ -1,154 +1,135 @@
 const Social = {
   currentTab: 'published',
-  selectedPage: null,
-  selectedInsta: null,
-  pages: [],
-  instaAccounts: [],
+  selectedFB: null,
+  selectedIG: null,
+  uploadedFiles: [],
 
   async render() {
-    contentArea.innerHTML = '<p class="text-center py-5">Loading social dashboard...</p>';
-
-    // Load connected pages & instagram accounts
-    await this.loadBusinessAssets();
+    contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
 
     let fbConfig = {}, igConfig = {};
     try {
       const fbDoc = await db.collection('settings').doc('facebook').get();
-      if (fbDoc.exists) fbConfig = fbDoc.data();
+      if (fbDoc.exists) { fbConfig = fbDoc.data(); this.selectedFB = fbConfig.pageId; }
       const igDoc = await db.collection('settings').doc('instagram').get();
-      if (igDoc.exists) igConfig = igDoc.data();
+      if (igDoc.exists) { igConfig = igDoc.data(); this.selectedIG = igConfig.accountId; }
     } catch (err) { console.error(err); }
 
-    // Auto-select first available asset
-    if (!this.selectedPage && fbConfig.pageId) this.selectedPage = fbConfig.pageId;
-    if (!this.selectedInsta && igConfig.accountId) this.selectedInsta = igConfig.accountId;
-
-    // Load posts from Firestore
     let posts = [];
     try {
       const snap = await db.collection('socialPosts').orderBy('createdAt', 'desc').get();
       posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) {}
 
-    // Filter by current tab
     if (this.currentTab === 'published') posts = posts.filter(p => p.status === 'published');
     else if (this.currentTab === 'scheduled') posts = posts.filter(p => p.status === 'scheduled');
     else if (this.currentTab === 'drafts') posts = posts.filter(p => p.status === 'draft');
 
     let html = `
       <style>
-        .content-calendar { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
-        .asset-selector { display: flex; gap: 10px; margin-bottom: 16px; }
-        .asset-chip { padding: 8px 16px; border-radius: 20px; cursor: pointer; border: 2px solid #e0e0e0; font-weight: 500; font-size: 13px; }
-        .asset-chip.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
-        .tab-bar { display: flex; gap: 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 16px; }
-        .tab-item { padding: 10px 20px; cursor: pointer; font-weight: 500; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
-        .tab-item.active { color: #2563eb; border-bottom-color: #2563eb; }
-        .post-card { border: 1px solid #e0e0e0; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; gap: 12px; align-items: start; }
-        .post-card img, .post-card video { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
-        .carousel-thumbs { display: flex; gap: 4px; flex-wrap: wrap; }
-        .carousel-thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
-        .create-btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 24px; font-weight: 600; cursor: pointer; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .modal-card { background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 640px; max-height: 80vh; overflow-y: auto; }
+        .composer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .composer-card { background: #fff; border-radius: 16px; width: 95%; max-width: 700px; max-height: 90vh; overflow-y: auto; padding: 24px; }
+        .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+        .media-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #f0f0f0; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px dashed #ccc; }
+        .media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
+        .media-item .remove-btn { position: absolute; top: 4px; right: 4px; background: #ff4444; color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; cursor: pointer; }
+        .platform-toggle { display: flex; gap: 12px; }
+        .platform-option { flex: 1; border: 2px solid #e0e0e0; border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; }
+        .platform-option.active { border-color: #2563eb; background: #eff6ff; }
+        .story-toggle { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .preview-box { background: #f7f7f7; border-radius: 8px; padding: 12px; margin-top: 12px; }
       </style>
 
-      <!-- Business Asset Selector -->
-      <div class="content-calendar">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Content Calendar</h5>
-          <button class="create-btn" onclick="Social.openCreateModal()"><i class="fas fa-plus me-1"></i> Create Post</button>
-        </div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Content Calendar</h5>
+        <button class="btn btn-primary rounded-pill" onclick="Social.openComposer()"><i class="fas fa-plus me-1"></i> Create Post</button>
+      </div>
 
-        <!-- Asset Chips -->
-        <div class="asset-selector">
-          ${fbConfig.pageId ? `<span class="asset-chip ${this.selectedPage === fbConfig.pageId ? 'active' : ''}" onclick="Social.selectPage('${fbConfig.pageId}')"><i class="fab fa-facebook text-primary me-1"></i> Facebook Page</span>` : ''}
-          ${igConfig.accountId ? `<span class="asset-chip ${this.selectedInsta === igConfig.accountId ? 'active' : ''}" onclick="Social.selectInsta('${igConfig.accountId}')"><i class="fab fa-instagram text-danger me-1"></i> Instagram</span>` : ''}
-        </div>
+      <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-sm btn-${this.currentTab==='published'?'primary':'outline-primary'} rounded-pill" onclick="Social.switchTab('published')">Published</button>
+        <button class="btn btn-sm btn-${this.currentTab==='scheduled'?'primary':'outline-primary'} rounded-pill" onclick="Social.switchTab('scheduled')">Scheduled</button>
+        <button class="btn btn-sm btn-${this.currentTab==='drafts'?'primary':'outline-primary'} rounded-pill" onclick="Social.switchTab('drafts')">Drafts</button>
+      </div>
 
-        <!-- Tabs -->
-        <div class="tab-bar">
-          <div class="tab-item ${this.currentTab==='published'?'active':''}" onclick="Social.switchTab('published')">Published</div>
-          <div class="tab-item ${this.currentTab==='scheduled'?'active':''}" onclick="Social.switchTab('scheduled')">Scheduled</div>
-          <div class="tab-item ${this.currentTab==='drafts'?'active':''}" onclick="Social.switchTab('drafts')">Drafts</div>
-        </div>
-
-        <!-- Posts Grid -->
-        <div id="postsContainer">
-          ${posts.length === 0 ? '<p class="text-muted text-center py-4">No posts found.</p>' : posts.map(p => `
-            <div class="post-card">
-              ${p.media && p.media.length > 0 ? `
-                <div class="carousel-thumbs">
-                  ${p.media.slice(0, 4).map(m => `<img src="${m}" alt="media">`).join('')}
-                  ${p.media.length > 4 ? `<span class="small text-muted">+${p.media.length - 4} more</span>` : ''}
-                </div>
-              ` : ''}
-              <div class="flex-grow-1">
-                <div class="d-flex justify-content-between">
-                  <span class="badge bg-${p.platform === 'facebook' ? 'primary' : 'danger'}">${p.platform}</span>
-                  <small class="text-muted">${new Date(p.createdAt?.toDate()).toLocaleString()}</small>
-                </div>
-                <p class="mb-1 mt-1">${p.message || '(no caption)'}</p>
-                <small class="text-muted">Type: ${p.postType || 'post'} | Status: ${p.status}</small>
-                <div class="mt-1">
-                  ${p.status === 'draft' ? `<button class="btn btn-sm btn-outline-primary" onclick="Social.publishDraft('${p.id}')">Publish</button>` : ''}
-                  <button class="btn btn-sm btn-outline-danger" onclick="Social.deletePost('${p.id}')"><i class="fas fa-trash"></i></button>
-                </div>
+      <div id="postsList">
+        ${posts.length === 0 ? '<p class="text-muted text-center py-4">No posts.</p>' : posts.map(p => `
+          <div class="border rounded p-3 mb-2 d-flex gap-3 align-items-start">
+            ${p.media && p.media.length > 0 ? `<div class="d-flex gap-1">${p.media.slice(0,3).map(m => `<img src="${m}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;">`).join('')}</div>` : ''}
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between">
+                <span class="badge bg-${p.platform==='facebook'?'primary':'danger'}">${p.platform}</span>
+                <small class="text-muted">${p.createdAt?.toDate().toLocaleString()}</small>
+              </div>
+              <p class="mb-1 mt-1">${p.message || '(no caption)'}</p>
+              <small>Type: ${p.postType} | ${p.shareToStory ? '📱 Story' : ''}</small>
+              <div class="mt-1">
+                ${p.status==='draft'?`<button class="btn btn-sm btn-outline-primary" onclick="Social.publishDraft('${p.id}')">Publish</button>`:''}
+                <button class="btn btn-sm btn-outline-danger" onclick="Social.deletePost('${p.id}')"><i class="fas fa-trash"></i></button>
               </div>
             </div>
-          `).join('')}
-        </div>
+          </div>
+        `).join('')}
       </div>
-      <div id="createModal"></div>
+      <div id="composerContainer"></div>
     `;
     contentArea.innerHTML = html;
   },
 
-  selectPage(id) { this.selectedPage = id; this.render(); },
-  selectInsta(id) { this.selectedInsta = id; this.render(); },
   switchTab(tab) { this.currentTab = tab; this.render(); },
 
-  async loadBusinessAssets() {
-    try {
-      const fbDoc = await db.collection('settings').doc('facebook').get();
-      if (fbDoc.exists) this.pages = [fbDoc.data()];
-      const igDoc = await db.collection('settings').doc('instagram').get();
-      if (igDoc.exists) this.instaAccounts = [igDoc.data()];
-    } catch (e) {}
-  },
+  openComposer() {
+    this.uploadedFiles = [];
+    document.getElementById('composerContainer').innerHTML = `
+      <div class="composer-overlay" onclick="Social.closeComposer()">
+        <div class="composer-card" onclick="event.stopPropagation()">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Create Post</h5>
+            <button class="btn-close" onclick="Social.closeComposer()"></button>
+          </div>
 
-  openCreateModal() {
-    document.getElementById('createModal').innerHTML = `
-      <div class="modal-overlay" onclick="Social.closeModal()">
-        <div class="modal-card" onclick="event.stopPropagation()">
-          <h5><i class="fas fa-plus-circle me-2"></i>Create New Post</h5>
-          <div class="row g-2 mt-2">
+          <!-- Platform Selection -->
+          <label class="form-label small fw-bold">Post to</label>
+          <div class="platform-toggle mb-3">
+            ${this.selectedFB ? `
+              <div class="platform-option active" id="platFB" onclick="Social.togglePlatform('facebook')">
+                <i class="fab fa-facebook fa-2x text-primary mb-1"></i><br>
+                <strong>Facebook</strong><br>
+                <small class="text-muted">11 Avatar Digital Hub</small>
+                <div class="form-check mt-1 story-toggle">
+                  <input class="form-check-input" type="checkbox" id="shareFBStory">
+                  <label class="form-check-label small">Share to Story</label>
+                </div>
+              </div>
+            ` : ''}
+            ${this.selectedIG ? `
+              <div class="platform-option active" id="platIG" onclick="Social.togglePlatform('instagram')">
+                <i class="fab fa-instagram fa-2x text-danger mb-1"></i><br>
+                <strong>Instagram</strong><br>
+                <small class="text-muted">11avatardigitalhub</small>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Media Upload -->
+          <label class="form-label small fw-bold">Media <small class="text-muted">(Max 10 photos or 1 video)</small></label>
+          <div class="media-grid" id="mediaGrid">
+            <div class="media-item" onclick="document.getElementById('fileInput').click()">
+              <i class="fas fa-plus fa-2x text-muted"></i>
+            </div>
+          </div>
+          <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" onchange="Social.handleFileSelect(event)">
+          <div id="uploadProgress" class="small text-info mt-1"></div>
+
+          <!-- Caption -->
+          <div class="mb-3 mt-2">
+            <label class="form-label small fw-bold">Text</label>
+            <textarea id="postCaption" class="form-control form-control-sm" rows="4" placeholder="Write your caption..."></textarea>
+          </div>
+
+          <!-- Schedule -->
+          <div class="row g-2 mb-3">
             <div class="col-md-6">
-              <label class="form-label small fw-bold">Platform</label>
-              <select id="postPlatform" class="form-select form-select-sm">
-                ${this.selectedPage ? '<option value="facebook">Facebook Page</option>' : ''}
-                ${this.selectedInsta ? '<option value="instagram">Instagram Business</option>' : ''}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small fw-bold">Post Type</label>
-              <select id="postType" class="form-select form-select-sm">
-                <option value="post">Post</option>
-                <option value="reel">Reel</option>
-                <option value="story">Story</option>
-              </select>
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-bold">Caption</label>
-              <textarea id="postCaption" class="form-control form-control-sm" rows="4" placeholder="Write your caption..."></textarea>
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-bold">Media URLs (comma separated for carousel)</label>
-              <input type="text" id="postMediaUrls" class="form-control form-control-sm" placeholder="https://image1.jpg, https://image2.jpg">
-              <small class="text-muted">Max 10 images for carousel</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small fw-bold">Schedule (optional)</label>
+              <label class="form-label small fw-bold">Schedule</label>
               <input type="datetime-local" id="postSchedule" class="form-control form-control-sm">
             </div>
             <div class="col-md-6 d-flex align-items-end">
@@ -158,17 +139,77 @@ const Social = {
               </div>
             </div>
           </div>
-          <div class="mt-3 d-flex gap-2">
+
+          <!-- Preview -->
+          <div class="preview-box" id="previewArea">
+            <small class="text-muted">Preview will appear here</small>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-2 mt-3">
             <button class="btn btn-primary btn-sm" onclick="Social.publishPost()"><i class="fas fa-paper-plane me-1"></i> Publish</button>
             <button class="btn btn-outline-primary btn-sm" onclick="Social.saveDraft()"><i class="fas fa-save me-1"></i> Save Draft</button>
-            <button class="btn btn-light btn-sm" onclick="Social.closeModal()">Cancel</button>
+            <button class="btn btn-light btn-sm" onclick="Social.closeComposer()">Cancel</button>
           </div>
         </div>
       </div>
     `;
   },
 
-  closeModal() { document.getElementById('createModal').innerHTML = ''; },
+  closeComposer() { document.getElementById('composerContainer').innerHTML = ''; },
+
+  togglePlatform(plat) {
+    const el = document.getElementById('plat' + (plat === 'facebook' ? 'FB' : 'IG'));
+    el.classList.toggle('active');
+  },
+
+  async handleFileSelect(event) {
+    const files = event.target.files;
+    document.getElementById('uploadProgress').innerText = `Uploading ${files.length} file(s)...`;
+    for (const file of files) {
+      if (this.uploadedFiles.length >= 10) { alert('Max 10 files'); break; }
+      const storageRef = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
+      const uploadTask = await storageRef.put(file);
+      const url = await uploadTask.ref.getDownloadURL();
+      this.uploadedFiles.push(url);
+      this.refreshMediaGrid();
+    }
+    document.getElementById('uploadProgress').innerText = '';
+    this.updatePreview();
+  },
+
+  refreshMediaGrid() {
+    const grid = document.getElementById('mediaGrid');
+    if (!grid) return;
+    grid.innerHTML = this.uploadedFiles.map((url, i) => `
+      <div class="media-item">
+        ${url.includes('.mp4') || url.includes('.mov') 
+          ? `<video src="${url}" controls></video>` 
+          : `<img src="${url}" alt="media">`}
+        <button class="remove-btn" onclick="Social.removeMedia(${i})">×</button>
+      </div>
+    `).join('') + `
+      <div class="media-item" onclick="document.getElementById('fileInput').click()">
+        <i class="fas fa-plus fa-2x text-muted"></i>
+      </div>
+    `;
+  },
+
+  removeMedia(index) {
+    this.uploadedFiles.splice(index, 1);
+    this.refreshMediaGrid();
+    this.updatePreview();
+  },
+
+  updatePreview() {
+    const preview = document.getElementById('previewArea');
+    if (!preview) return;
+    const caption = document.getElementById('postCaption')?.value || '';
+    preview.innerHTML = this.uploadedFiles.map(url => 
+      url.includes('.mp4') ? `<video src="${url}" controls style="width:100%;max-height:200px;border-radius:8px;"></video>` 
+      : `<img src="${url}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;">`
+    ).join('') + `<p class="mt-2 mb-0">${caption || 'Your caption...'}</p>`;
+  },
 
   async publishPost() {
     await this.savePost('published');
@@ -179,112 +220,77 @@ const Social = {
   },
 
   async savePost(status) {
-    const platform = document.getElementById('postPlatform').value;
-    const postType = document.getElementById('postType').value;
-    const message = document.getElementById('postCaption').value.trim();
-    const mediaUrls = document.getElementById('postMediaUrls').value.split(',').map(s => s.trim()).filter(Boolean);
-    const scheduledAt = document.getElementById('postSchedule').value;
+    const message = document.getElementById('postCaption')?.value?.trim() || '';
+    const scheduledAt = document.getElementById('postSchedule')?.value || '';
     const isDraft = document.getElementById('saveAsDraft')?.checked;
-
-    if (!message && mediaUrls.length === 0) return alert('Enter caption or media!');
+    const shareFBStory = document.getElementById('shareFBStory')?.checked;
+    const fbActive = document.getElementById('platFB')?.classList.contains('active');
+    const igActive = document.getElementById('platIG')?.classList.contains('active');
 
     const finalStatus = isDraft ? 'draft' : (scheduledAt ? 'scheduled' : status);
 
-    const postData = {
-      platform, postType, message, media: mediaUrls,
-      status: finalStatus,
-      scheduledAt: scheduledAt || null,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      pageId: this.selectedPage,
-      instaId: this.selectedInsta
-    };
+    for (const platform of [fbActive ? 'facebook' : null, igActive ? 'instagram' : null].filter(Boolean)) {
+      const postData = {
+        platform, message, media: this.uploadedFiles,
+        postType: this.uploadedFiles.some(f => f.includes('.mp4')) ? 'video' : 'photo',
+        status: finalStatus,
+        shareToStory: platform === 'facebook' ? shareFBStory : false,
+        scheduledAt: scheduledAt || null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
 
-    if (finalStatus === 'published') {
-      await this.sendToPlatform(platform, postType, message, mediaUrls, postData);
-    } else {
-      await db.collection('socialPosts').add(postData);
-      alert(`✅ ${finalStatus === 'scheduled' ? 'Scheduled' : 'Draft saved'}!`);
-    }
-
-    this.closeModal();
-    this.render();
-  },
-
-  async sendToPlatform(platform, postType, message, mediaUrls, postData) {
-    if (platform === 'facebook') {
-      const cfg = (await db.collection('settings').doc('facebook').get()).data();
-      if (!cfg?.pageAccessToken || !cfg?.pageId) return alert('Facebook not configured.');
-      try {
-        const params = new URLSearchParams({ message, access_token: cfg.pageAccessToken });
-        if (mediaUrls.length > 0) params.append('link', mediaUrls[0]);
-        const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
-        const result = await res.json();
-        if (res.ok) {
-          postData.status = 'published';
-          postData.platformId = result.id;
-          await db.collection('socialPosts').add(postData);
-          alert('✅ Posted to Facebook!');
-        } else {
-          alert('❌ ' + (result.error?.message || 'Failed'));
-        }
-      } catch (err) { alert('Error: ' + err.message); }
-    } else if (platform === 'instagram') {
-      const cfg = (await db.collection('settings').doc('instagram').get()).data();
-      if (!cfg?.accessToken || !cfg?.accountId) return alert('Instagram not configured.');
-      try {
-        const igUserId = cfg.accountId;
-        let creationId = null;
-        if (mediaUrls.length > 0) {
-          for (const url of mediaUrls.slice(0, 10)) {
-            const params = new URLSearchParams({ image_url: url, caption: message, access_token: cfg.accessToken });
-            const createRes = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: params });
+      if (finalStatus === 'published') {
+        if (platform === 'facebook') {
+          const cfg = (await db.collection('settings').doc('facebook').get()).data();
+          const params = new URLSearchParams({ message, access_token: cfg.pageAccessToken });
+          for (const url of this.uploadedFiles.slice(0, 1)) params.append('link', url);
+          const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
+          const result = await res.json();
+          if (res.ok) { postData.platformId = result.id; await db.collection('socialPosts').add(postData); }
+          else alert('FB Error: ' + (result.error?.message || 'Failed'));
+        } else if (platform === 'instagram') {
+          const cfg = (await db.collection('settings').doc('instagram').get()).data();
+          for (const url of this.uploadedFiles.slice(0, 10)) {
+            const params = new URLSearchParams({ caption: message, image_url: url, access_token: cfg.accessToken });
+            const createRes = await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media`, { method: 'POST', body: params });
             const createData = await createRes.json();
             if (createData.id) {
-              const publishRes = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, {
+              await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media_publish`, {
                 method: 'POST',
                 body: new URLSearchParams({ creation_id: createData.id, access_token: cfg.accessToken })
               });
-              const publishData = await publishRes.json();
-              creationId = publishData.id;
             }
           }
-        } else {
-          const params = new URLSearchParams({ caption: message, access_token: cfg.accessToken });
-          const createRes = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: params });
-          const createData = await createRes.json();
-          if (createData.id) {
-            const publishRes = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, {
-              method: 'POST',
-              body: new URLSearchParams({ creation_id: createData.id, access_token: cfg.accessToken })
-            });
-            const publishData = await publishRes.json();
-            creationId = publishData.id;
-          }
-        }
-        if (creationId) {
-          postData.status = 'published';
-          postData.platformId = creationId;
+          postData.platformId = 'ig-' + Date.now();
           await db.collection('socialPosts').add(postData);
-          alert('✅ Posted to Instagram!');
-        } else {
-          alert('❌ Failed to post');
         }
-      } catch (err) { alert('Error: ' + err.message); }
+      } else {
+        await db.collection('socialPosts').add(postData);
+      }
     }
+
+    this.closeComposer();
+    this.render();
+    alert(`✅ ${finalStatus === 'published' ? 'Posted!' : finalStatus === 'scheduled' ? 'Scheduled!' : 'Draft saved!'}`);
   },
 
   async publishDraft(id) {
     const doc = await db.collection('socialPosts').doc(id).get();
     const post = doc.data();
-    await this.sendToPlatform(post.platform, post.postType, post.message, post.media, post);
-    await db.collection('socialPosts').doc(id).delete();
+    post.status = 'published';
+    if (post.platform === 'facebook') {
+      const cfg = (await db.collection('settings').doc('facebook').get()).data();
+      const params = new URLSearchParams({ message: post.message, access_token: cfg.pageAccessToken });
+      if (post.media?.[0]) params.append('link', post.media[0]);
+      await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
+    }
+    await db.collection('socialPosts').doc(id).update({ status: 'published' });
     this.render();
   },
 
   async deletePost(id) {
-    if (!confirm('Delete this post?')) return;
+    if (!confirm('Delete?')) return;
     await db.collection('socialPosts').doc(id).delete();
-    alert('Deleted.');
     this.render();
   }
 };
