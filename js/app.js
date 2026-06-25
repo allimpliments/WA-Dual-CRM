@@ -28,6 +28,12 @@ const navSections = [
     ]
   },
   {
+    title: 'Social Media',
+    items: [
+      { name: 'Social Posting', icon: 'fa-share-alt', section: 'social', roles: ['admin', 'team'] }
+    ]
+  },
+  {
     title: 'E-commerce',
     items: [
       { name: 'E-commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
@@ -45,8 +51,7 @@ const navSections = [
     items: [
       { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin'] },
       { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin'] },
-      { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin', 'team'] },
-      { name: 'Social Posting', icon: 'fa-share-alt', section: 'social', roles: ['admin', 'team'] }
+      { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin', 'team'] }
     ]
   },
   {
@@ -132,7 +137,7 @@ function addMobileNav() {
       <a href="#" class="nav-item" data-mob="chats"><i class="fas fa-comment"></i><br>Chats</a>
       <a href="#" class="nav-item" data-mob="contacts"><i class="fas fa-users"></i><br>Contacts</a>
       <a href="#" class="nav-item" data-mob="leads"><i class="fas fa-funnel-dollar"></i><br>Leads</a>
-      <a href="#" class="nav-item" data-mob="settings"><i class="fas fa-cog"></i><br>Setup</a>
+      <a href="#" class="nav-item" data-mob="social"><i class="fas fa-share-alt"></i><br>Social</a>
     `;
     document.body.appendChild(nav);
     nav.querySelectorAll('[data-mob]').forEach(item => {
