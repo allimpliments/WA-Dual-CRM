@@ -43,7 +43,7 @@ const Chats = {
             </div>
 
             <div class="alert alert-success py-2 px-3 small mb-2">
-              <i class="fas fa-check-circle me-1"></i> Webhook is active. Incoming messages appear automatically every 10 seconds.
+              <i class="fas fa-check-circle me-1"></i> Webhook is active. Incoming messages appear in real-time.
             </div>
 
             <div class="mb-2">
@@ -66,7 +66,6 @@ const Chats = {
                       <p class="mb-0 small message-body">${msg.body || '(media)'}</p>
                       <div class="mt-1">
                         <span class="badge bg-${msg.type === 'incoming' ? 'info' : 'success'}">${msg.type || 'outgoing'}</span>
-                        ${msg.waMessageId ? `<small class="text-muted ms-1">ID: ${msg.waMessageId.substring(0,12)}...</small>` : ''}
                       </div>
                     </div>
                   </div>
@@ -79,42 +78,33 @@ const Chats = {
     `;
     contentArea.innerHTML = html;
 
-    if (window._chatInterval) clearInterval(window._chatInterval);
-    window._chatInterval = setInterval(() => {
-      const title = document.getElementById('currentSectionTitle');
-      if (title && title.textContent === 'All Chats') {
-        Chats.refreshMessages();
-      }
-    }, 10000);
-  },
-
-  async refreshMessages() {
-    try {
-      const snap = await db.collection('messages').orderBy('createdAt', 'desc').limit(100).get();
-      const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const list = document.getElementById('messageList');
-      if (!list) return;
-
-      list.innerHTML = messages.length === 0
-        ? '<p class="text-center text-muted py-4">No messages yet.</p>'
-        : messages.map(msg => `
-          <div class="d-flex mb-2 p-2 border rounded message-row ${msg.type === 'incoming' ? 'bg-light' : ''}">
-            <div class="me-2">
-              <i class="fas fa-arrow-${msg.type === 'incoming' ? 'down text-info' : 'up text-success'}"></i>
-            </div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between">
-                <strong>${msg.from || msg.to || '-'}</strong>
-                <small class="text-muted">${msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleString() : '-'}</small>
+    // Real-time Firestore listener
+    if (window._chatUnsubscribe) window._chatUnsubscribe();
+    window._chatUnsubscribe = db.collection('messages')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .onSnapshot(snap => {
+        const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const list = document.getElementById('messageList');
+        if (!list) return;
+        list.innerHTML = msgs.length === 0
+          ? '<p class="text-center text-muted py-4">No messages yet.</p>'
+          : msgs.map(msg => `
+            <div class="d-flex mb-2 p-2 border rounded message-row ${msg.type === 'incoming' ? 'bg-light' : ''}">
+              <div class="me-2">
+                <i class="fas fa-arrow-${msg.type === 'incoming' ? 'down text-info' : 'up text-success'}"></i>
               </div>
-              <p class="mb-0 small message-body">${msg.body || '(media)'}</p>
-              <div class="mt-1">
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between">
+                  <strong>${msg.from || msg.to || '-'}</strong>
+                  <small class="text-muted">${msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleString() : '-'}</small>
+                </div>
+                <p class="mb-0 small message-body">${msg.body || '(media)'}</p>
                 <span class="badge bg-${msg.type === 'incoming' ? 'info' : 'success'}">${msg.type || 'outgoing'}</span>
               </div>
             </div>
-          </div>
-        `).join('');
-    } catch (e) {}
+          `).join('');
+      }, err => console.error('Chat listener error:', err));
   },
 
   filterMessages() {
@@ -176,7 +166,6 @@ const Chats = {
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('chatResult').innerHTML = '<span class="text-success">✅ Sent!</span>';
-        setTimeout(() => { Chats.render(); }, 500);
       } else {
         document.getElementById('chatResult').innerHTML = '<span class="text-danger">❌ ' + (result.error?.message || 'Failed') + '</span>';
       }
@@ -189,7 +178,7 @@ const Chats = {
     const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
     if (!cfg?.accessToken) return alert('WhatsApp not configured.');
 
-    contentArea.innerHTML = '<p class="text-center py-5">Refreshing messages...</p>';
+    contentArea.innerHTML = '<p class="text-center py-5">Refreshing...</p>';
 
     let added = 0;
     try {
