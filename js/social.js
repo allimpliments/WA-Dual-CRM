@@ -11,7 +11,6 @@ const Social = {
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
 
-    // Load connected accounts
     await this.loadAccounts();
 
     let posts = [];
@@ -42,7 +41,6 @@ const Social = {
         .account-selector{display:flex;gap:12px;margin-top:12px;}
         .account-chip{padding:8px 16px;border:2px solid #dadde1;border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;transition:0.2s;}
         .account-chip.active{border-color:#1877f2;background:#e7f3ff;color:#1877f2;}
-        .account-chip img{width:24px;height:24px;border-radius:50%;object-fit:cover;}
         .account-chip .page-avatar{width:24px;height:24px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
       </style>
 
@@ -109,7 +107,6 @@ const Social = {
           <div class="d-flex justify-content-between mb-4"><h3 style="font-weight:700;margin:0;">Create Post</h3><button class="btn-close" onclick="Social.closeComposer()"></button></div>
           <div style="display:grid;grid-template-columns:1fr 400px;gap:24px;">
             <div>
-              <!-- Platform & Account Selection -->
               <div class="meta-card">
                 <div class="fw-bold mb-3">Post to</div>
                 <div class="d-flex gap-3">
@@ -121,7 +118,7 @@ const Social = {
                           <div class="page-avatar">${p.avatar||'F'}</div> ${p.name}
                         </div>
                       `).join('')}
-                    </div>` : '<small class="text-muted d-block mt-2">No pages connected</small>'}
+                    </div>` : '<small class="text-muted d-block mt-2">No pages</small>'}
                   </div>
                   <div class="platform-card ${this.activePlatforms.instagram?'active':''}" onclick="Social.togglePlatform('instagram')">
                     <i class="fab fa-instagram fa-2x text-danger mb-2"></i><br><strong>Instagram</strong>
@@ -131,14 +128,13 @@ const Social = {
                           <div class="page-avatar">${a.avatar||'I'}</div> ${a.name}
                         </div>
                       `).join('')}
-                    </div>` : '<small class="text-muted d-block mt-2">No accounts connected</small>'}
+                    </div>` : '<small class="text-muted d-block mt-2">No accounts</small>'}
                   </div>
                 </div>
               </div>
 
-              <!-- Media Upload -->
               <div class="meta-card">
-                <div class="fw-bold mb-3">Media <small class="text-muted">(Drag & Drop or Click)</small></div>
+                <div class="fw-bold mb-3">Media</div>
                 <div class="drop-zone" ondragover="event.preventDefault();this.style.borderColor='#1877f2';this.style.background='#e7f3ff';" ondragleave="this.style.borderColor='#dadde1';this.style.background='#fafbfc';" ondrop="Social.handleDrop(event)">
                   <i class="fas fa-cloud-upload-alt fa-3x" style="color:#1877f2;margin-bottom:12px;"></i>
                   <p style="font-weight:600;">Upload Media</p>
@@ -152,20 +148,17 @@ const Social = {
                 <div class="media-grid mt-3" id="composerMediaGrid"></div>
               </div>
 
-              <!-- Caption -->
               <div class="meta-card">
                 <div class="fw-bold mb-3">Caption</div>
                 <textarea id="composerCaption" class="form-control" style="min-height:150px;border-radius:8px;border:1px solid #dadde1;padding:12px;font-size:14px;" placeholder="What's on your mind?" oninput="Social.updatePreview()"></textarea>
               </div>
 
-              <!-- Actions -->
               <div class="d-flex gap-2">
                 <button class="meta-btn meta-btn-primary flex-grow-1" style="height:48px;font-size:16px;" onclick="Social.publishFromComposer()">🚀 Publish Now</button>
                 <button class="meta-btn meta-btn-outline" onclick="Social.saveAsDraft()">💾 Draft</button>
               </div>
             </div>
 
-            <!-- Preview -->
             <div style="position:sticky;top:20px;">
               <div class="meta-card">
                 <div class="fw-bold mb-3">Preview</div>
@@ -188,31 +181,33 @@ const Social = {
   togglePlatform(p) { this.activePlatforms[p] = !this.activePlatforms[p]; this.openComposer(); },
   closeComposer() { document.getElementById('composerContainer').innerHTML = ''; },
 
-  async handleDrop(e) { e.preventDefault(); e.target.style.borderColor='#dadde1'; e.target.style.background='#fafbfc'; await this.uploadFiles(e.dataTransfer.files); },
-  async handleComposerFiles(e) { await this.uploadFiles(e.target.files); },
+  async handleDrop(e) {
+    e.preventDefault();
+    e.target.style.borderColor = '#dadde1';
+    e.target.style.background = '#fafbfc';
+    await this.uploadFiles(e.dataTransfer.files);
+  },
+
+  async handleComposerFiles(e) {
+    await this.uploadFiles(e.target.files);
+  },
 
   async uploadFiles(files) {
-    for(const file of files) {
-      if(this.uploadedFiles.length >= 10) { alert('Max 10 files'); break; }
-      
+    for (const file of files) {
+      if (this.uploadedFiles.length >= 10) { alert('Max 10 files'); break; }
       const storageRef = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
       const uploadTask = storageRef.put(file);
-      
-      try {
-        await uploadTask;
-        const url = await uploadTask.snapshot.ref.getDownloadURL();
-        this.uploadedFiles.push(url);
-      } catch(e) {
-        console.error('Upload error:', e);
-        alert('Upload failed: ' + e.message);
-      }
+      await uploadTask;
+      const url = await uploadTask.snapshot.ref.getDownloadURL();
+      this.uploadedFiles.push(url);
     }
     this.refreshMediaGrid();
-  }
+  },
 
   refreshMediaGrid() {
-    const grid = document.getElementById('composerMediaGrid'); if(!grid) return;
-    grid.innerHTML = this.uploadedFiles.map((url,i) => `
+    const grid = document.getElementById('composerMediaGrid');
+    if (!grid) return;
+    grid.innerHTML = this.uploadedFiles.map((url, i) => `
       <div class="media-item">
         ${url.match(/\.(mp4|mov|webm)/i) ? `<video src="${url}" controls></video>` : `<img src="${url}">`}
         <button class="remove-btn" onclick="Social.removeMedia(${i})">×</button>
@@ -221,12 +216,17 @@ const Social = {
     this.updatePreview();
   },
 
-  removeMedia(i) { this.uploadedFiles.splice(i,1); this.refreshMediaGrid(); },
+  removeMedia(i) { this.uploadedFiles.splice(i, 1); this.refreshMediaGrid(); },
 
   updatePreview() {
-    const preview = document.getElementById('composerPreview'); if(!preview) return;
+    const preview = document.getElementById('composerPreview');
+    if (!preview) return;
     const caption = document.getElementById('composerCaption')?.value || 'Start writing...';
-    const mediaHTML = this.uploadedFiles.map(url => url.match(/\.(mp4|mov|webm)/i) ? `<video src="${url}" controls style="width:100%;border-radius:8px;margin-bottom:4px;"></video>` : `<img src="${url}" style="width:100%;border-radius:8px;margin-bottom:4px;">`).join('');
+    const mediaHTML = this.uploadedFiles.map(url =>
+      url.match(/\.(mp4|mov|webm)/i)
+        ? `<video src="${url}" controls style="width:100%;border-radius:8px;margin-bottom:4px;"></video>`
+        : `<img src="${url}" style="width:100%;border-radius:8px;margin-bottom:4px;">`
+    ).join('');
     preview.innerHTML = `<div style="background:#fff;border-radius:8px;padding:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:36px;height:36px;border-radius:50%;background:#1877f2;display:flex;align-items:center;justify-content:center;color:#fff;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div><p style="white-space:pre-wrap;">${caption}</p>${mediaHTML}</div>`;
   },
 
@@ -236,40 +236,40 @@ const Social = {
   async savePost(status) {
     const msg = document.getElementById('composerCaption')?.value || '';
 
-    for(const platform of ['facebook','instagram']) {
-      if(!this.activePlatforms[platform]) continue;
+    for (const platform of ['facebook', 'instagram']) {
+      if (!this.activePlatforms[platform]) continue;
 
       const configDoc = platform === 'facebook' ? 'facebook_page' : 'instagram_business';
       const cfg = (await db.collection('settings').doc(configDoc).get()).data();
-      if(!cfg?.accessToken) continue;
+      if (!cfg?.accessToken) continue;
 
       const data = {
         platform, message: msg, media: [...this.uploadedFiles], status,
         pageId: platform === 'facebook' ? this.selectedFBPage : null,
         accountId: platform === 'instagram' ? this.selectedIGAccount : null,
-        pageName: platform === 'facebook' ? (this.fbPages.find(p=>p.id===this.selectedFBPage)?.name||'') : '',
-        accountName: platform === 'instagram' ? (this.igAccounts.find(a=>a.id===this.selectedIGAccount)?.name||'') : '',
+        pageName: platform === 'facebook' ? (this.fbPages.find(p => p.id === this.selectedFBPage)?.name || '') : '',
+        accountName: platform === 'instagram' ? (this.igAccounts.find(a => a.id === this.selectedIGAccount)?.name || '') : '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
-      if(status === 'published') {
-        if(platform === 'facebook') {
+      if (status === 'published') {
+        if (platform === 'facebook') {
           const params = new URLSearchParams({ message: msg, access_token: cfg.accessToken });
-          if(this.uploadedFiles.length > 0) params.append('link', this.uploadedFiles[0]);
+          if (this.uploadedFiles.length > 0) params.append('link', this.uploadedFiles[0]);
           const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
           const result = await res.json();
-          if(result.id) data.platformId = result.id;
+          if (result.id) data.platformId = result.id;
           else { alert('FB Error: ' + (result.error?.message || 'Failed')); return; }
-        } else if(platform === 'instagram') {
-          if(this.uploadedFiles.length === 0) { alert('Instagram requires media!'); return; }
-          for(const url of this.uploadedFiles.slice(0, 10)) {
+        } else if (platform === 'instagram') {
+          if (this.uploadedFiles.length === 0) { alert('Instagram requires media!'); return; }
+          for (const url of this.uploadedFiles.slice(0, 10)) {
             const isVideo = url.match(/\.(mp4|mov|webm)/i);
             const params = new URLSearchParams({ caption: msg, access_token: cfg.accessToken });
-            if(isVideo) { params.append('media_type', 'VIDEO'); params.append('video_url', url); }
+            if (isVideo) { params.append('media_type', 'VIDEO'); params.append('video_url', url); }
             else { params.append('image_url', url); }
             const createRes = await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media`, { method: 'POST', body: params });
             const createData = await createRes.json();
-            if(createData.id) {
+            if (createData.id) {
               await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media_publish`, {
                 method: 'POST', body: new URLSearchParams({ creation_id: createData.id, access_token: cfg.accessToken })
               });
@@ -288,27 +288,27 @@ const Social = {
     const post = doc.data();
     const configDoc = post.platform === 'facebook' ? 'facebook_page' : 'instagram_business';
     const cfg = (await db.collection('settings').doc(configDoc).get()).data();
-    if(!cfg?.accessToken) return alert('Not configured!');
-    if(post.platform==='facebook'){
-      const params = new URLSearchParams({message:post.message,access_token:cfg.accessToken});
-      if(post.media?.length) params.append('link',post.media[0]);
-      const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`,{method:'POST',body:params});
+    if (!cfg?.accessToken) return alert('Not configured!');
+    if (post.platform === 'facebook') {
+      const params = new URLSearchParams({ message: post.message, access_token: cfg.accessToken });
+      if (post.media?.length) params.append('link', post.media[0]);
+      const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
       const result = await res.json();
-      if(result.id) await db.collection('socialPosts').doc(id).update({status:'published',platformId:result.id});
+      if (result.id) await db.collection('socialPosts').doc(id).update({ status: 'published', platformId: result.id });
     }
-    if(post.platform==='instagram'){
-      for(const url of (post.media||[]).slice(0,10)){
-        const params = new URLSearchParams({caption:post.message,access_token:cfg.accessToken});
-        if(url.match(/\.(mp4|mov|webm)/i)){params.append('media_type','VIDEO');params.append('video_url',url);}
-        else params.append('image_url',url);
-        const cr = await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media`,{method:'POST',body:params});
+    if (post.platform === 'instagram') {
+      for (const url of (post.media || []).slice(0, 10)) {
+        const params = new URLSearchParams({ caption: post.message, access_token: cfg.accessToken });
+        if (url.match(/\.(mp4|mov|webm)/i)) { params.append('media_type', 'VIDEO'); params.append('video_url', url); }
+        else params.append('image_url', url);
+        const cr = await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media`, { method: 'POST', body: params });
         const cd = await cr.json();
-        if(cd.id) await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media_publish`,{method:'POST',body:new URLSearchParams({creation_id:cd.id,access_token:cfg.accessToken})});
+        if (cd.id) await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
       }
-      await db.collection('socialPosts').doc(id).update({status:'published'});
+      await db.collection('socialPosts').doc(id).update({ status: 'published' });
     }
     this.render(); alert('✅ Published!');
   },
 
-  async deletePost(id) { if(!confirm('Delete?')) return; await db.collection('socialPosts').doc(id).delete(); this.render(); }
+  async deletePost(id) { if (!confirm('Delete?')) return; await db.collection('socialPosts').doc(id).delete(); this.render(); }
 };
