@@ -194,12 +194,21 @@ const Social = {
   async uploadFiles(files) {
     for(const file of files) {
       if(this.uploadedFiles.length >= 10) { alert('Max 10 files'); break; }
-      const ref = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
-      await ref.put(file);
-      this.uploadedFiles.push(await ref.ref.getDownloadURL());
+      
+      const storageRef = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
+      const uploadTask = storageRef.put(file);
+      
+      try {
+        await uploadTask;
+        const url = await uploadTask.snapshot.ref.getDownloadURL();
+        this.uploadedFiles.push(url);
+      } catch(e) {
+        console.error('Upload error:', e);
+        alert('Upload failed: ' + e.message);
+      }
     }
     this.refreshMediaGrid();
-  },
+  }
 
   refreshMediaGrid() {
     const grid = document.getElementById('composerMediaGrid'); if(!grid) return;
