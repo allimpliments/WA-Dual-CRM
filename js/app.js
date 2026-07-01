@@ -118,7 +118,7 @@ function loadSection(section) {
     case 'social': Social.render(); break;
     case 'plan': Plan.render(); break;
     case 'forms':
-    Forms.currentTab = 'forms';  // हमेशा फ़ॉर्म लिस्ट खोलें
+    Forms.currentTab = 'forms';
     Forms.render();
     break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
