@@ -9,13 +9,12 @@ const Contacts = {
       return;
     }
 
-    // Load contacts and custom fields definitions
     let contacts = [];
     let fields = [];
     try {
       const snap = await db.collection('contacts').orderBy('createdAt', 'desc').get();
       contacts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const fieldSnap = await db.collection('contactFields').get();
+      const fieldSnap = await db.collection('contactFields').orderBy('createdAt').get();
       fields = fieldSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (err) { console.error(err); }
 
@@ -44,7 +43,7 @@ const Contacts = {
             </thead>
             <tbody>
               ${contacts.length === 0
-                ? '<tr><td colspan="5" class="text-center text-muted py-4">No contacts found.</td></tr>'
+                ? '<tr><td colspan="${5 + fields.length}" class="text-center text-muted py-4">No contacts found.</td></tr>'
                 : contacts.map(c => `
                   <tr>
                     <td><strong>${c.firstName || ''} ${c.lastName || ''}</strong></td>
@@ -89,13 +88,13 @@ const Contacts = {
         <table class="table">
           <thead><tr><th>Field Name</th><th>Type</th><th>Required</th><th>Actions</th></tr></thead>
           <tbody>
-            ${fields.length === 0 ? '<tr><td colspan="4" class="text-muted">No custom fields.</td></tr>' : fields.map(f => `
+            ${fields.length === 0 ? '<tr><td colspan="4" class="text-muted">No custom fields yet. Add one to collect extra contact information.</td></tr>' : fields.map(f => `
               <tr>
                 <td>${f.name}</td>
                 <td>${f.type || 'text'}</td>
                 <td>${f.required ? '✅' : '❌'}</td>
                 <td>
-                  <button class="btn btn-sm btn-outline-info" onclick="Contacts.showEditFieldForm('${f.id}')"><i class="fas fa-edit"></i></button>
+                  <button class="btn btn-sm btn-outline-info me-1" onclick="Contacts.showEditFieldForm('${f.id}')"><i class="fas fa-edit"></i></button>
                   <button class="btn btn-sm btn-outline-danger" onclick="Contacts.deleteField('${f.id}')"><i class="fas fa-trash"></i></button>
                 </td>
               </tr>
@@ -107,12 +106,12 @@ const Contacts = {
     contentArea.innerHTML = html;
   },
 
-  // ----- Custom Fields CRUD -----
+  // ----- Custom Field CRUD -----
   showAddFieldForm() {
     document.getElementById('fieldFormContainer').innerHTML = `
       <div class="card mb-3 border-info"><div class="card-body p-2">
         <div class="row g-2">
-          <div class="col-md-4"><input type="text" id="fieldName" class="form-control form-control-sm" placeholder="Field Name"></div>
+          <div class="col-md-4"><input type="text" id="fieldName" class="form-control form-control-sm" placeholder="Field Name (e.g. Budget)"></div>
           <div class="col-md-3">
             <select id="fieldType" class="form-select form-select-sm">
               <option value="text">Text</option>
@@ -129,6 +128,30 @@ const Contacts = {
     `;
   },
 
+  showEditFieldForm(id) {
+    db.collection('contactFields').doc(id).get().then(doc => {
+      const f = doc.data();
+      document.getElementById('fieldFormContainer').innerHTML = `
+        <div class="card mb-3 border-info"><div class="card-body p-2">
+          <div class="row g-2">
+            <div class="col-md-4"><input type="text" id="fieldName" class="form-control form-control-sm" value="${f.name}"></div>
+            <div class="col-md-3">
+              <select id="fieldType" class="form-select form-select-sm">
+                <option value="text" ${f.type==='text'?'selected':''}>Text</option>
+                <option value="number" ${f.type==='number'?'selected':''}>Number</option>
+                <option value="email" ${f.type==='email'?'selected':''}>Email</option>
+                <option value="url" ${f.type==='url'?'selected':''}>URL</option>
+                <option value="date" ${f.type==='date'?'selected':''}>Date</option>
+              </select>
+            </div>
+            <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="checkbox" id="fieldRequired" ${f.required?'checked':''}><label class="form-check-label">Required</label></div></div>
+            <div class="col-md-3"><button class="btn btn-success btn-sm" onclick="Contacts.updateField('${id}')">Update</button></div>
+          </div>
+        </div></div>
+      `;
+    });
+  },
+
   async addField() {
     const name = document.getElementById('fieldName').value.trim();
     const type = document.getElementById('fieldType').value;
@@ -138,13 +161,22 @@ const Contacts = {
     this.renderFieldManager();
   },
 
+  async updateField(id) {
+    const name = document.getElementById('fieldName').value.trim();
+    const type = document.getElementById('fieldType').value;
+    const required = document.getElementById('fieldRequired').checked;
+    if (!name) return alert('Field name required!');
+    await db.collection('contactFields').doc(id).update({ name, type, required });
+    this.renderFieldManager();
+  },
+
   async deleteField(id) {
-    if (!confirm('Delete field?')) return;
+    if (!confirm('Delete this field? All contact data for this field will remain but the column will be hidden.')) return;
     await db.collection('contactFields').doc(id).delete();
     this.renderFieldManager();
   },
 
-  // ----- Contact CRUD with Custom Fields -----
+  // ----- Contact CRUD (with custom fields) -----
   async showAddForm() {
     const fields = await this.getFields();
     let html = `
@@ -153,7 +185,7 @@ const Contacts = {
         <div class="row g-2">
           <div class="col-md-6"><input type="text" id="cFirstName" class="form-control form-control-sm" placeholder="First Name *"></div>
           <div class="col-md-6"><input type="text" id="cLastName" class="form-control form-control-sm" placeholder="Last Name"></div>
-          <div class="col-md-6"><input type="text" id="cMobile" class="form-control form-control-sm" placeholder="Mobile"></div>
+          <div class="col-md-6"><input type="text" id="cMobile" class="form-control form-control-sm" placeholder="Mobile Number"></div>
           <div class="col-md-6"><input type="email" id="cEmail" class="form-control form-control-sm" placeholder="Email"></div>
           <div class="col-md-6">
             <select id="cGroup" class="form-select form-select-sm">
@@ -170,7 +202,7 @@ const Contacts = {
             </div>
           `).join('')}
         </div>
-        <button class="btn btn-success btn-sm mt-2" onclick="Contacts.addContact()">Save</button>
+        <button class="btn btn-success btn-sm mt-2" onclick="Contacts.addContact()">Save Contact</button>
         <button class="btn btn-secondary btn-sm mt-2" onclick="Contacts.render()">Cancel</button>
       </div></div>
     `;
@@ -179,7 +211,7 @@ const Contacts = {
 
   async addContact() {
     const firstName = document.getElementById('cFirstName').value.trim();
-    if (!firstName) return alert('First Name required!');
+    if (!firstName) return alert('First Name is required!');
     const data = {
       firstName,
       lastName: document.getElementById('cLastName').value.trim(),
@@ -188,16 +220,19 @@ const Contacts = {
       group: document.getElementById('cGroup').value,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    // Collect custom fields
+    // Save custom fields
     const fields = await this.getFields();
     data.customFields = {};
     fields.forEach(f => {
       const val = document.getElementById('cf_' + f.id)?.value?.trim() || '';
-      if (f.required && !val) return alert(`${f.name} is required!`);
+      if (f.required && !val) {
+        alert(`${f.name} is required!`);
+        throw new Error('validation');
+      }
       data.customFields[f.id] = val;
     });
     await db.collection('contacts').add(data);
-    alert('Contact added!');
+    alert('✅ Contact added!');
     this.render();
   },
 
@@ -248,13 +283,14 @@ const Contacts = {
       data.customFields[f.id] = document.getElementById('cf_' + f.id)?.value?.trim() || '';
     });
     await db.collection('contacts').doc(id).update(data);
-    alert('Contact updated!');
+    alert('✅ Contact updated!');
     this.render();
   },
 
   async deleteContact(id) {
-    if (!confirm('Delete?')) return;
+    if (!confirm('Delete contact?')) return;
     await db.collection('contacts').doc(id).delete();
+    alert('Deleted.');
     this.render();
   },
 
