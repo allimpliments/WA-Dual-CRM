@@ -134,7 +134,33 @@ if (formId) {
             data: formData,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
+          // Create Contact or Lead based on form source
+const source = form.source || 'General';
+const contactData = {
+  firstName: formData['Name'] || formData['Full Name'] || formData['First Name'] || '',
+  lastName: formData['Last Name'] || '',
+  mobile: formData['Phone'] || formData['Mobile'] || formData['Phone Number'] || '',
+  email: formData['Email'] || formData['Email Address'] || '',
+  group: source === 'WhatsApp' ? 'Leads' : source === 'Facebook' ? 'Leads' : 'Customers',
+  source: source,
+  createdAt: firebase.firestore.FieldValue.serverTimestamp()
+};
 
+if (contactData.firstName || contactData.mobile || contactData.email) {
+  if (source === 'WhatsApp' || source === 'Facebook') {
+    // Add to Leads
+    await db.collection('leads').add({
+      name: `${contactData.firstName} ${contactData.lastName}`.trim(),
+      phone: contactData.mobile,
+      email: contactData.email,
+      source: source,
+      status: 'New',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  // Always add to Contacts
+  await db.collection('contacts').add(contactData);
+}
           // Increment submission count on the form document
           await db.collection('forms').doc(formId).update({
             submissionCount: firebase.firestore.FieldValue.increment(1)
