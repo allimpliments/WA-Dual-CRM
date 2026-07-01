@@ -515,28 +515,45 @@ const Forms = {
     prompt('Share this link:', `${window.location.origin}${window.location.pathname}?form=${formId}`);
   },
 
-  // ==================== SUBMISSIONS (with delete) ====================
+  // ==================== SUBMISSIONS (with multi-select delete) ====================
   async renderSubmissions() {
     const formId = this.currentFormId;
     if (!formId) { this.render(); return; }
     const formDoc = await db.collection('forms').doc(formId).get();
     const form = formDoc.data();
-    const snap = await db.collection('formSubmissions').where('formId', '==', formId).orderBy('createdAt', 'desc').get();
+    const snap = await db.collection('formSubmissions')
+      .where('formId', '==', formId)
+      .orderBy('createdAt', 'desc')
+      .get();
     const submissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
     let html = `
       <div class="d-flex justify-content-between mb-3">
         <h4>Submissions: ${form.name}</h4>
-        <button class="btn btn-outline-primary btn-sm" onclick="Forms.currentTab='forms'; Forms.render();">Back</button>
+        <div>
+          <button class="btn btn-sm btn-outline-danger me-1" onclick="Forms.deleteSelectedSubmissions('${formId}')" id="deleteSelectedBtn" disabled>
+            <i class="fas fa-trash me-1"></i> Delete Selected (<span id="selectedCount">0</span>)
+          </button>
+          <button class="btn btn-outline-primary btn-sm" onclick="Forms.currentTab='forms'; Forms.render();">Back</button>
+        </div>
       </div>
       <div class="card-widget">
         <p>Total: <strong>${submissions.length}</strong></p>
         ${submissions.length === 0 ? '<p class="text-muted">No submissions.</p>' : `
           <div class="table-responsive">
             <table class="table table-sm">
-              <thead><tr>${(form.fields || []).map(f => `<th>${f.label}</th>`).join('')}<th>Date</th><th>Action</th></tr></thead>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllSubmissions" onchange="Forms.toggleSelectAll(this)"></th>
+                  ${(form.fields || []).map(f => `<th>${f.label}</th>`).join('')}
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
               <tbody>
                 ${submissions.map(s => `
                   <tr>
+                    <td><input type="checkbox" class="submission-checkbox" value="${s.id}" onchange="Forms.updateDeleteButton()"></td>
                     ${(form.fields || []).map(f => `<td>${(s.data && s.data[f.label]) || '-'}</td>`).join('')}
                     <td>${s.createdAt?.toDate().toLocaleString()}</td>
                     <td>
@@ -553,16 +570,48 @@ const Forms = {
     contentArea.innerHTML = html;
   },
 
+  toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.submission-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    this.updateDeleteButton();
+  },
+
+  updateDeleteButton() {
+    const checkboxes = document.querySelectorAll('.submission-checkbox');
+    const selected = document.querySelectorAll('.submission-checkbox:checked');
+    const count = selected.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('deleteSelectedBtn').disabled = count === 0;
+  },
+
   async deleteSubmission(formId, submissionId) {
     if (!confirm('Delete this submission?')) return;
     try {
       await db.collection('formSubmissions').doc(submissionId).delete();
-      // Decrement submission count
       await db.collection('forms').doc(formId).update({
         submissionCount: firebase.firestore.FieldValue.increment(-1)
       });
       alert('Submission deleted.');
-      // Refresh submissions view
+      this.renderSubmissions();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
+  async deleteSelectedSubmissions(formId) {
+    const checkboxes = document.querySelectorAll('.submission-checkbox:checked');
+    if (checkboxes.length === 0) return alert('No submissions selected.');
+    if (!confirm(`Delete ${checkboxes.length} selected submission(s)?`)) return;
+    try {
+      const batch = db.batch();
+      checkboxes.forEach(cb => {
+        batch.delete(db.collection('formSubmissions').doc(cb.value));
+      });
+      await batch.commit();
+      await db.collection('forms').doc(formId).update({
+        submissionCount: firebase.firestore.FieldValue.increment(-checkboxes.length)
+      });
+      alert(`${checkboxes.length} submission(s) deleted.`);
       this.renderSubmissions();
     } catch (err) {
       alert('Error: ' + err.message);
