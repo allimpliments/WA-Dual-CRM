@@ -46,6 +46,9 @@ const navSections = [
       { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
     ]
   },
+  { title: 'Forms', items: [
+  { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin', 'team'] }
+  },
   {
     title: 'Management',
     items: [
@@ -98,6 +101,7 @@ function loadSection(section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
     case 'contacts': Contacts.render(); break;
+    case 'forms': Forms.render(); break;
     case 'campaigns': Campaigns.render(); break;
     case 'setup': Setup.render(); break;
     case 'chats': Chats.render(); break;
