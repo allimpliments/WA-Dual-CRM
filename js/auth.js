@@ -1,3 +1,4 @@
+// auth.js – fixed login + public form support
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -97,10 +98,13 @@ if (formId) {
       document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Error loading form.</p>';
     }
   })();
+  // Stop here for public form
   return;
 }
 
-// ========== NORMAL AUTH FLOW ==========
+// ========== NORMAL AUTH ==========
+console.log('Auth script loaded');
+
 document.getElementById('showRegister').addEventListener('click', (e) => {
   e.preventDefault();
   loginFormDiv.style.display = 'none';
@@ -113,6 +117,7 @@ document.getElementById('showLogin').addEventListener('click', (e) => {
 });
 
 document.getElementById('registerBtn').addEventListener('click', async () => {
+  console.log('Register clicked');
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
@@ -123,14 +128,20 @@ document.getElementById('registerBtn').addEventListener('click', async () => {
       name, email, role: 'client',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    alert('Registration successful! You can now login.');
+    // Switch to login form
+    registerFormDiv.style.display = 'none';
+    loginFormDiv.style.display = 'block';
   } catch (err) {
     alert(err.message);
   }
 });
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
+  console.log('Login clicked');
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return alert('Please enter email and password.');
   try {
     await auth.signInWithEmailAndPassword(email, password);
   } catch (err) {
@@ -139,6 +150,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 });
 
 auth.onAuthStateChanged(async (user) => {
+  console.log('Auth state changed', user ? 'logged in' : 'logged out');
   if (user) {
     let userData = null;
     try {
