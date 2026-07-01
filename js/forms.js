@@ -5,22 +5,25 @@ const Forms = {
   formDesign: {
     primaryColor: '#1877f2',
     buttonTextColor: '#ffffff',
+    backgroundColor: '#ffffff',
+    fontFamily: 'Inter, sans-serif',
+    titleColor: '#1c1e21',
+    titleFontSize: '24px',
     borderStyle: 'solid',
     bannerUrl: '',
     logoUrl: '',
-    titleFontSize: '24px',
-    titleColor: '#1c1e21',
-    backgroundColor: '#ffffff',
-    fontFamily: 'Inter, sans-serif'
+    customCSS: ''
   },
 
+  // ==================== RENDER ====================
   async render() {
-    contentArea.innerHTML = '<p class="text-center py-5">Loading forms...</p>';
+    contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
 
     if (this.currentTab === 'builder') { await this.renderBuilder(); return; }
-    if (this.currentTab === 'submissions') { await this.renderSubmissions(); return; }
     if (this.currentTab === 'design') { await this.renderDesignPanel(); return; }
+    if (this.currentTab === 'submissions') { await this.renderSubmissions(); return; }
 
+    // Main Forms List
     let forms = [];
     try {
       const snap = await db.collection('forms').orderBy('createdAt', 'desc').get();
@@ -29,30 +32,29 @@ const Forms = {
 
     let html = `
       <style>
-        .form-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 16px; transition: 0.2s; cursor: pointer; }
+        .form-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 16px; cursor: pointer; transition: 0.2s; }
         .form-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #1877f2; }
-        .form-card .form-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
       </style>
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0"><i class="fas fa-wpforms text-primary me-2"></i>Form Builder</h4>
         <button class="btn btn-primary" onclick="Forms.currentTab='builder'; Forms.render();"><i class="fas fa-plus me-1"></i> Create New Form</button>
       </div>
-      <div class="row g-3" id="formsList">
+      <div class="row g-3">
         ${forms.length === 0 ? '<div class="col-12"><p class="text-muted text-center py-4">No forms yet.</p></div>' : forms.map(f => `
           <div class="col-md-6 col-lg-4">
             <div class="form-card" onclick="Forms.editForm('${f.id}')">
-              <div class="d-flex gap-3 align-items-center mb-2">
-                <div class="form-icon bg-primary bg-opacity-10"><i class="fas fa-wpforms text-primary"></i></div>
-                <div><strong>${f.name || 'Untitled'}</strong><br><small class="text-muted">${f.source || 'General'}</small></div>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">${(f.fields || []).length} fields</small>
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>${f.name || 'Untitled'}</strong><br>
+                  <small class="text-muted">${f.source || 'General'}</small>
+                </div>
                 <div class="d-flex gap-1" onclick="event.stopPropagation();">
                   <button class="btn btn-sm btn-outline-primary" onclick="Forms.getFormLink('${f.id}')"><i class="fas fa-link"></i></button>
                   <button class="btn btn-sm btn-outline-info" onclick="Forms.currentTab='submissions'; Forms.currentFormId='${f.id}'; Forms.render();"><i class="fas fa-list"></i></button>
                   <button class="btn btn-sm btn-outline-danger" onclick="Forms.deleteForm('${f.id}')"><i class="fas fa-trash"></i></button>
                 </div>
               </div>
+              <small class="text-muted">${(f.fields || []).length} fields · ${f.submissionCount || 0} submissions</small>
             </div>
           </div>
         `).join('')}
@@ -61,92 +63,86 @@ const Forms = {
     contentArea.innerHTML = html;
   },
 
-  // ==================== BUILDER ====================
+  // ==================== FORM BUILDER ====================
   async renderBuilder(formId = null) {
-    let form = { name: '', source: 'General', fields: [], design: {} };
+    // Load form data if editing
     if (formId) {
       const doc = await db.collection('forms').doc(formId).get();
       if (doc.exists) {
-        form = { id: formId, ...doc.data() };
-        this.formDesign = { ...this.formDesign, ...(form.design || {}) };
+        const data = doc.data();
+        this.formFields = JSON.parse(JSON.stringify(data.fields || []));
+        this.formDesign = { ...this.formDesign, ...(data.design || {}) };
+        this.currentFormId = formId;
       }
     } else {
-      this.formDesign = { ...Forms.formDesign };
+      this.formFields = [];
+      this.currentFormId = null;
     }
-    this.formFields = [...(form.fields || [])];
-    this.currentFormId = formId || null;
 
     let html = `
       <style>
-        .builder-layout { display: grid; grid-template-columns: 260px 1fr 340px; gap: 16px; }
-        .field-types-panel { background: #fff; border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; height: fit-content; }
-        .field-type-item { padding: 8px 10px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; border: 1px solid transparent; transition: 0.15s; }
-        .field-type-item:hover { background: #f0f7ff; border-color: #1877f2; }
-        .builder-canvas { background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #e0e0e0; min-height: 400px; }
-        .canvas-field { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: grab; transition: 0.15s; position: relative; }
-        .canvas-field:hover { border-color: #1877f2; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .canvas-field .field-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .canvas-field .field-label { font-weight: 600; font-size: 13px; }
-        .canvas-field .field-preview input, .canvas-field .field-preview select, .canvas-field .field-preview textarea { width: 100%; padding: 6px 10px; border: 1px solid #dadde1; border-radius: 6px; font-size: 12px; background: #f9fafb; }
-        .canvas-field .field-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; opacity: 0; transition: 0.15s; }
-        .canvas-field:hover .field-actions { opacity: 1; }
-        .canvas-field.half-width { display: inline-block; width: calc(50% - 6px); margin-right: 8px; vertical-align: top; }
-        .preview-panel { background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #e0e0e0; }
-        .preview-phone { border-radius: 12px; padding: 16px; max-width: 360px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        .preview-phone .preview-field { margin-bottom: 12px; }
-        .preview-phone label { font-weight: 500; font-size: 11px; color: #555; display: block; margin-bottom: 3px; }
-        .preview-phone input, .preview-phone select, .preview-phone textarea { width: 100%; padding: 7px 9px; border: 1px solid #ddd; border-radius: 5px; font-size: 12px; }
-        .preview-phone .preview-checkbox, .preview-phone .preview-radio { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 12px; }
-        .preview-phone .btn-submit { color: #fff; border: none; padding: 10px; border-radius: 8px; width: 100%; font-weight: 600; font-size: 13px; cursor: pointer; }
+        .builder-layout { display: grid; grid-template-columns: 220px 1fr 360px; gap: 16px; }
+        .field-palette { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 12px; height: fit-content; }
+        .palette-item { padding: 8px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; transition: 0.15s; }
+        .palette-item:hover { background: #e7f3ff; }
+        .canvas { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; min-height: 500px; }
+        .field-row { background: #fafbfc; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: grab; display: flex; gap: 12px; align-items: center; transition: 0.15s; }
+        .field-row:hover { border-color: #1877f2; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .field-row .field-info { flex: 1; }
+        .field-row .field-preview { margin-top: 4px; }
+        .field-row .field-preview input, .field-row .field-preview select, .field-row .field-preview textarea { width: 100%; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; background: #fff; }
+        .preview-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; }
+        .preview-phone { border-radius: 16px; padding: 20px; max-width: 360px; margin: 0 auto; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+        .preview-field { margin-bottom: 12px; }
+        .preview-field label { font-weight: 500; font-size: 12px; color: #555; display: block; margin-bottom: 4px; }
+        .preview-field input, .preview-field select, .preview-field textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
         .preview-half { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .preview-full { grid-column: 1 / -1; }
+        .preview-full { grid-column: span 2; }
+        .btn-submit { width: 100%; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
         @media (max-width: 1200px) { .builder-layout { grid-template-columns: 1fr; } }
       </style>
 
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <h4 class="mb-0"><i class="fas fa-wpforms text-primary me-2"></i>${formId ? 'Edit' : 'Create'} Form</h4>
-          <div class="d-flex gap-2 mt-1">
-            <button class="btn btn-link btn-sm p-0" onclick="Forms.currentTab='forms'; Forms.render();"><i class="fas fa-arrow-left me-1"></i> Back</button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="Forms.currentTab='design'; Forms.renderBuilderDesign();"><i class="fas fa-palette me-1"></i> Design</button>
-          </div>
-        </div>
+        <h4 class="mb-0"><i class="fas fa-wpforms text-primary me-2"></i>${formId ? 'Edit' : 'Create'} Form</h4>
         <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="Forms.currentTab='design'; Forms.renderDesignPanel();"><i class="fas fa-palette me-1"></i> Design</button>
           <button class="btn btn-outline-primary btn-sm" onclick="Forms.getFormLink(formId || 'preview')"><i class="fas fa-eye me-1"></i> Preview</button>
-          <button class="btn btn-success btn-sm" onclick="Forms.saveForm()"><i class="fas fa-save me-1"></i> Save Form</button>
+          <button class="btn btn-success btn-sm" onclick="Forms.saveForm()"><i class="fas fa-save me-1"></i> Save</button>
         </div>
       </div>
 
       <div class="card-widget mb-3">
         <div class="row g-2">
-          <div class="col-md-4"><label class="form-label small fw-bold">Form Name</label><input type="text" id="formName" class="form-control form-control-sm" value="${form.name}"></div>
-          <div class="col-md-3"><label class="form-label small fw-bold">Lead Source</label><select id="formSource" class="form-select form-select-sm"><option value="General" ${form.source==='General'?'selected':''}>General</option><option value="WhatsApp" ${form.source==='WhatsApp'?'selected':''}>WhatsApp</option><option value="Facebook" ${form.source==='Facebook'?'selected':''}>Facebook</option><option value="Website" ${form.source==='Website'?'selected':''}>Website</option></select></div>
-          <div class="col-md-5"><label class="form-label small fw-bold">Success Message</label><input type="text" id="formSuccessMsg" class="form-control form-control-sm" value="${form.successMsg || 'Thank you! Your form has been submitted.'}"></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Form Name</label><input type="text" id="formName" class="form-control form-control-sm" value="${formId ? (await db.collection('forms').doc(formId).get()).data().name : ''}"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Lead Source</label><select id="formSource" class="form-select form-select-sm"><option value="General">General</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option><option value="Website">Website</option></select></div>
+          <div class="col-md-5"><label class="form-label small fw-bold">Success Message</label><input type="text" id="formSuccessMsg" class="form-control form-control-sm" value="Thank you!"></div>
         </div>
       </div>
 
       <div class="builder-layout">
-        <div class="field-types-panel">
-          <h6 class="mb-2">Add Fields</h6>
-          <div class="field-type-item" onclick="Forms.addField('text')"><i class="fas fa-font"></i> Text</div>
-          <div class="field-type-item" onclick="Forms.addField('number')"><i class="fas fa-sort-numeric-up"></i> Number</div>
-          <div class="field-type-item" onclick="Forms.addField('email')"><i class="fas fa-envelope"></i> Email</div>
-          <div class="field-type-item" onclick="Forms.addField('date')"><i class="fas fa-calendar"></i> Date</div>
-          <div class="field-type-item" onclick="Forms.addField('dropdown')"><i class="fas fa-caret-down"></i> Dropdown</div>
-          <div class="field-type-item" onclick="Forms.addField('radio')"><i class="fas fa-dot-circle"></i> Radio</div>
-          <div class="field-type-item" onclick="Forms.addField('checkbox')"><i class="fas fa-check-square"></i> Checkbox</div>
-          <div class="field-type-item" onclick="Forms.addField('textarea')"><i class="fas fa-align-left"></i> Textarea</div>
-          <div class="field-type-item" onclick="Forms.addField('file')"><i class="fas fa-upload"></i> File Upload</div>
-          <div class="field-type-item" onclick="Forms.addField('phone')"><i class="fas fa-phone"></i> Phone</div>
+        <!-- Field Palette -->
+        <div class="field-palette">
+          <h6 class="mb-2">Field Types</h6>
+          <div class="palette-item" onclick="Forms.addField('text')"><i class="fas fa-font"></i> Text</div>
+          <div class="palette-item" onclick="Forms.addField('number')"><i class="fas fa-sort-numeric-up"></i> Number</div>
+          <div class="palette-item" onclick="Forms.addField('email')"><i class="fas fa-envelope"></i> Email</div>
+          <div class="palette-item" onclick="Forms.addField('date')"><i class="fas fa-calendar"></i> Date</div>
+          <div class="palette-item" onclick="Forms.addField('dropdown')"><i class="fas fa-caret-down"></i> Dropdown</div>
+          <div class="palette-item" onclick="Forms.addField('radio')"><i class="fas fa-dot-circle"></i> Radio</div>
+          <div class="palette-item" onclick="Forms.addField('checkbox')"><i class="fas fa-check-square"></i> Checkbox</div>
+          <div class="palette-item" onclick="Forms.addField('textarea')"><i class="fas fa-align-left"></i> Textarea</div>
+          <div class="palette-item" onclick="Forms.addField('file')"><i class="fas fa-upload"></i> File</div>
+          <div class="palette-item" onclick="Forms.addField('phone')"><i class="fas fa-phone"></i> Phone</div>
         </div>
 
-        <div class="builder-canvas" id="builderCanvas">
-          <h6 class="mb-2">Form Fields</h6>
+        <!-- Canvas -->
+        <div class="canvas" id="builderCanvas">
           <div id="canvasFields">
-            ${this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click on field types from left panel to add fields.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('')}
+            ${this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click a field type to add it here.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('')}
           </div>
         </div>
 
+        <!-- Preview -->
         <div class="preview-panel">
           <h6 class="mb-2">Live Preview</h6>
           <div class="preview-phone" id="formPreview" style="background:${this.formDesign.backgroundColor}; font-family:${this.formDesign.fontFamily};">
@@ -154,15 +150,19 @@ const Forms = {
           </div>
         </div>
       </div>
+
+      <!-- Edit Field Modal -->
       <div id="editFieldModal" style="display:none;"></div>
     `;
     contentArea.innerHTML = html;
+
+    // Init Sortable on canvas
     setTimeout(() => {
       const canvas = document.getElementById('canvasFields');
       if (canvas && this.formFields.length > 0) {
         new Sortable(canvas, {
           animation: 150,
-          handle: '.canvas-field',
+          handle: '.field-row',
           onEnd: (evt) => {
             const moved = this.formFields.splice(evt.oldIndex, 1)[0];
             this.formFields.splice(evt.newIndex, 0, moved);
@@ -171,25 +171,29 @@ const Forms = {
           }
         });
       }
+      // Set source dropdown if editing
+      if (formId) {
+        db.collection('forms').doc(formId).get().then(doc => {
+          if (doc.exists) {
+            document.getElementById('formName').value = doc.data().name || '';
+            document.getElementById('formSource').value = doc.data().source || 'General';
+            document.getElementById('formSuccessMsg').value = doc.data().successMsg || 'Thank you!';
+          }
+        });
+      }
     }, 200);
   },
 
-  renderBuilderDesign() {
-    // Will be implemented in next step
-  },
-
   renderCanvasField(field, index) {
-    const widthClass = field.width === 'half' ? 'half-width' : '';
     return `
-      <div class="canvas-field ${widthClass}" data-index="${index}">
-        <div class="field-header">
-          <span class="field-label">${field.label || 'Untitled'} ${field.required ? '<span class="text-danger">*</span>' : ''}</span>
-          <small class="text-muted">${field.type}${field.width==='half'?' (50%)':''}</small>
+      <div class="field-row" data-index="${index}">
+        <div class="field-info">
+          <strong>${field.label || 'Untitled'}</strong> <small class="text-muted">(${field.type})</small>
+          <div class="field-preview">
+            ${this.renderFieldHTML(field, index, true)}
+          </div>
         </div>
-        <div class="field-preview">
-          ${this.renderFieldPreview(field, index)}
-        </div>
-        <div class="field-actions">
+        <div class="d-flex gap-1">
           <button class="btn btn-sm btn-outline-info" onclick="Forms.editField(${index})"><i class="fas fa-edit"></i></button>
           <button class="btn btn-sm btn-outline-danger" onclick="Forms.removeField(${index})"><i class="fas fa-trash"></i></button>
         </div>
@@ -197,31 +201,40 @@ const Forms = {
     `;
   },
 
-  renderFieldPreview(field, index) {
-    switch(field.type) {
-      case 'dropdown': return `<select><option>${field.options?.[0] || 'Select...'}</option>${(field.options || []).slice(1).map(o => `<option>${o}</option>`).join('')}</select>`;
-      case 'radio': return (field.options || []).map(o => `<div class="preview-checkbox"><input type="radio" name="r_${index}" disabled> ${o}</div>`).join('');
-      case 'checkbox': return (field.options || []).map(o => `<div class="preview-checkbox"><input type="checkbox" disabled> ${o}</div>`).join('');
-      case 'textarea': return `<textarea rows="2" disabled style="width:100%;border:1px solid #dadde1;border-radius:6px;background:#f9fafb;"></textarea>`;
-      case 'file': return `<input type="file" disabled>`;
-      default: return `<input type="${field.type || 'text'}" disabled placeholder="${field.placeholder || ''}">`;
+  renderFieldHTML(field, index, disabled = false) {
+    const dis = disabled ? 'disabled' : '';
+    switch (field.type) {
+      case 'dropdown':
+        return `<select ${dis}><option>${field.options?.[0] || 'Select...'}</option>${(field.options || []).slice(1).map(o => `<option>${o}</option>`).join('')}</select>`;
+      case 'radio':
+        return (field.options || []).map(o => `<div class="preview-checkbox"><input type="radio" name="r_${index}" ${dis}> ${o}</div>`).join('');
+      case 'checkbox':
+        return (field.options || []).map(o => `<div class="preview-checkbox"><input type="checkbox" ${dis}> ${o}</div>`).join('');
+      case 'textarea':
+        return `<textarea rows="2" ${dis}></textarea>`;
+      case 'file':
+        return `<input type="file" ${dis}>`;
+      default:
+        return `<input type="${field.type}" ${dis} placeholder="${field.placeholder || ''}">`;
     }
   },
 
   renderPreview() {
     let html = '';
+    const name = document.getElementById('formName')?.value || 'Untitled Form';
+    const source = document.getElementById('formSource')?.value || 'General';
+
     // Banner
     if (this.formDesign.bannerUrl) {
       html += `<img src="${this.formDesign.bannerUrl}" style="width:100%;border-radius:8px;margin-bottom:12px;">`;
     }
-    // Logo + Title
+    // Logo
     if (this.formDesign.logoUrl) {
       html += `<div style="text-align:center;margin-bottom:8px;"><img src="${this.formDesign.logoUrl}" style="max-height:50px;"></div>`;
     }
-    html += `<h4 style="text-align:center;color:${this.formDesign.titleColor};font-size:${this.formDesign.titleFontSize};margin-bottom:4px;">${document.getElementById('formName')?.value || 'Untitled Form'}</h4>`;
-    html += `<small class="text-muted d-block text-center mb-3">${document.getElementById('formSource')?.value || 'General'}</small>`;
+    html += `<h4 style="text-align:center;color:${this.formDesign.titleColor};font-size:${this.formDesign.titleFontSize};margin-bottom:4px;">${name}</h4>`;
+    html += `<small class="text-muted d-block text-center mb-3">${source}</small>`;
 
-    // Group fields by half/full
     let i = 0;
     while (i < this.formFields.length) {
       const f = this.formFields[i];
@@ -239,6 +252,9 @@ const Forms = {
       }
     }
     html += `<button class="btn-submit" style="background:${this.formDesign.primaryColor};color:${this.formDesign.buttonTextColor};">Submit</button>`;
+    if (this.formDesign.customCSS) {
+      html += `<style>${this.formDesign.customCSS}</style>`;
+    }
     return html;
   },
 
@@ -246,20 +262,24 @@ const Forms = {
     return `
       <div class="preview-field">
         <label>${field.label} ${field.required ? '<span style="color:#fa3e3e;">*</span>' : ''}</label>
-        ${this.renderFieldPreview(field, index)}
+        ${this.renderFieldHTML(field, index, true)}
       </div>
     `;
   },
 
+  // ==================== FIELD CRUD ====================
   addField(type) {
-    this.formFields.push({ type, label: this.getDefaultLabel(type), required: false, options: type === 'dropdown' || type === 'radio' || type === 'checkbox' ? ['Option 1', 'Option 2', 'Option 3'] : [], placeholder: '', width: 'full' });
+    this.formFields.push({
+      type, label: this.getDefaultLabel(type), required: false,
+      options: ['dropdown', 'radio', 'checkbox'].includes(type) ? ['Option 1', 'Option 2', 'Option 3'] : [],
+      placeholder: '', width: 'full'
+    });
     this.refreshCanvas();
     this.refreshPreview();
   },
 
   getDefaultLabel(type) {
-    const labels = { text: 'Full Name', number: 'Age', email: 'Email Address', date: 'Date', dropdown: 'Select Option', radio: 'Choose One', checkbox: 'Select Options', textarea: 'Message', file: 'Upload File', phone: 'Phone Number' };
-    return labels[type] || 'New Field';
+    return { text: 'Name', number: 'Age', email: 'Email', date: 'Date', dropdown: 'Select', radio: 'Choose', checkbox: 'Options', textarea: 'Message', file: 'File', phone: 'Phone' }[type] || 'Field';
   },
 
   editField(index) {
@@ -269,17 +289,11 @@ const Forms = {
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;" onclick="Forms.closeEditModal()">
         <div class="card-widget" style="width:480px;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
           <h5>Edit Field</h5>
-          <div class="mb-3"><label class="form-label small">Label</label><input type="text" id="editLabel" class="form-control form-control-sm" value="${f.label}"></div>
-          <div class="mb-3"><label class="form-label small">Placeholder</label><input type="text" id="editPlaceholder" class="form-control form-control-sm" value="${f.placeholder || ''}"></div>
-          <div class="mb-3">
-            <label class="form-label small">Width</label>
-            <select id="editWidth" class="form-select form-select-sm">
-              <option value="full" ${f.width==='full'?'selected':''}>100% (Full)</option>
-              <option value="half" ${f.width==='half'?'selected':''}>50% (Half)</option>
-            </select>
-          </div>
-          ${['dropdown', 'radio', 'checkbox'].includes(f.type) ? `<div class="mb-3"><label class="form-label small">Options (one per line)</label><textarea id="editOptions" class="form-control form-control-sm" rows="4">${(f.options || []).join('\n')}</textarea></div>` : ''}
-          <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="editRequired" ${f.required ? 'checked' : ''}><label class="form-check-label">Required</label></div>
+          <div class="mb-3"><label>Label</label><input type="text" id="editLabel" class="form-control form-control-sm" value="${f.label}"></div>
+          <div class="mb-3"><label>Placeholder</label><input type="text" id="editPlaceholder" class="form-control form-control-sm" value="${f.placeholder || ''}"></div>
+          <div class="mb-3"><label>Width</label><select id="editWidth" class="form-select form-select-sm"><option value="full" ${f.width==='full'?'selected':''}>100%</option><option value="half" ${f.width==='half'?'selected':''}>50%</option></select></div>
+          ${['dropdown', 'radio', 'checkbox'].includes(f.type) ? `<div class="mb-3"><label>Options (one per line)</label><textarea id="editOptions" class="form-control form-control-sm" rows="4">${(f.options || []).join('\n')}</textarea></div>` : ''}
+          <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="editRequired" ${f.required?'checked':''}><label>Required</label></div>
           <button class="btn btn-primary btn-sm" onclick="Forms.saveFieldEdit(${index})">Save</button>
           <button class="btn btn-light btn-sm" onclick="Forms.closeEditModal()">Cancel</button>
         </div>
@@ -314,23 +328,119 @@ const Forms = {
 
   refreshCanvas() {
     const canvas = document.getElementById('canvasFields');
-    if (!canvas) return;
-    canvas.innerHTML = this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click on field types from left panel to add fields.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('');
+    if (canvas) {
+      canvas.innerHTML = this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click a field type to add it here.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('');
+    }
   },
 
   refreshPreview() {
     const preview = document.getElementById('formPreview');
-    if (!preview) return;
-    preview.innerHTML = this.renderPreview();
+    if (preview) preview.innerHTML = this.renderPreview();
   },
 
-  // ==================== SAVE ====================
+  // ==================== DESIGN PANEL ====================
+  async renderDesignPanel() {
+    let html = `
+      <div class="d-flex justify-content-between mb-3">
+        <h4 class="mb-0"><i class="fas fa-palette me-2"></i>Form Design</h4>
+        <button class="btn btn-outline-primary btn-sm" onclick="Forms.currentTab='builder'; Forms.render();"><i class="fas fa-arrow-left me-1"></i> Back to Builder</button>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-8">
+          <div class="card-widget">
+            <h5>Colors & Typography</h5>
+            <div class="row g-2">
+              <div class="col-md-4"><label>Primary Color</label><input type="color" id="designPrimary" class="form-control form-control-color" value="${this.formDesign.primaryColor}"></div>
+              <div class="col-md-4"><label>Button Text</label><input type="color" id="designBtnText" class="form-control form-control-color" value="${this.formDesign.buttonTextColor}"></div>
+              <div class="col-md-4"><label>Background</label><input type="color" id="designBg" class="form-control form-control-color" value="${this.formDesign.backgroundColor}"></div>
+              <div class="col-md-4"><label>Title Color</label><input type="color" id="designTitleColor" class="form-control form-control-color" value="${this.formDesign.titleColor}"></div>
+              <div class="col-md-4"><label>Title Font Size</label><input type="text" id="designTitleSize" class="form-control form-control-sm" value="${this.formDesign.titleFontSize}"></div>
+              <div class="col-md-4"><label>Font Family</label><select id="designFont" class="form-select form-select-sm">
+                <option value="Inter, sans-serif" ${this.formDesign.fontFamily==='Inter, sans-serif'?'selected':''}>Inter</option>
+                <option value="Roboto, sans-serif">Roboto</option>
+                <option value="Poppins, sans-serif">Poppins</option>
+                <option value="Open Sans, sans-serif">Open Sans</option>
+              </select></div>
+            </div>
+          </div>
+          <div class="card-widget mt-3">
+            <h5>Banner & Logo</h5>
+            <div class="row g-2">
+              <div class="col-md-6"><label>Banner URL</label><input type="text" id="designBanner" class="form-control form-control-sm" value="${this.formDesign.bannerUrl}"></div>
+              <div class="col-md-6"><label>Logo URL</label><input type="text" id="designLogo" class="form-control form-control-sm" value="${this.formDesign.logoUrl}"></div>
+            </div>
+          </div>
+          <div class="card-widget mt-3">
+            <h5>Custom CSS</h5>
+            <textarea id="designCSS" class="form-control form-control-sm" rows="4">${this.formDesign.customCSS}</textarea>
+          </div>
+          <button class="btn btn-success btn-sm mt-3" onclick="Forms.saveDesign()">Apply Design</button>
+        </div>
+        <div class="col-md-4">
+          <div class="card-widget">
+            <h5>Preview</h5>
+            <div class="preview-phone" id="designPreview" style="background:${this.formDesign.backgroundColor}; font-family:${this.formDesign.fontFamily};">
+              ${this.renderDesignPreview()}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    contentArea.innerHTML = html;
+    // Live preview update
+    ['designPrimary','designBtnText','designBg','designTitleColor','designTitleSize','designFont','designBanner','designLogo','designCSS'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => this.updateDesignPreview());
+    });
+  },
+
+  renderDesignPreview() {
+    const name = 'Sample Form';
+    return `
+      ${this.formDesign.bannerUrl ? `<img src="${this.formDesign.bannerUrl}" style="width:100%;border-radius:8px;margin-bottom:12px;">` : ''}
+      ${this.formDesign.logoUrl ? `<div style="text-align:center;margin-bottom:8px;"><img src="${this.formDesign.logoUrl}" style="max-height:50px;"></div>` : ''}
+      <h4 style="text-align:center;color:${this.formDesign.titleColor};font-size:${this.formDesign.titleFontSize};">${name}</h4>
+      <div class="preview-field"><label>Sample Field</label><input type="text" disabled></div>
+      <button class="btn-submit" style="background:${this.formDesign.primaryColor};color:${this.formDesign.buttonTextColor};">Submit</button>
+    `;
+  },
+
+  updateDesignPreview() {
+    const preview = document.getElementById('designPreview');
+    if (!preview) return;
+    this.formDesign.primaryColor = document.getElementById('designPrimary')?.value || this.formDesign.primaryColor;
+    this.formDesign.buttonTextColor = document.getElementById('designBtnText')?.value || this.formDesign.buttonTextColor;
+    this.formDesign.backgroundColor = document.getElementById('designBg')?.value || this.formDesign.backgroundColor;
+    this.formDesign.titleColor = document.getElementById('designTitleColor')?.value || this.formDesign.titleColor;
+    this.formDesign.titleFontSize = document.getElementById('designTitleSize')?.value || this.formDesign.titleFontSize;
+    this.formDesign.fontFamily = document.getElementById('designFont')?.value || this.formDesign.fontFamily;
+    this.formDesign.bannerUrl = document.getElementById('designBanner')?.value || '';
+    this.formDesign.logoUrl = document.getElementById('designLogo')?.value || '';
+    preview.style.background = this.formDesign.backgroundColor;
+    preview.style.fontFamily = this.formDesign.fontFamily;
+    preview.innerHTML = this.renderDesignPreview();
+    if (document.getElementById('designCSS')) {
+      this.formDesign.customCSS = document.getElementById('designCSS').value;
+    }
+  },
+
+  saveDesign() {
+    this.updateDesignPreview();
+    alert('✅ Design applied! Go back to builder and save the form.');
+  },
+
+  // ==================== SAVE FORM ====================
   async saveForm() {
     const name = document.getElementById('formName').value.trim();
     const source = document.getElementById('formSource').value;
     const successMsg = document.getElementById('formSuccessMsg').value.trim();
     if (!name) return alert('Form name required!');
-    const data = { name, source, successMsg, fields: this.formFields, design: this.formDesign, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    const data = {
+      name, source, successMsg,
+      fields: this.formFields,
+      design: this.formDesign,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
     try {
       if (this.currentFormId) {
         await db.collection('forms').doc(this.currentFormId).update(data);
@@ -347,33 +457,47 @@ const Forms = {
   },
 
   editForm(id) { this.currentTab = 'builder'; this.currentFormId = id; this.render(); },
+
   getFormLink(formId) {
-    if (formId === 'preview') { alert('Save the form first.'); return; }
+    if (formId === 'preview') { alert('Save the form first to get a link.'); return; }
     prompt('Share this link:', `https://allimpliments.github.io/WA-Dual-CRM/?form=${formId}`);
   },
 
+  // ==================== SUBMISSIONS ====================
   async renderSubmissions() {
     const formId = this.currentFormId;
     const formDoc = await db.collection('forms').doc(formId).get();
     const form = formDoc.data();
-    const subsSnap = await db.collection('formSubmissions').where('formId', '==', formId).orderBy('createdAt', 'desc').get();
-    const submissions = subsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await db.collection('formSubmissions').where('formId', '==', formId).orderBy('createdAt', 'desc').get();
+    const submissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
     let html = `
-      <div class="d-flex justify-content-between mb-3"><h4>Submissions: ${form.name}</h4><button class="btn btn-outline-primary btn-sm" onclick="Forms.currentTab='forms'; Forms.render();">Back</button></div>
-      <div class="card-widget"><p>Total: <strong>${submissions.length}</strong></p></div>
+      <div class="d-flex justify-content-between mb-3">
+        <h4>Submissions: ${form.name}</h4>
+        <button class="btn btn-outline-primary btn-sm" onclick="Forms.currentTab='forms'; Forms.render();">Back</button>
+      </div>
+      <div class="card-widget">
+        <p>Total: <strong>${submissions.length}</strong></p>
+        ${submissions.length === 0 ? '<p class="text-muted">No submissions.</p>' : `
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead><tr>${(form.fields || []).map(f => `<th>${f.label}</th>`).join('')}<th>Date</th></tr></thead>
+              <tbody>
+                ${submissions.map(s => `
+                  <tr>${(form.fields || []).map(f => `<td>${(s.data && s.data[f.label]) || '-'}</td>`).join('')}<td>${s.createdAt?.toDate().toLocaleString()}</td></tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
     `;
     contentArea.innerHTML = html;
   },
 
   async deleteForm(id) {
-    if (!confirm('Delete form?')) return;
+    if (!confirm('Delete this form and its submissions?')) return;
     await db.collection('forms').doc(id).delete();
     alert('Deleted.'); this.render();
-  },
-
-  // ==================== DESIGN PANEL (Next Step) ====================
-  async renderDesignPanel() {
-    // Will be implemented in next message
-    contentArea.innerHTML = '<p class="text-center py-5">Design panel coming in next step...</p>';
   }
 };
