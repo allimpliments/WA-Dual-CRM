@@ -75,15 +75,13 @@ const Forms = {
   editForm(id) {
     this.currentTab = 'builder';
     this.currentFormId = id;
-    this.render(); // render will call (this.currentFormId)
+    this.render();
   },
 
   // ==================== FORM BUILDER ====================
   async renderBuilder(formId = null) {
-    // If no formId passed, use currentFormId
     const effectiveFormId = formId || this.currentFormId;
-    
-    // Load form data if editing
+
     if (effectiveFormId) {
       const doc = await db.collection('forms').doc(effectiveFormId).get();
       if (doc.exists) {
@@ -136,7 +134,6 @@ const Forms = {
           <div class="col-md-3"><label class="form-label small fw-bold">Lead Source</label><select id="formSource" class="form-select form-select-sm"><option value="General">General</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option><option value="Website">Website</option></select></div>
           <div class="col-md-5"><label class="form-label small fw-bold">Success Message</label><input type="text" id="formSuccessMsg" class="form-control form-control-sm" value="${effectiveFormId ? (await db.collection('forms').doc(effectiveFormId).get()).data().successMsg || 'Thank you!' : 'Thank you!'}"></div>
         </div>
-        ${effectiveFormId ? `<script>document.getElementById('formSource').value = '${(await db.collection('forms').doc(effectiveFormId).get()).data().source || 'General'}';</script>` : ''}
       </div>
 
       <div class="builder-layout">
@@ -346,7 +343,6 @@ const Forms = {
     const canvas = document.getElementById('canvasFields');
     if (canvas) {
       canvas.innerHTML = this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click a field type to add it here.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('');
-      // Re-initialize sortable after refresh
       if (this.formFields.length > 0) {
         if (window._sortableInstance) window._sortableInstance.destroy();
         window._sortableInstance = new Sortable(canvas, {
@@ -412,7 +408,7 @@ const Forms = {
             <h5>Custom CSS</h5>
             <textarea id="designCSS" class="form-control form-control-sm" rows="4">${this.formDesign.customCSS}</textarea>
           </div>
-          <button class="btn btn-success btn-sm mt-3" onclick="Forms.()">Apply Design</button>
+          <button class="btn btn-success btn-sm mt-3" onclick="Forms.saveDesign()">Apply Design</button>
         </div>
         <div class="col-md-4">
           <div class="card-widget">
@@ -480,15 +476,15 @@ const Forms = {
   },
 
   saveDesign() {
-    this.updateDesignPreview(); // स्थानीय ऑब्जेक्ट अपडेट करें
+    this.updateDesignPreview();
     if (this.currentFormId) {
-      // डेटाबेस में तुरंत सेव करें
       db.collection('forms').doc(this.currentFormId).update({ design: this.formDesign });
       alert('✅ Design saved to form!');
     } else {
       alert('⚠️ Save the form first, then apply design.');
     }
-  }
+  },
+
   // ==================== SAVE FORM ====================
   async saveForm() {
     const name = document.getElementById('formName').value.trim();
@@ -529,7 +525,6 @@ const Forms = {
     const form = formDoc.data();
     const snap = await db.collection('formSubmissions').where('formId', '==', formId).orderBy('createdAt', 'desc').get();
     const submissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
     let html = `
       <div class="d-flex justify-content-between mb-3">
         <h4>Submissions: ${form.name}</h4>
