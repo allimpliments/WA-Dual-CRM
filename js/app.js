@@ -34,6 +34,12 @@ const navSections = [
     ]
   },
   {
+    title: 'Forms',
+    items: [
+      { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin', 'team'] }
+    ]
+  },
+  {
     title: 'E-commerce',
     items: [
       { name: 'E-commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
@@ -45,9 +51,6 @@ const navSections = [
       { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin', 'team'] },
       { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
     ]
-  },
-  { title: 'Forms', items: [
-  { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin', 'team'] }
   },
   {
     title: 'Management',
