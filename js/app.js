@@ -104,6 +104,7 @@ function loadSection(section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
     case 'contacts': Contacts.render(); break;
+    case 'forms': Forms.currentTab = 'forms'; Forms.render(); break;
     case 'campaigns': Campaigns.render(); break;
     case 'setup': Setup.render(); break;
     case 'chats': Chats.render(); break;
@@ -117,10 +118,6 @@ function loadSection(section) {
     case 'kanban': Kanban.render(); break;
     case 'social': Social.render(); break;
     case 'plan': Plan.render(); break;
-    case 'forms':
-    Forms.currentTab = 'forms';
-    Forms.render();
-    break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
   document.querySelectorAll('.sidebar .nav-link').forEach(l => {
