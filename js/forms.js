@@ -515,7 +515,7 @@ const Forms = {
     prompt('Share this link:', `${window.location.origin}${window.location.pathname}?form=${formId}`);
   },
 
-  // ==================== SUBMISSIONS ====================
+  // ==================== SUBMISSIONS (with delete) ====================
   async renderSubmissions() {
     const formId = this.currentFormId;
     if (!formId) { this.render(); return; }
@@ -533,10 +533,16 @@ const Forms = {
         ${submissions.length === 0 ? '<p class="text-muted">No submissions.</p>' : `
           <div class="table-responsive">
             <table class="table table-sm">
-              <thead><tr>${(form.fields || []).map(f => `<th>${f.label}</th>`).join('')}<th>Date</th></tr></thead>
+              <thead><tr>${(form.fields || []).map(f => `<th>${f.label}</th>`).join('')}<th>Date</th><th>Action</th></tr></thead>
               <tbody>
                 ${submissions.map(s => `
-                  <tr>${(form.fields || []).map(f => `<td>${(s.data && s.data[f.label]) || '-'}</td>`).join('')}<td>${s.createdAt?.toDate().toLocaleString()}</td></tr>
+                  <tr>
+                    ${(form.fields || []).map(f => `<td>${(s.data && s.data[f.label]) || '-'}</td>`).join('')}
+                    <td>${s.createdAt?.toDate().toLocaleString()}</td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-danger" onclick="Forms.deleteSubmission('${formId}', '${s.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                  </tr>
                 `).join('')}
               </tbody>
             </table>
@@ -547,8 +553,24 @@ const Forms = {
     contentArea.innerHTML = html;
   },
 
+  async deleteSubmission(formId, submissionId) {
+    if (!confirm('Delete this submission?')) return;
+    try {
+      await db.collection('formSubmissions').doc(submissionId).delete();
+      // Decrement submission count
+      await db.collection('forms').doc(formId).update({
+        submissionCount: firebase.firestore.FieldValue.increment(-1)
+      });
+      alert('Submission deleted.');
+      // Refresh submissions view
+      this.renderSubmissions();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
   async deleteForm(id) {
-    if (!confirm('Delete this form and its submissions?')) return;
+    if (!confirm('Delete this form and all its submissions?')) return;
     await db.collection('forms').doc(id).delete();
     alert('Deleted.'); this.render();
   }
