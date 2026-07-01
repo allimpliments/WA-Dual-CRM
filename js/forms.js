@@ -75,7 +75,7 @@ const Forms = {
   editForm(id) {
     this.currentTab = 'builder';
     this.currentFormId = id;
-    this.render(); // render will call renderBuilder(this.currentFormId)
+    this.render(); // render will call (this.currentFormId)
   },
 
   // ==================== FORM BUILDER ====================
@@ -412,7 +412,7 @@ const Forms = {
             <h5>Custom CSS</h5>
             <textarea id="designCSS" class="form-control form-control-sm" rows="4">${this.formDesign.customCSS}</textarea>
           </div>
-          <button class="btn btn-success btn-sm mt-3" onclick="Forms.saveDesign()">Apply Design</button>
+          <button class="btn btn-success btn-sm mt-3" onclick="Forms.()">Apply Design</button>
         </div>
         <div class="col-md-4">
           <div class="card-widget">
@@ -480,10 +480,15 @@ const Forms = {
   },
 
   saveDesign() {
-    this.updateDesignPreview();
-    alert('✅ Design applied! Go back to builder and save the form.');
-  },
-
+    this.updateDesignPreview(); // स्थानीय ऑब्जेक्ट अपडेट करें
+    if (this.currentFormId) {
+      // डेटाबेस में तुरंत सेव करें
+      db.collection('forms').doc(this.currentFormId).update({ design: this.formDesign });
+      alert('✅ Design saved to form!');
+    } else {
+      alert('⚠️ Save the form first, then apply design.');
+    }
+  }
   // ==================== SAVE FORM ====================
   async saveForm() {
     const name = document.getElementById('formName').value.trim();
