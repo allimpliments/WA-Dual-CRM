@@ -1,4 +1,4 @@
-// auth.js – fixed: no top-level return, public form + login dono kaam karenge
+// auth.js – fixed: public form + login, with graceful contact/lead creation
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -78,7 +78,6 @@ if (formId) {
         // ====== VALIDATION ======
         const fields = form.fields || [];
         let isValid = true;
-        // Remove previous error highlights
         document.querySelectorAll('#publicFormForm .error').forEach(el => el.classList.remove('error'));
 
         fields.forEach((f, i) => {
@@ -98,7 +97,6 @@ if (formId) {
 
           if (!value) {
             isValid = false;
-            // Highlight the first invalid input of this field
             const fieldContainer = document.querySelector(`#publicFormForm .field:nth-of-type(${i+1})`);
             if (fieldContainer) {
               const inputEl = fieldContainer.querySelector('input, select, textarea');
@@ -128,43 +126,47 @@ if (formId) {
         });
 
         try {
-          // Save submission
+          // 1. Save submission (always allowed with updated rules)
           await db.collection('formSubmissions').add({
             formId: formId,
             data: formData,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
-          // Create Contact or Lead based on form source
-const source = form.source || 'General';
-const contactData = {
-  firstName: formData['Name'] || formData['Full Name'] || formData['First Name'] || '',
-  lastName: formData['Last Name'] || '',
-  mobile: formData['Phone'] || formData['Mobile'] || formData['Phone Number'] || '',
-  email: formData['Email'] || formData['Email Address'] || '',
-  group: source === 'WhatsApp' ? 'Leads' : source === 'Facebook' ? 'Leads' : 'Customers',
-  source: source,
-  createdAt: firebase.firestore.FieldValue.serverTimestamp()
-};
 
-if (contactData.firstName || contactData.mobile || contactData.email) {
-  if (source === 'WhatsApp' || source === 'Facebook') {
-    // Add to Leads
-    await db.collection('leads').add({
-      name: `${contactData.firstName} ${contactData.lastName}`.trim(),
-      phone: contactData.mobile,
-      email: contactData.email,
-      source: source,
-      status: 'New',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }
-  // Always add to Contacts
-  await db.collection('contacts').add(contactData);
-}
-          // Increment submission count on the form document
+          // 2. Increment submission count on the form document
           await db.collection('forms').doc(formId).update({
             submissionCount: firebase.firestore.FieldValue.increment(1)
           });
+
+          // 3. Create Contact / Lead based on form source
+          const source = form.source || 'General';
+          const contactData = {
+            firstName: formData['Name'] || formData['Full Name'] || formData['First Name'] || '',
+            lastName: formData['Last Name'] || '',
+            mobile: formData['Phone'] || formData['Mobile'] || formData['Phone Number'] || '',
+            email: formData['Email'] || formData['Email Address'] || '',
+            group: source === 'WhatsApp' ? 'Leads' : source === 'Facebook' ? 'Leads' : 'Customers',
+            source: source,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+
+          if (contactData.firstName || contactData.mobile || contactData.email) {
+            try {
+              await db.collection('contacts').add(contactData);
+              if (source === 'WhatsApp' || source === 'Facebook') {
+                await db.collection('leads').add({
+                  name: `${contactData.firstName} ${contactData.lastName}`.trim(),
+                  phone: contactData.mobile,
+                  email: contactData.email,
+                  source: source,
+                  status: 'New',
+                  createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+              }
+            } catch (innerErr) {
+              console.warn('Contact/Lead creation skipped:', innerErr.message);
+            }
+          }
 
           document.getElementById('publicFormMsg').innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
           document.getElementById('publicFormForm').reset();
