@@ -1,4 +1,4 @@
-// auth.js – fixed login + public form support
+// auth.js – fixed: no top-level return, public form + login dono kaam karenge
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -7,7 +7,9 @@ const registerFormDiv = document.getElementById('registerForm');
 // ========== PUBLIC FORM VIEW ==========
 const urlParams = new URLSearchParams(window.location.search);
 const formId = urlParams.get('form');
+
 if (formId) {
+  // Public form mode – login screen hatao, sidebar/topbar chhupao
   loginScreen.style.display = 'none';
   appMain.style.display = 'block';
   const sidebar = document.getElementById('sidebar');
@@ -98,87 +100,85 @@ if (formId) {
       document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Error loading form.</p>';
     }
   })();
-  // Stop here for public form
-  return;
-}
 
-// ========== NORMAL AUTH ==========
-console.log('Auth script loaded');
+} else {
+  // ========== NORMAL AUTH FLOW ==========
+  console.log('Auth script loaded');
 
-document.getElementById('showRegister').addEventListener('click', (e) => {
-  e.preventDefault();
-  loginFormDiv.style.display = 'none';
-  registerFormDiv.style.display = 'block';
-});
-document.getElementById('showLogin').addEventListener('click', (e) => {
-  e.preventDefault();
-  registerFormDiv.style.display = 'none';
-  loginFormDiv.style.display = 'block';
-});
-
-document.getElementById('registerBtn').addEventListener('click', async () => {
-  console.log('Register clicked');
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPassword').value;
-  if (!name || !email || password.length < 6) return alert('Please fill all fields correctly.');
-  try {
-    const userCred = await auth.createUserWithEmailAndPassword(email, password);
-    await db.collection('users').doc(userCred.user.uid).set({
-      name, email, role: 'client',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    alert('Registration successful! You can now login.');
-    // Switch to login form
+  document.getElementById('showRegister').addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormDiv.style.display = 'none';
+    registerFormDiv.style.display = 'block';
+  });
+  document.getElementById('showLogin').addEventListener('click', (e) => {
+    e.preventDefault();
     registerFormDiv.style.display = 'none';
     loginFormDiv.style.display = 'block';
-  } catch (err) {
-    alert(err.message);
-  }
-});
+  });
 
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  console.log('Login clicked');
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  if (!email || !password) return alert('Please enter email and password.');
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-auth.onAuthStateChanged(async (user) => {
-  console.log('Auth state changed', user ? 'logged in' : 'logged out');
-  if (user) {
-    let userData = null;
+  document.getElementById('registerBtn').addEventListener('click', async () => {
+    console.log('Register clicked');
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!name || !email || password.length < 6) return alert('Please fill all fields correctly.');
     try {
-      const doc = await db.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        userData = doc.data();
-      } else {
-        userData = { name: user.email, email: user.email, role: 'admin' };
-        await db.collection('users').doc(user.uid).set({
-          name: user.email,
-          email: user.email,
-          role: 'admin',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
+      const userCred = await auth.createUserWithEmailAndPassword(email, password);
+      await db.collection('users').doc(userCred.user.uid).set({
+        name, email, role: 'client',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert('Registration successful! You can now login.');
+      registerFormDiv.style.display = 'none';
+      loginFormDiv.style.display = 'block';
     } catch (err) {
-      console.error('Error fetching user data:', err);
-      userData = { name: user.email, email: user.email, role: 'admin' };
+      alert(err.message);
     }
-    window.currentUser = { uid: user.uid, ...userData };
-    loginScreen.style.display = 'none';
-    appMain.style.display = 'block';
-    initApp(userData.role);
-    const roleBadge = document.getElementById('userRoleBadge');
-    if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
-  } else {
-    window.currentUser = null;
-    loginScreen.style.display = 'flex';
-    appMain.style.display = 'none';
-  }
-});
+  });
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    console.log('Login clicked');
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return alert('Please enter email and password.');
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  auth.onAuthStateChanged(async (user) => {
+    console.log('Auth state changed', user ? 'logged in' : 'logged out');
+    if (user) {
+      let userData = null;
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          userData = doc.data();
+        } else {
+          userData = { name: user.email, email: user.email, role: 'admin' };
+          await db.collection('users').doc(user.uid).set({
+            name: user.email,
+            email: user.email,
+            role: 'admin',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        userData = { name: user.email, email: user.email, role: 'admin' };
+      }
+      window.currentUser = { uid: user.uid, ...userData };
+      loginScreen.style.display = 'none';
+      appMain.style.display = 'block';
+      initApp(userData.role);
+      const roleBadge = document.getElementById('userRoleBadge');
+      if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
+    } else {
+      window.currentUser = null;
+      loginScreen.style.display = 'flex';
+      appMain.style.display = 'none';
+    }
+  });
+}
