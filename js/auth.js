@@ -7,13 +7,14 @@ const registerFormDiv = document.getElementById('registerForm');
 const urlParams = new URLSearchParams(window.location.search);
 const formId = urlParams.get('form');
 if (formId) {
-  // Hide login, show main area
+  // Hide login, show main area without sidebar/topbar
   loginScreen.style.display = 'none';
   appMain.style.display = 'block';
-  
   // Hide sidebar and topbar for clean public view
-  document.getElementById('sidebar').style.display = 'none';
-  document.querySelector('.topbar').style.display = 'none';
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  const topbar = document.querySelector('.topbar');
+  if (topbar) topbar.style.display = 'none';
   
   (async () => {
     const doc = await db.collection('forms').doc(formId).get();
@@ -56,7 +57,6 @@ if (formId) {
             } else {
               input = `<input type="${f.type}" ${f.required?'required':''} placeholder="${f.placeholder || ''}">`;
             }
-            // Wrap in full or half width
             const widthClass = f.width === 'half' ? 'preview-half' : 'preview-full';
             return `<div class="${widthClass}"><div class="field"><label>${f.label} ${f.required?'*':''}</label>${input}</div></div>`;
           }).join('')}
@@ -78,7 +78,6 @@ if (formId) {
           const checked = document.querySelectorAll(`input[name="field_${i}"]:checked`);
           formData[f.label] = Array.from(checked).map(c => c.value).join(', ');
         } else {
-          // Get the input by index
           const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
           if (inputs[i]) formData[f.label] = inputs[i].value;
         }
@@ -96,11 +95,12 @@ if (formId) {
       }
     });
   })();
-  // Stop further execution
+  // Stop normal auth flow for public form
   return;
 }
 
 // ========== NORMAL AUTH FLOW ==========
+// (only runs if no form parameter)
 document.getElementById('showRegister').addEventListener('click', (e) => {
   e.preventDefault();
   loginFormDiv.style.display = 'none';
