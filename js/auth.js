@@ -9,7 +9,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const formId = urlParams.get('form');
 
 if (formId) {
-  // Public form mode – login screen hatao, sidebar/topbar chhupao
   loginScreen.style.display = 'none';
   appMain.style.display = 'block';
   const sidebar = document.getElementById('sidebar');
@@ -26,6 +25,7 @@ if (formId) {
       }
       const form = doc.data();
       const design = form.design || {};
+
       let html = `
         <style>
           body { background: #f0f2f5; }
@@ -37,6 +37,7 @@ if (formId) {
           .public-form button { background: ${design.primaryColor || '#1877f2'}; color: ${design.buttonTextColor || '#fff'}; border: none; padding: 12px; border-radius: 8px; font-weight: 600; width: 100%; cursor: pointer; font-size: 16px; }
           .public-form .half { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
           .public-form .full { grid-column: span 2; }
+          .error { border: 2px solid red !important; }
         </style>
         <div class="public-form">
           ${design.bannerUrl ? `<img src="${design.bannerUrl}" style="width:100%;border-radius:8px;margin-bottom:16px;">` : ''}
@@ -46,21 +47,22 @@ if (formId) {
           <form id="publicFormForm">
             ${(form.fields || []).map((f, i) => {
               let input = '';
+              const reqAttr = f.required ? 'data-required="true"' : '';
               if (f.type === 'dropdown') {
-                input = `<select ${f.required?'required':''}><option value="">Select...</option>${(f.options||[]).map(o => `<option>${o}</option>`).join('')}</select>`;
+                input = `<select ${reqAttr}><option value="">Select...</option>${(f.options||[]).map(o => `<option>${o}</option>`).join('')}</select>`;
               } else if (f.type === 'radio') {
-                input = (f.options||[]).map(o => `<label><input type="radio" name="field_${i}" value="${o}" ${f.required?'required':''}> ${o}</label><br>`).join('');
+                input = (f.options||[]).map(o => `<label><input type="radio" name="field_${i}" value="${o}" ${reqAttr}> ${o}</label><br>`).join('');
               } else if (f.type === 'checkbox') {
                 input = (f.options||[]).map(o => `<label><input type="checkbox" name="field_${i}" value="${o}"> ${o}</label><br>`).join('');
               } else if (f.type === 'textarea') {
-                input = `<textarea rows="3" ${f.required?'required':''}></textarea>`;
+                input = `<textarea rows="3" ${reqAttr}></textarea>`;
               } else if (f.type === 'file') {
-                input = `<input type="file" ${f.required?'required':''}>`;
+                input = `<input type="file" ${reqAttr}>`;
               } else {
-                input = `<input type="${f.type}" ${f.required?'required':''} placeholder="${f.placeholder || ''}">`;
+                input = `<input type="${f.type}" ${reqAttr} placeholder="${f.placeholder || ''}">`;
               }
               const widthClass = f.width === 'half' ? 'half' : 'full';
-              return `<div class="${widthClass}"><div class="field"><label>${f.label} ${f.required?'*':''}</label>${input}</div></div>`;
+              return `<div class="${widthClass}"><div class="field"><label>${f.label} ${f.required ? '<span style="color:red;">*</span>' : ''}</label>${input}</div></div>`;
             }).join('')}
             <button type="submit">Submit</button>
           </form>
@@ -69,10 +71,50 @@ if (formId) {
         ${design.customCSS ? `<style>${design.customCSS}</style>` : ''}
       `;
       document.getElementById('contentArea').innerHTML = html;
+
       document.getElementById('publicFormForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // ====== VALIDATION ======
+        const fields = form.fields || [];
+        let isValid = true;
+        // Remove previous error highlights
+        document.querySelectorAll('#publicFormForm .error').forEach(el => el.classList.remove('error'));
+
+        fields.forEach((f, i) => {
+          if (!f.required) return;
+          let value = '';
+
+          if (f.type === 'radio') {
+            const selected = document.querySelector(`input[name="field_${i}"]:checked`);
+            value = selected ? selected.value : '';
+          } else if (f.type === 'checkbox') {
+            const checked = document.querySelectorAll(`input[name="field_${i}"]:checked`);
+            value = Array.from(checked).map(c => c.value).join(', ');
+          } else {
+            const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
+            if (inputs[i]) value = inputs[i].value.trim();
+          }
+
+          if (!value) {
+            isValid = false;
+            // Highlight the first invalid input of this field
+            const fieldContainer = document.querySelector(`#publicFormForm .field:nth-of-type(${i+1})`);
+            if (fieldContainer) {
+              const inputEl = fieldContainer.querySelector('input, select, textarea');
+              if (inputEl) inputEl.classList.add('error');
+            }
+          }
+        });
+
+        if (!isValid) {
+          document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Please fill all required fields.</span>';
+          return;
+        }
+
+        // ====== COLLECT DATA ======
         const formData = {};
-        (form.fields || []).forEach((f, i) => {
+        fields.forEach((f, i) => {
           if (f.type === 'radio') {
             const selected = document.querySelector(`input[name="field_${i}"]:checked`);
             formData[f.label] = selected ? selected.value : '';
@@ -84,23 +126,32 @@ if (formId) {
             if (inputs[i]) formData[f.label] = inputs[i].value;
           }
         });
+
         try {
+          // Save submission
           await db.collection('formSubmissions').add({
             formId: formId,
             data: formData,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
-          document.getElementById('publicFormMsg').innerHTML = '<span class="text-success">' + (form.successMsg || 'Thank you!') + '</span>';
+
+          // Increment submission count on the form document
+          await db.collection('forms').doc(formId).update({
+            submissionCount: firebase.firestore.FieldValue.increment(1)
+          });
+
+          document.getElementById('publicFormMsg').innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
           document.getElementById('publicFormForm').reset();
         } catch (err) {
-          document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Error submitting form.</span>';
+          console.error(err);
+          document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Error submitting form. Please try again.</span>';
         }
       });
     } catch (e) {
+      console.error(e);
       document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Error loading form.</p>';
     }
   })();
-
 } else {
   // ========== NORMAL AUTH FLOW ==========
   console.log('Auth script loaded');
