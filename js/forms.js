@@ -59,7 +59,7 @@ const Forms = {
                 </div>
                 <div class="d-flex gap-1" onclick="event.stopPropagation();">
                   <button class="btn btn-sm btn-outline-primary" onclick="Forms.getFormLink('${f.id}')"><i class="fas fa-link"></i></button>
-                  <button class="btn btn-sm btn-outline-info" onclick="Forms.currentTab='submissions'; Forms.currentFormId='${f.id}'; Forms.render();"><i class="fas fa-list"></i></button>
+                  <button class="btn btn-sm btn-outline-info" onclick="Forms.currentTab='submissions'; Forms.currentFormId='${f.id}'; Forms.render();"><i class="fas fa-list"></i> Submissions</button>
                   <button class="btn btn-sm btn-outline-danger" onclick="Forms.deleteForm('${f.id}')"><i class="fas fa-trash"></i></button>
                 </div>
               </div>
@@ -169,7 +169,6 @@ const Forms = {
     `;
     contentArea.innerHTML = html;
 
-    // Set source dropdown after rendering
     if (effectiveFormId) {
       const doc = await db.collection('forms').doc(effectiveFormId).get();
       if (doc.exists) {
@@ -179,7 +178,6 @@ const Forms = {
       }
     }
 
-    // Init Sortable
     setTimeout(() => {
       const canvas = document.getElementById('canvasFields');
       if (canvas && this.formFields.length > 0) {
