@@ -19,9 +19,18 @@ const Forms = {
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
 
-    if (this.currentTab === 'builder') { await this.renderBuilder(); return; }
-    if (this.currentTab === 'design') { await this.renderDesignPanel(); return; }
-    if (this.currentTab === 'submissions') { await this.renderSubmissions(); return; }
+    if (this.currentTab === 'builder') {
+      await this.renderBuilder(this.currentFormId);
+      return;
+    }
+    if (this.currentTab === 'design') {
+      await this.renderDesignPanel();
+      return;
+    }
+    if (this.currentTab === 'submissions') {
+      await this.renderSubmissions();
+      return;
+    }
 
     // Main Forms List
     let forms = [];
@@ -37,7 +46,7 @@ const Forms = {
       </style>
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0"><i class="fas fa-wpforms text-primary me-2"></i>Form Builder</h4>
-        <button class="btn btn-primary" onclick="Forms.currentTab='builder'; Forms.render();"><i class="fas fa-plus me-1"></i> Create New Form</button>
+        <button class="btn btn-primary" onclick="Forms.currentTab='builder'; Forms.currentFormId=null; Forms.render();"><i class="fas fa-plus me-1"></i> Create New Form</button>
       </div>
       <div class="row g-3">
         ${forms.length === 0 ? '<div class="col-12"><p class="text-muted text-center py-4">No forms yet.</p></div>' : forms.map(f => `
@@ -63,16 +72,25 @@ const Forms = {
     contentArea.innerHTML = html;
   },
 
+  editForm(id) {
+    this.currentTab = 'builder';
+    this.currentFormId = id;
+    this.render(); // render will call renderBuilder(this.currentFormId)
+  },
+
   // ==================== FORM BUILDER ====================
   async renderBuilder(formId = null) {
+    // If no formId passed, use currentFormId
+    const effectiveFormId = formId || this.currentFormId;
+    
     // Load form data if editing
-    if (formId) {
-      const doc = await db.collection('forms').doc(formId).get();
+    if (effectiveFormId) {
+      const doc = await db.collection('forms').doc(effectiveFormId).get();
       if (doc.exists) {
         const data = doc.data();
         this.formFields = JSON.parse(JSON.stringify(data.fields || []));
         this.formDesign = { ...this.formDesign, ...(data.design || {}) };
-        this.currentFormId = formId;
+        this.currentFormId = effectiveFormId;
       }
     } else {
       this.formFields = [];
@@ -98,29 +116,30 @@ const Forms = {
         .preview-field input, .preview-field select, .preview-field textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
         .preview-half { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .preview-full { grid-column: span 2; }
-        .btn-submit { width: 100%; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
+        .btn-submit { width: 100%; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; }
         @media (max-width: 1200px) { .builder-layout { grid-template-columns: 1fr; } }
       </style>
 
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fas fa-wpforms text-primary me-2"></i>${formId ? 'Edit' : 'Create'} Form</h4>
+        <h4 class="mb-0"><i class="fas fa-wpforms text-primary me-2"></i>${effectiveFormId ? 'Edit' : 'Create'} Form</h4>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline-secondary btn-sm" onclick="Forms.currentTab='design'; Forms.renderDesignPanel();"><i class="fas fa-palette me-1"></i> Design</button>
-          <button class="btn btn-outline-primary btn-sm" onclick="Forms.getFormLink(formId || 'preview')"><i class="fas fa-eye me-1"></i> Preview</button>
+          <button class="btn btn-light btn-sm" onclick="Forms.currentTab='forms'; Forms.currentFormId=null; Forms.render();"><i class="fas fa-times me-1"></i> Cancel</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="Forms.currentTab='design'; Forms.render();"><i class="fas fa-palette me-1"></i> Design</button>
+          <button class="btn btn-outline-primary btn-sm" onclick="Forms.getFormLink(effectiveFormId || 'preview')"><i class="fas fa-eye me-1"></i> Preview</button>
           <button class="btn btn-success btn-sm" onclick="Forms.saveForm()"><i class="fas fa-save me-1"></i> Save</button>
         </div>
       </div>
 
       <div class="card-widget mb-3">
         <div class="row g-2">
-          <div class="col-md-4"><label class="form-label small fw-bold">Form Name</label><input type="text" id="formName" class="form-control form-control-sm" value="${formId ? (await db.collection('forms').doc(formId).get()).data().name : ''}"></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Form Name</label><input type="text" id="formName" class="form-control form-control-sm" value="${effectiveFormId ? (await db.collection('forms').doc(effectiveFormId).get()).data().name || '' : ''}"></div>
           <div class="col-md-3"><label class="form-label small fw-bold">Lead Source</label><select id="formSource" class="form-select form-select-sm"><option value="General">General</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option><option value="Website">Website</option></select></div>
-          <div class="col-md-5"><label class="form-label small fw-bold">Success Message</label><input type="text" id="formSuccessMsg" class="form-control form-control-sm" value="Thank you!"></div>
+          <div class="col-md-5"><label class="form-label small fw-bold">Success Message</label><input type="text" id="formSuccessMsg" class="form-control form-control-sm" value="${effectiveFormId ? (await db.collection('forms').doc(effectiveFormId).get()).data().successMsg || 'Thank you!' : 'Thank you!'}"></div>
         </div>
+        ${effectiveFormId ? `<script>document.getElementById('formSource').value = '${(await db.collection('forms').doc(effectiveFormId).get()).data().source || 'General'}';</script>` : ''}
       </div>
 
       <div class="builder-layout">
-        <!-- Field Palette -->
         <div class="field-palette">
           <h6 class="mb-2">Field Types</h6>
           <div class="palette-item" onclick="Forms.addField('text')"><i class="fas fa-font"></i> Text</div>
@@ -135,14 +154,12 @@ const Forms = {
           <div class="palette-item" onclick="Forms.addField('phone')"><i class="fas fa-phone"></i> Phone</div>
         </div>
 
-        <!-- Canvas -->
         <div class="canvas" id="builderCanvas">
           <div id="canvasFields">
             ${this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click a field type to add it here.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('')}
           </div>
         </div>
 
-        <!-- Preview -->
         <div class="preview-panel">
           <h6 class="mb-2">Live Preview</h6>
           <div class="preview-phone" id="formPreview" style="background:${this.formDesign.backgroundColor}; font-family:${this.formDesign.fontFamily};">
@@ -151,16 +168,26 @@ const Forms = {
         </div>
       </div>
 
-      <!-- Edit Field Modal -->
       <div id="editFieldModal" style="display:none;"></div>
     `;
     contentArea.innerHTML = html;
 
-    // Init Sortable on canvas
+    // Set source dropdown after rendering
+    if (effectiveFormId) {
+      const doc = await db.collection('forms').doc(effectiveFormId).get();
+      if (doc.exists) {
+        const source = doc.data().source || 'General';
+        const sel = document.getElementById('formSource');
+        if (sel) sel.value = source;
+      }
+    }
+
+    // Init Sortable
     setTimeout(() => {
       const canvas = document.getElementById('canvasFields');
       if (canvas && this.formFields.length > 0) {
-        new Sortable(canvas, {
+        if (window._sortableInstance) window._sortableInstance.destroy();
+        window._sortableInstance = new Sortable(canvas, {
           animation: 150,
           handle: '.field-row',
           onEnd: (evt) => {
@@ -171,17 +198,7 @@ const Forms = {
           }
         });
       }
-      // Set source dropdown if editing
-      if (formId) {
-        db.collection('forms').doc(formId).get().then(doc => {
-          if (doc.exists) {
-            document.getElementById('formName').value = doc.data().name || '';
-            document.getElementById('formSource').value = doc.data().source || 'General';
-            document.getElementById('formSuccessMsg').value = doc.data().successMsg || 'Thank you!';
-          }
-        });
-      }
-    }, 200);
+    }, 300);
   },
 
   renderCanvasField(field, index) {
@@ -224,11 +241,9 @@ const Forms = {
     const name = document.getElementById('formName')?.value || 'Untitled Form';
     const source = document.getElementById('formSource')?.value || 'General';
 
-    // Banner
     if (this.formDesign.bannerUrl) {
       html += `<img src="${this.formDesign.bannerUrl}" style="width:100%;border-radius:8px;margin-bottom:12px;">`;
     }
-    // Logo
     if (this.formDesign.logoUrl) {
       html += `<div style="text-align:center;margin-bottom:8px;"><img src="${this.formDesign.logoUrl}" style="max-height:50px;"></div>`;
     }
@@ -279,7 +294,8 @@ const Forms = {
   },
 
   getDefaultLabel(type) {
-    return { text: 'Name', number: 'Age', email: 'Email', date: 'Date', dropdown: 'Select', radio: 'Choose', checkbox: 'Options', textarea: 'Message', file: 'File', phone: 'Phone' }[type] || 'Field';
+    const labels = { text: 'Name', number: 'Age', email: 'Email', date: 'Date', dropdown: 'Select', radio: 'Choose', checkbox: 'Options', textarea: 'Message', file: 'File', phone: 'Phone' };
+    return labels[type] || 'Field';
   },
 
   editField(index) {
@@ -330,6 +346,20 @@ const Forms = {
     const canvas = document.getElementById('canvasFields');
     if (canvas) {
       canvas.innerHTML = this.formFields.length === 0 ? '<p class="text-muted text-center py-4">Click a field type to add it here.</p>' : this.formFields.map((f, i) => this.renderCanvasField(f, i)).join('');
+      // Re-initialize sortable after refresh
+      if (this.formFields.length > 0) {
+        if (window._sortableInstance) window._sortableInstance.destroy();
+        window._sortableInstance = new Sortable(canvas, {
+          animation: 150,
+          handle: '.field-row',
+          onEnd: (evt) => {
+            const moved = this.formFields.splice(evt.oldIndex, 1)[0];
+            this.formFields.splice(evt.newIndex, 0, moved);
+            this.refreshCanvas();
+            this.refreshPreview();
+          }
+        });
+      }
     }
   },
 
@@ -366,8 +396,16 @@ const Forms = {
           <div class="card-widget mt-3">
             <h5>Banner & Logo</h5>
             <div class="row g-2">
-              <div class="col-md-6"><label>Banner URL</label><input type="text" id="designBanner" class="form-control form-control-sm" value="${this.formDesign.bannerUrl}"></div>
-              <div class="col-md-6"><label>Logo URL</label><input type="text" id="designLogo" class="form-control form-control-sm" value="${this.formDesign.logoUrl}"></div>
+              <div class="col-md-6">
+                <label>Banner (Image URL or Upload)</label>
+                <input type="text" id="designBanner" class="form-control form-control-sm mb-1" value="${this.formDesign.bannerUrl}">
+                <input type="file" id="bannerFileInput" accept="image/*" onchange="Forms.uploadDesignImage('banner')" class="form-control form-control-sm">
+              </div>
+              <div class="col-md-6">
+                <label>Logo (Image URL or Upload)</label>
+                <input type="text" id="designLogo" class="form-control form-control-sm mb-1" value="${this.formDesign.logoUrl}">
+                <input type="file" id="logoFileInput" accept="image/*" onchange="Forms.uploadDesignImage('logo')" class="form-control form-control-sm">
+              </div>
             </div>
           </div>
           <div class="card-widget mt-3">
@@ -387,7 +425,6 @@ const Forms = {
       </div>
     `;
     contentArea.innerHTML = html;
-    // Live preview update
     ['designPrimary','designBtnText','designBg','designTitleColor','designTitleSize','designFont','designBanner','designLogo','designCSS'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => this.updateDesignPreview());
@@ -395,14 +432,32 @@ const Forms = {
   },
 
   renderDesignPreview() {
-    const name = 'Sample Form';
     return `
       ${this.formDesign.bannerUrl ? `<img src="${this.formDesign.bannerUrl}" style="width:100%;border-radius:8px;margin-bottom:12px;">` : ''}
       ${this.formDesign.logoUrl ? `<div style="text-align:center;margin-bottom:8px;"><img src="${this.formDesign.logoUrl}" style="max-height:50px;"></div>` : ''}
-      <h4 style="text-align:center;color:${this.formDesign.titleColor};font-size:${this.formDesign.titleFontSize};">${name}</h4>
+      <h4 style="text-align:center;color:${this.formDesign.titleColor};font-size:${this.formDesign.titleFontSize};">Sample Form</h4>
       <div class="preview-field"><label>Sample Field</label><input type="text" disabled></div>
       <button class="btn-submit" style="background:${this.formDesign.primaryColor};color:${this.formDesign.buttonTextColor};">Submit</button>
     `;
+  },
+
+  async uploadDesignImage(type) {
+    const fileInput = document.getElementById(type === 'banner' ? 'bannerFileInput' : 'logoFileInput');
+    const file = fileInput.files[0];
+    if (!file) return;
+    const storageRef = firebase.storage().ref('form_design/' + Date.now() + '_' + file.name);
+    const task = storageRef.put(file);
+    task.on('state_changed', null, null, async () => {
+      const url = await task.snapshot.ref.getDownloadURL();
+      if (type === 'banner') {
+        this.formDesign.bannerUrl = url;
+        document.getElementById('designBanner').value = url;
+      } else {
+        this.formDesign.logoUrl = url;
+        document.getElementById('designLogo').value = url;
+      }
+      this.updateDesignPreview();
+    });
   },
 
   updateDesignPreview() {
@@ -456,16 +511,15 @@ const Forms = {
     } catch (err) { alert('Error: ' + err.message); }
   },
 
-  editForm(id) { this.currentTab = 'builder'; this.currentFormId = id; this.render(); },
-
   getFormLink(formId) {
     if (formId === 'preview') { alert('Save the form first to get a link.'); return; }
-    prompt('Share this link:', `https://allimpliments.github.io/WA-Dual-CRM/?form=${formId}`);
+    prompt('Share this link:', `${window.location.origin}${window.location.pathname}?form=${formId}`);
   },
 
   // ==================== SUBMISSIONS ====================
   async renderSubmissions() {
     const formId = this.currentFormId;
+    if (!formId) { this.render(); return; }
     const formDoc = await db.collection('forms').doc(formId).get();
     const form = formDoc.data();
     const snap = await db.collection('formSubmissions').where('formId', '==', formId).orderBy('createdAt', 'desc').get();
