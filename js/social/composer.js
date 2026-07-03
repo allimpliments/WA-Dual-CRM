@@ -36,32 +36,17 @@ const SocialComposer = {
         .media-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #f0f0f0; }
         .media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
         .media-item .remove-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; z-index: 2; }
-        .carousel-slider { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
-        .carousel-slider .slides { display: flex; transition: transform 0.3s ease; }
-        .carousel-slider .slide { min-width: 100%; }
-        .carousel-slider .slide img { width: 100%; height: 300px; object-fit: contain; }
-        .carousel-slider .dots { display: flex; justify-content: center; gap: 6px; padding: 8px; position: absolute; bottom: 8px; left: 0; right: 0; }
-        .carousel-slider .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; }
-        .carousel-slider .dot.active { background: #1877f2; }
-        .carousel-slider .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; z-index: 2; display: flex; align-items: center; justify-content: center; }
-        .preview-story { background: #000; border-radius: 12px; width: 100%; aspect-ratio: 9/16; max-height: 500px; color: #fff; position: relative; overflow: hidden; }
-        .preview-story img, .preview-story video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
-        .preview-reel { background: #000; border-radius: 8px; width: 100%; aspect-ratio: 9/16; max-height: 500px; color: #fff; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-        .preview-reel video, .preview-reel img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-        .preview-feed { background: #fff; border-radius: 8px; padding: 12px; }
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; z-index: 9999; animation: slideUp 0.3s ease; }
         .toast-success { background: #31a24c; }
         .toast-error { background: #fa3e3e; }
+        .toast-info { background: #1877f2; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @media (max-width: 1024px) { .composer-grid { grid-template-columns: 1fr; } }
       </style>
 
       <div class="composer-overlay" onclick="SocialComposer.close()">
         <div class="composer-panel" onclick="event.stopPropagation()">
-          <div class="d-flex justify-content-between align-items-center mb-3" style="position:sticky;top:0;background:#f0f2f5;padding-bottom:12px;z-index:5;">
-            <h4 style="font-weight:700;margin:0;">Create Post</h4>
-            <button class="btn-close" onclick="SocialComposer.close()"></button>
-          </div>
+          <h4 style="font-weight:700;margin:0 0 16px 0;">Create Post</h4>
           <div class="composer-grid">
             <div>
               <div class="card"><div class="card-title">Post to</div>
@@ -71,7 +56,6 @@ const SocialComposer = {
               <div class="card"><div class="card-title">Post Type</div>
                 <div class="d-flex gap-2">
                   <div class="type-tab ${this.postType==='post'?'active':''}" onclick="SocialComposer.setPostType('post')">📄 Post</div>
-                  <div class="type-tab ${this.postType==='story'?'active':''}" onclick="SocialComposer.setPostType('story')">📱 Story</div>
                   <div class="type-tab ${this.postType==='reel'?'active':''}" onclick="SocialComposer.setPostType('reel')">🎬 Reel</div>
                   <div class="type-tab ${this.postType==='carousel'?'active':''}" onclick="SocialComposer.setPostType('carousel')">🖼️ Carousel</div>
                 </div>
@@ -92,37 +76,25 @@ const SocialComposer = {
                   <small class="text-muted" id="charCount">0 chars</small>
                 </div>
               </div>
-              <div class="card"><div class="card-title">Schedule</div>
-                <div class="row g-2"><div class="col-6"><input type="date" id="scheduleDate" class="form-control form-control-sm" style="border-radius:8px;"></div><div class="col-6"><input type="time" id="scheduleTime" class="form-control form-control-sm" style="border-radius:8px;"></div></div>
-              </div>
               <div class="d-flex gap-2">
-                <button class="btn btn-primary flex-grow-1" style="height:48px;" onclick="SocialComposer.publish()">🚀 Publish Now</button>
+                <button class="btn btn-primary flex-grow-1" style="height:48px;" id="publishBtn" onclick="SocialComposer.publish()">🚀 Publish Now</button>
                 <button class="btn btn-outline" onclick="SocialComposer.saveDraft()">💾 Draft</button>
               </div>
             </div>
             <div style="position:sticky;top:20px;">
               <div class="card">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <div class="card-title" style="margin:0;">Preview</div>
-                  <div class="d-flex gap-1">
-                    <select class="form-select form-select-sm" style="width:auto;" onchange="SocialComposer.previewPlatform=this.value;SocialComposer.updatePreview();"><option value="facebook">FB</option><option value="instagram">IG</option></select>
-                    <select class="form-select form-select-sm" style="width:auto;" onchange="SocialComposer.previewMode=this.value;SocialComposer.updatePreview();"><option value="feed">Feed</option><option value="story">Story</option><option value="reel">Reel</option></select>
-                    <button class="btn btn-sm btn-light" onclick="SocialComposer.previewDevice=SocialComposer.previewDevice==='desktop'?'mobile':'desktop';SocialComposer.updatePreview();"><i class="fas fa-${this.previewDevice==='desktop'?'mobile-alt':'desktop'}"></i></button>
-                  </div>
-                </div>
-                <div id="composerPreview" style="max-width:${this.previewDevice==='mobile'?'320px':'100%'};margin:0 auto;"><p class="text-muted text-center py-4">Preview</p></div>
+                <div class="card-title">Preview</div>
+                <div id="composerPreview"><p class="text-muted text-center py-4">Preview</p></div>
               </div>
             </div>
           </div>
         </div>
       </div>
     `;
-    document.addEventListener('keydown', this.handleKeyboard);
   },
 
-  handleKeyboard(e) { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); SocialComposer.saveDraft(); } },
-  setPostType(type) { this.postType = type; document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); if (type === 'story') this.previewMode = 'story'; else if (type === 'reel') this.previewMode = 'reel'; else this.previewMode = 'feed'; this.updatePreview(); },
-  onCaptionInput() { const c = document.getElementById('composerCaption'); const cnt = document.getElementById('charCount'); if (cnt) cnt.innerText = (c?.value?.length || 0) + ' chars'; this.hasUnsavedChanges = true; this.updatePreview(); },
+  setPostType(type) { this.postType = type; document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); },
+  onCaptionInput() { const c = document.getElementById('composerCaption'); const cnt = document.getElementById('charCount'); if (cnt) cnt.innerText = (c?.value?.length || 0) + ' chars'; this.hasUnsavedChanges = true; },
   insertText(t) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += t; this.onCaptionInput(); } },
   insertEmoji(e) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += e; this.onCaptionInput(); } },
   async handleDrop(e) { e.preventDefault(); await this.uploadFiles(e.dataTransfer.files); },
@@ -157,38 +129,14 @@ const SocialComposer = {
     if (this.uploadedFiles.length === 0) { g.innerHTML = '<p class="text-muted small">No media yet.</p>'; return; }
     g.innerHTML = this.uploadedFiles.map((f, i) => {
       let inner = f.url ? (f.url.match(/\.(mp4|mov|webm)/i) ? `<video src="${f.url}" controls></video>` : `<img src="${f.url}">`) : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#666;">${f.name}</div>`;
-      let bar = f.progress < 100 ? `<div style="position:absolute;bottom:0;left:0;width:100%;height:6px;background:rgba(0,0,0,0.3);"><div style="height:100%;background:#1877f2;width:${f.progress}%;"></div></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;color:#1877f2;background:rgba(255,255,255,0.9);padding:2px 8px;border-radius:4px;">${f.progress}%</div>` : '';
+      let bar = f.progress < 100 ? `<div style="position:absolute;bottom:0;left:0;width:100%;height:6px;background:rgba(0,0,0,0.3);"><div style="height:100%;background:#1877f2;width:${f.progress}%;"></div></div>` : '';
       return `<div class="media-item">${inner}${bar}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
     }).join('');
-    this.updatePreview();
   },
 
   removeMedia(i) { this.uploadedFiles.splice(i, 1); this.refreshMediaGrid(); this.hasUnsavedChanges = true; },
-  carouselPrev() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex - 1 + this.uploadedFiles.length) % this.uploadedFiles.length; this.updatePreview(); } },
-  carouselNext() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex + 1) % this.uploadedFiles.length; this.updatePreview(); } },
-  carouselGoTo(i) { this.carouselIndex = i; this.updatePreview(); },
-
-  getPreviewHTML() {
-    const caption = document.getElementById?.('composerCaption')?.value || '';
-    const media = this.uploadedFiles.filter(f => f.url).map(f => f.url);
-    if (!caption && media.length === 0) return '<p class="text-muted text-center py-4">Preview</p>';
-    if (this.previewMode === 'story') return `<div class="preview-story">${media[0] ? (media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" autoplay muted loop></video>` : `<img src="${media[0]}">`) : ''}<div style="position:absolute;top:12px;left:12px;font-weight:600;">11 Avatar Digital Hub</div><div style="position:absolute;bottom:12px;left:12px;right:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;">${caption}</div></div>`;
-    if (this.previewMode === 'reel') return `<div class="preview-reel">${media[0] && media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" controls></video>` : '<p>Upload video</p>'}</div>`;
-    if (this.postType === 'carousel' && media.length > 0) {
-      let h = `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div><div class="carousel-slider"><button class="nav-btn" style="left:8px;" onclick="SocialComposer.carouselPrev()">‹</button><button class="nav-btn" style="right:8px;" onclick="SocialComposer.carouselNext()">›</button><div class="slides" style="transform:translateX(-${this.carouselIndex * 100}%);">`;
-      media.forEach(m => h += `<div class="slide">${m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;height:300px;object-fit:contain;"></video>` : `<img src="${m}" style="width:100%;height:300px;object-fit:contain;">`}</div>`);
-      h += `</div><div class="dots">${media.map((_, i) => `<span class="dot ${i === this.carouselIndex ? 'active' : ''}" onclick="SocialComposer.carouselGoTo(${i})"></span>`).join('')}</div></div><p style="margin-top:8px;">${caption}</p></div>`;
-      return h;
-    }
-    let h = `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div>`;
-    media.forEach(m => h += m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;border-radius:8px;margin-bottom:4px;max-height:300px;"></video>` : `<img src="${m}" style="width:100%;border-radius:8px;margin-bottom:4px;max-height:300px;object-fit:cover;">`);
-    h += `<p style="margin-top:8px;">${caption}</p></div>`;
-    return h;
-  },
-
-  updatePreview() { const p = document.getElementById('composerPreview'); if (p) p.innerHTML = this.getPreviewHTML(); },
   startAutoSave() { if (this.autoSaveTimer) clearInterval(this.autoSaveTimer); this.autoSaveTimer = setInterval(() => { if (this.hasUnsavedChanges && document.getElementById('composerCaption')?.value?.trim()) this.saveDraft(true); }, 30000); },
-  showToast(msg, type) { const old = document.querySelector('.toast'); if (old) old.remove(); const t = document.createElement('div'); t.className = 'toast toast-' + (type || 'success'); t.innerText = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); },
+  showToast(msg, type) { const old = document.querySelector('.toast'); if (old) old.remove(); const t = document.createElement('div'); t.className = 'toast toast-' + (type || 'success'); t.innerText = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 4000); },
 
   async saveDraft(silent) {
     const msg = document.getElementById('composerCaption')?.value || '';
@@ -200,24 +148,35 @@ const SocialComposer = {
   },
 
   async publish() {
+    const btn = document.getElementById('publishBtn');
+    if (btn) { btn.disabled = true; btn.innerText = '⏳ Publishing...'; }
+
     const msg = document.getElementById('composerCaption')?.value || '';
-    const scheduleDate = document.getElementById('scheduleDate')?.value;
-    const scheduleTime = document.getElementById('scheduleTime')?.value;
-    const scheduledAt = (scheduleDate && scheduleTime) ? new Date(scheduleDate + 'T' + scheduleTime).toISOString() : null;
-    const finalStatus = scheduledAt ? 'scheduled' : 'published';
     const media = this.uploadedFiles.filter(f => f.url).map(f => f.url);
     const postType = this.postType;
 
-    if (!this.activePlatforms.facebook && !this.activePlatforms.instagram) return this.showToast('Select a platform', 'error');
+    if (!this.activePlatforms.facebook && !this.activePlatforms.instagram) {
+      this.showToast('Select at least one platform', 'error');
+      if (btn) { btn.disabled = false; btn.innerText = '🚀 Publish Now'; }
+      return;
+    }
+
+    let successCount = 0;
+    let errorMsg = '';
 
     for (const platform of ['facebook', 'instagram']) {
       if (!this.activePlatforms[platform]) continue;
-      const cfg = (await db.collection('settings').doc(platform === 'facebook' ? 'facebook_page' : 'instagram_business').get()).data();
-      if (!cfg?.accessToken) return this.showToast(platform + ' not configured', 'error');
 
       try {
+        const cfg = (await db.collection('settings').doc(platform === 'facebook' ? 'facebook_page' : 'instagram_business').get()).data();
+        if (!cfg?.accessToken) {
+          errorMsg += platform + ' not configured. ';
+          continue;
+        }
+
+        this.showToast('Posting to ' + platform + '...', 'info');
+
         if (platform === 'facebook') {
-          // Facebook: Post each media as separate photo
           if (media.length > 0) {
             for (const url of media) {
               const isVideo = url.match(/\.(mp4|mov|webm)/i);
@@ -244,10 +203,10 @@ const SocialComposer = {
           const igUserId = cfg.accountId;
           let mediaType;
           if (postType === 'reel') mediaType = 'REELS';
-          else if (postType === 'story') mediaType = 'STORIES';
+
+          if (media.length === 0) throw new Error('Instagram requires media');
 
           if (postType === 'carousel' && media.length > 1) {
-            // Step 1: Create individual media containers
             const children = [];
             for (const url of media.slice(0, 10)) {
               const isV = url.match(/\.(mp4|mov)/i);
@@ -257,20 +216,17 @@ const SocialComposer = {
               const r = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: p });
               const d = await r.json();
               if (d.id) children.push(d.id);
-              else throw new Error('Carousel item failed: ' + (d.error?.message || JSON.stringify(d)));
+              else throw new Error(d.error?.message || 'Carousel item failed');
             }
-            // Step 2: Create carousel container
             const cp = new URLSearchParams({ caption: msg, media_type: 'CAROUSEL', access_token: cfg.accessToken });
             children.forEach((id, i) => cp.append(`children[${i}]`, id));
             const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: cp });
             const cd = await cr.json();
-            if (!cd.id) throw new Error('Carousel create failed: ' + (cd.error?.message || JSON.stringify(cd)));
-            // Step 3: Publish carousel
+            if (!cd.id) throw new Error(cd.error?.message || 'Carousel create failed');
             const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
             const pd = await pr.json();
-            if (!pd.id) throw new Error('Carousel publish failed: ' + (pd.error?.message || JSON.stringify(pd)));
+            if (!pd.id) throw new Error(pd.error?.message || 'Carousel publish failed');
           } else {
-            // Single media (Post, Reel, Story)
             for (const url of media.slice(0, 1)) {
               const isV = url.match(/\.(mp4|mov|webm)/i);
               const p = new URLSearchParams({ caption: msg, access_token: cfg.accessToken });
@@ -280,34 +236,43 @@ const SocialComposer = {
               } else {
                 p.append('image_url', url);
               }
-              // Step 1: Create media container
               const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: p });
               const cd = await cr.json();
-              if (!cd.id) throw new Error('Media create failed: ' + (cd.error?.message || JSON.stringify(cd)));
-              // Step 2: Wait a bit for processing (especially for REELS)
-              if (mediaType === 'REELS') {
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-              }
-              // Step 3: Publish
+              if (!cd.id) throw new Error(cd.error?.message || 'Media create failed');
+              // Wait for REELS processing
+              if (mediaType === 'REELS') await new Promise(r => setTimeout(r, 5000));
               const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
               const pd = await pr.json();
-              if (!pd.id) throw new Error('Publish failed: ' + (pd.error?.message || JSON.stringify(pd)));
+              if (!pd.id) throw new Error(pd.error?.message || 'Publish failed');
             }
           }
         }
-        await db.collection('socialPosts').add({ platform, message: msg, media, postType, status: finalStatus, scheduledAt, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+        await db.collection('socialPosts').add({
+          platform, message: msg, media, postType,
+          status: 'published',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        successCount++;
       } catch (err) {
-        return this.showToast(platform + ': ' + err.message, 'error');
+        errorMsg += platform + ': ' + err.message + ' | ';
       }
     }
-    this.close();
-    Social.render();
-    this.showToast('✅ ' + (finalStatus === 'published' ? 'Posted!' : 'Scheduled!'));
+
+    if (btn) { btn.disabled = false; btn.innerText = '🚀 Publish Now'; }
+
+    if (successCount > 0) {
+      this.close();
+      Social.render();
+      this.showToast('✅ Posted to ' + successCount + ' platform(s)!');
+    }
+    if (errorMsg) {
+      this.showToast('❌ ' + errorMsg, 'error');
+    }
   },
 
   close() {
     if (this.autoSaveTimer) clearInterval(this.autoSaveTimer);
-    document.removeEventListener('keydown', this.handleKeyboard);
     document.getElementById('composerContainer').innerHTML = '';
   }
 };
