@@ -129,8 +129,7 @@ const SocialComposer = {
     if (this.uploadedFiles.length === 0) { g.innerHTML = '<p class="text-muted small">No media yet.</p>'; return; }
     g.innerHTML = this.uploadedFiles.map((f, i) => {
       let inner = f.url ? (f.url.match(/\.(mp4|mov|webm)/i) ? `<video src="${f.url}" controls></video>` : `<img src="${f.url}">`) : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#666;">${f.name}</div>`;
-      let bar = f.progress < 100 ? `<div style="position:absolute;bottom:0;left:0;width:100%;height:6px;background:rgba(0,0,0,0.3);"><div style="height:100%;background:#1877f2;width:${f.progress}%;"></div></div>` : '';
-      return `<div class="media-item">${inner}${bar}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
+      return `<div class="media-item">${inner}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
     }).join('');
   },
 
@@ -239,8 +238,20 @@ const SocialComposer = {
               const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: p });
               const cd = await cr.json();
               if (!cd.id) throw new Error(cd.error?.message || 'Media create failed');
-              // Wait for REELS processing
-              if (mediaType === 'REELS') await new Promise(r => setTimeout(r, 5000));
+
+              // For REELS, poll status until finished
+              if (mediaType === 'REELS') {
+                let finished = false;
+                for (let i = 0; i < 30; i++) {
+                  await new Promise(r => setTimeout(r, 3000));
+                  const statusRes = await fetch(`https://graph.facebook.com/v22.0/${cd.id}?fields=status_code&access_token=${cfg.accessToken}`);
+                  const statusData = await statusRes.json();
+                  if (statusData.status_code === 'FINISHED') { finished = true; break; }
+                  if (statusData.status_code === 'ERROR') throw new Error('Video processing failed: ' + (statusData.status || 'Unknown error'));
+                }
+                if (!finished) throw new Error('Video processing timeout. Please try again.');
+              }
+
               const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
               const pd = await pr.json();
               if (!pd.id) throw new Error(pd.error?.message || 'Publish failed');
