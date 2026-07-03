@@ -1,10 +1,5 @@
 const Social = {
   currentTab: 'published',
-  uploadedFiles: [],
-  activePlatforms: { facebook: true, instagram: true },
-  postType: 'post',
-  previewPlatform: 'facebook',
-  previewMode: 'feed',
 
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
@@ -20,24 +15,10 @@ const Social = {
 
     let html = `
       <style>
-        .composer-grid { display: grid; grid-template-columns: 1fr 400px; gap: 24px; }
         .card { background: #fff; border: 1px solid #dadde1; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
         .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; font-size: 14px; }
         .btn-primary { background: #1877f2; color: #fff; }
         .btn-outline { background: #fff; color: #1877f2; border: 1px solid #dadde1; }
-        .type-tab { padding: 10px 16px; border-radius: 20px; cursor: pointer; border: 1px solid #dadde1; background: #fff; font-size: 13px; font-weight: 500; }
-        .type-tab.active { background: #1877f2; color: #fff; border-color: #1877f2; }
-        .drop-zone { border: 2px dashed #dadde1; border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; background: #fafbfc; }
-        .drop-zone:hover { border-color: #1877f2; background: #e7f3ff; }
-        .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .media-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #f0f0f0; }
-        .media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
-        .media-item .remove-btn { position: absolute; top: 4px; right: 4px; background: #fa3e3e; color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; z-index: 1; }
-        .preview-feed { background: #fff; border-radius: 8px; padding: 12px; }
-        .preview-story { background: #000; border-radius: 12px; min-height: 400px; color: #fff; position: relative; padding: 16px; }
-        .preview-reel { background: #000; border-radius: 8px; aspect-ratio: 9/16; color: #fff; display: flex; align-items: center; justify-content: center; }
-        .chars { font-size: 12px; color: #65676b; margin-top: 4px; }
-        @media (max-width: 1024px) { .composer-grid { grid-template-columns: 1fr; } }
       </style>
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 style="font-weight:700;">📅 Content Calendar</h4>
@@ -48,19 +29,24 @@ const Social = {
         <button class="btn btn-sm btn-${this.currentTab==='scheduled'?'primary':'light'} rounded-pill" onclick="Social.switchTab('scheduled')">⏰ Scheduled</button>
         <button class="btn btn-sm btn-${this.currentTab==='drafts'?'primary':'light'} rounded-pill" onclick="Social.switchTab('drafts')">📝 Drafts</button>
       </div>
-      <div id="postsList">${posts.length === 0 ? '<p class="text-muted text-center py-4">No posts.</p>' : posts.map(p => `
-        <div class="card" style="padding:16px;">
-          <div class="d-flex gap-3">
-            ${p.media?.length ? `<img src="${p.media[0]}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : ''}
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between"><div><span class="badge bg-${p.platform==='facebook'?'primary':'danger'}">${p.platform}</span><span class="badge bg-info ms-1">${p.postType||'post'}</span></div><small>${p.createdAt?.toDate().toLocaleDateString()}</small></div>
-              <p class="mt-1">${p.message||'(no caption)'}</p>
-              ${p.status!=='published'?`<button class="btn btn-sm btn-primary" onclick="Social.publishDraft('${p.id}')">Publish</button>`:''}
-              <button class="btn btn-sm btn-outline ms-1" onclick="Social.deletePost('${p.id}')"><i class="fas fa-trash"></i></button>
+      <div id="postsList">
+        ${posts.length === 0 ? '<p class="text-muted text-center py-4">No posts.</p>' : posts.map(p => `
+          <div class="card" style="padding:16px;">
+            <div class="d-flex gap-3">
+              ${p.media?.length ? `<img src="${p.media[0]}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : ''}
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between">
+                  <div><span class="badge bg-${p.platform==='facebook'?'primary':'danger'}">${p.platform}</span><span class="badge bg-info ms-1">${p.postType||'post'}</span></div>
+                  <small>${p.createdAt?.toDate().toLocaleDateString()}</small>
+                </div>
+                <p class="mt-1">${p.message||'(no caption)'}</p>
+                ${p.status!=='published'?`<button class="btn btn-sm btn-primary" onclick="Social.publishDraft('${p.id}')">Publish</button>`:''}
+                <button class="btn btn-sm btn-outline ms-1" onclick="Social.deletePost('${p.id}')"><i class="fas fa-trash"></i></button>
+              </div>
             </div>
           </div>
-        </div>
-      `).join('')}</div>
+        `).join('')}
+      </div>
       <div id="composerContainer"></div>
     `;
     contentArea.innerHTML = html;
@@ -68,239 +54,12 @@ const Social = {
 
   switchTab(tab) { this.currentTab = tab; this.render(); },
 
+  // ==================== OPEN COMPOSER ====================
   openComposer() {
-    this.uploadedFiles = []; this.postType = 'post';
-    document.getElementById('composerContainer').innerHTML = `
-      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="Social.closeComposer()">
-        <div style="background:#f0f2f5;border-radius:16px;padding:24px;max-height:92vh;overflow-y:auto;width:96%;max-width:1300px;" onclick="event.stopPropagation()">
-          <div class="d-flex justify-content-between mb-3"><h4 style="font-weight:700;">Create Post</h4><button class="btn-close" onclick="Social.closeComposer()"></button></div>
-          <div class="composer-grid">
-            <div>
-              <div class="card"><div class="fw-bold mb-2">Post to</div>
-                <label class="d-flex align-items-center gap-2"><input type="checkbox" ${this.activePlatforms.facebook?'checked':''} onchange="Social.activePlatforms.facebook=this.checked"> <i class="fab fa-facebook text-primary"></i> Facebook</label>
-                <label class="d-flex align-items-center gap-2 mt-1"><input type="checkbox" ${this.activePlatforms.instagram?'checked':''} onchange="Social.activePlatforms.instagram=this.checked"> <i class="fab fa-instagram text-danger"></i> Instagram</label>
-              </div>
-              <div class="card">
-                <div class="fw-bold mb-2">Post Type</div>
-                <div class="d-flex gap-2">
-                  <div class="type-tab ${this.postType==='post'?'active':''}" onclick="Social.setPostType('post')">📄 Post</div>
-                  <div class="type-tab ${this.postType==='story'?'active':''}" onclick="Social.setPostType('story')">📱 Story</div>
-                  <div class="type-tab ${this.postType==='reel'?'active':''}" onclick="Social.setPostType('reel')">🎬 Reel</div>
-                  <div class="type-tab ${this.postType==='carousel'?'active':''}" onclick="Social.setPostType('carousel')">🖼️ Carousel</div>
-                </div>
-              </div>
-              <div class="card">
-                <div class="fw-bold mb-2">Media</div>
-                <div class="drop-zone" ondragover="event.preventDefault();this.style.borderColor='#1877f2'" ondragleave="this.style.borderColor='#dadde1'" ondrop="Social.handleDrop(event)">
-                  <i class="fas fa-cloud-upload-alt fa-3x" style="color:#1877f2;"></i>
-                  <p>Add photos or video by dragging and dropping</p>
-                  <button class="btn btn-outline btn-sm mt-2" onclick="event.stopPropagation();document.getElementById('composerFileInput').click();">Browse Files</button>
-                </div>
-                <input type="file" id="composerFileInput" multiple accept="image/*,video/*" style="display:none" onchange="Social.handleComposerFiles(event)">
-                <div class="media-grid mt-3" id="composerMediaGrid"></div>
-              </div>
-              <div class="card">
-                <div class="fw-bold mb-2">Caption</div>
-                <textarea id="composerCaption" class="form-control" rows="4" placeholder="Write a caption..." style="border-radius:8px;" oninput="Social.updateCharCount(); Social.updatePreview();"></textarea>
-                <div class="chars" id="charCount">0 characters</div>
-                <div class="d-flex gap-1 mt-2">
-                  <button class="btn btn-sm btn-light" onclick="Social.insertText('😊')">😊</button>
-                  <button class="btn btn-sm btn-light" onclick="Social.insertText('#')">#</button>
-                  <button class="btn btn-sm btn-light" onclick="Social.insertText('@')">@</button>
-                </div>
-              </div>
-              <div class="card">
-                <div class="fw-bold mb-2">Schedule</div>
-                <div class="row g-2">
-                  <div class="col-6"><input type="date" id="scheduleDate" class="form-control form-control-sm" style="border-radius:8px;"></div>
-                  <div class="col-6"><input type="time" id="scheduleTime" class="form-control form-control-sm" style="border-radius:8px;"></div>
-                </div>
-              </div>
-              <div class="d-flex gap-2">
-                <button class="btn btn-primary flex-grow-1" style="height:48px;" onclick="Social.publishFromComposer()">🚀 Publish Now</button>
-                <button class="btn btn-outline" onclick="Social.saveAsDraft()">💾 Draft</button>
-              </div>
-            </div>
-            <div style="position:sticky;top:20px;">
-              <div class="card">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <div class="fw-bold">Preview</div>
-                  <div class="d-flex gap-1">
-                    <select class="form-select form-select-sm" style="width:auto;" onchange="Social.previewPlatform=this.value;Social.updatePreview();">
-                      <option value="facebook">Facebook</option>
-                      <option value="instagram">Instagram</option>
-                    </select>
-                    <select class="form-select form-select-sm" style="width:auto;" onchange="Social.previewMode=this.value;Social.updatePreview();">
-                      <option value="feed">Feed</option>
-                      <option value="story">Story</option>
-                      <option value="reel">Reel</option>
-                    </select>
-                  </div>
-                </div>
-                <div id="composerPreview">${this.getPreviewHTML()}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    SocialComposer.render();
   },
 
-  setPostType(type) {
-    this.postType = type;
-    document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    if (type === 'story') this.previewMode = 'story';
-    else if (type === 'reel') this.previewMode = 'reel';
-    else this.previewMode = 'feed';
-    const modeSel = document.getElementById('previewMode');
-    if (modeSel) modeSel.value = this.previewMode;
-    this.updatePreview();
-  },
-
-  getPreviewHTML() {
-    const caption = document.getElementById?.('composerCaption')?.value || 'Start writing...';
-    const media = this.uploadedFiles;
-    if (this.previewMode === 'story') {
-      return `<div class="preview-story">${media.length>0 ? (media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:12px;" autoplay muted loop></video>` : `<img src="${media[0]}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:12px;">`) : ''}<div style="position:absolute;bottom:12px;left:12px;right:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;">${caption}</div></div>`;
-    }
-    if (this.previewMode === 'reel') {
-      return `<div class="preview-reel">${media.length>0 && media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" controls></video>` : '<p>🎬 Upload a video for Reel preview</p>'}</div>`;
-    }
-    return `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small>Just now</small></div></div>${media.map(m => m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;border-radius:8px;margin-bottom:4px;"></video>` : `<img src="${m}" style="width:100%;border-radius:8px;margin-bottom:4px;">`).join('')}<p style="margin-top:8px;">${caption}</p></div>`;
-  },
-
-  updatePreview() { const p = document.getElementById('composerPreview'); if (p) p.innerHTML = this.getPreviewHTML(); },
-  updateCharCount() { const c = document.getElementById('charCount'); if (c) c.innerText = (document.getElementById('composerCaption')?.value?.length || 0) + ' characters'; },
-  insertText(t) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += t; this.updateCharCount(); this.updatePreview(); } },
-  closeComposer() { document.getElementById('composerContainer').innerHTML = ''; },
-  async handleDrop(e) { e.preventDefault(); await this.uploadFiles(e.dataTransfer.files); },
-  async handleComposerFiles(e) { await this.uploadFiles(e.target.files); },
-
-  async uploadFiles(files) {
-    const max = this.postType === 'carousel' ? 10 : 1;
-    for (const file of files) {
-      if (this.uploadedFiles.length >= max) { alert(`Max ${max} file(s) for ${this.postType}`); break; }
-      const ref = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
-      await ref.put(file);
-      this.uploadedFiles.push(await ref.ref.getDownloadURL());
-    }
-    this.refreshMediaGrid();
-  },
-
-  refreshMediaGrid() {
-    const grid = document.getElementById('composerMediaGrid'); if (!grid) return;
-    grid.innerHTML = this.uploadedFiles.map((url, i) => `
-      <div class="media-item">
-        ${url.match(/\.(mp4|mov|webm)/i) ? `<video src="${url}" controls></video>` : `<img src="${url}">`}
-        <button class="remove-btn" onclick="Social.removeMedia(${i})">×</button>
-      </div>
-    `).join('');
-    this.updatePreview();
-  },
-
-  removeMedia(i) { this.uploadedFiles.splice(i, 1); this.refreshMediaGrid(); },
-
-  async publishFromComposer() { await this.savePost('published'); },
-  async saveAsDraft() { await this.savePost('draft'); },
-
-  async savePost(status) {
-    const msg = document.getElementById('composerCaption')?.value || '';
-    const scheduleDate = document.getElementById('scheduleDate')?.value;
-    const scheduleTime = document.getElementById('scheduleTime')?.value;
-    const scheduledAt = (scheduleDate && scheduleTime) ? new Date(scheduleDate + 'T' + scheduleTime).toISOString() : null;
-    const finalStatus = scheduledAt ? 'scheduled' : status;
-
-    for (const platform of ['facebook', 'instagram']) {
-      if (!this.activePlatforms[platform]) continue;
-      const configDoc = platform === 'facebook' ? 'facebook_page' : 'instagram_business';
-      const cfg = (await db.collection('settings').doc(configDoc).get()).data();
-      if (!cfg?.accessToken) { alert(`${platform} not configured.`); return; }
-
-      const data = { platform, message: msg, media: [...this.uploadedFiles], status: finalStatus, postType: this.postType, scheduledAt, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-
-      if (finalStatus === 'published') {
-        try {
-          if (platform === 'facebook') {
-            if (this.postType === 'story') {
-              if (media.length === 0) throw new Error('Media required for story');
-              const isVideo = media[0].match(/\.(mp4|mov)/i);
-              const ep = isVideo ? `/${cfg.pageId}/video_stories` : `/${cfg.pageId}/photo_stories`;
-              const params = new URLSearchParams({ access_token: cfg.accessToken });
-              if (isVideo) params.append('file_url', media[0]); else params.append('url', media[0]);
-              const res = await fetch(`https://graph.facebook.com/v22.0${ep}`, { method: 'POST', body: params });
-              const result = await res.json();
-              if (result.id) data.platformId = result.id;
-              else throw new Error(result.error?.message || 'Story failed');
-            } else if (this.postType === 'reel') {
-              if (!media[0]?.match(/\.(mp4|mov)/i)) throw new Error('Video required for reel');
-              const params = new URLSearchParams({ file_url: media[0], description: msg, access_token: cfg.accessToken });
-              const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/videos`, { method: 'POST', body: params });
-              const result = await res.json();
-              if (result.id) data.platformId = result.id;
-              else throw new Error(result.error?.message || 'Reel failed');
-            } else {
-              const params = new URLSearchParams({ message: msg, access_token: cfg.accessToken });
-              if (media.length > 0) params.append('link', media[0]);
-              const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
-              const result = await res.json();
-              if (result.id) data.platformId = result.id;
-              else throw new Error(result.error?.message || 'Post failed');
-            }
-          } else {
-            if (media.length === 0) throw new Error('Instagram requires media');
-            const igUserId = cfg.accountId;
-            let mediaType = this.postType === 'reel' ? 'REELS' : this.postType === 'story' ? 'STORIES' : undefined;
-
-            if (this.postType === 'carousel') {
-              const children = [];
-              for (const url of media.slice(0, 10)) {
-                const isVideo = url.match(/\.(mp4|mov)/i);
-                const params = new URLSearchParams({ access_token: cfg.accessToken });
-                if (isVideo) { params.append('media_type', 'VIDEO'); params.append('video_url', url); }
-                else params.append('image_url', url);
-                const res = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: params });
-                const r = await res.json();
-                if (r.id) children.push(r.id);
-                else throw new Error(r.error?.message || 'Carousel item failed');
-              }
-              const cp = new URLSearchParams({ caption: msg, media_type: 'CAROUSEL', access_token: cfg.accessToken });
-              children.forEach((id, i) => cp.append(`children[${i}]`, id));
-              const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: cp });
-              const cd = await cr.json();
-              if (cd.id) {
-                const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
-                const pd = await pr.json();
-                if (pd.id) data.platformId = pd.id;
-                else throw new Error(pd.error?.message || 'Carousel publish failed');
-              } else throw new Error(cd.error?.message || 'Carousel create failed');
-            } else {
-              for (const url of media.slice(0, 1)) {
-                const isVideo = url.match(/\.(mp4|mov)/i);
-                const params = new URLSearchParams({ caption: msg, access_token: cfg.accessToken });
-                if (isVideo || mediaType) {
-                  params.append('media_type', mediaType || (isVideo ? 'VIDEO' : 'IMAGE'));
-                  params.append(isVideo ? 'video_url' : 'image_url', url);
-                } else params.append('image_url', url);
-                const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: params });
-                const cd = await cr.json();
-                if (cd.id) {
-                  const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
-                  const pd = await pr.json();
-                  if (pd.id) data.platformId = pd.id;
-                  else throw new Error(pd.error?.message || 'Publish failed');
-                } else throw new Error(cd.error?.message || 'Media create failed');
-              }
-            }
-          }
-        } catch (err) { alert(`${platform}: ` + err.message); return; }
-      }
-      await db.collection('socialPosts').add(data);
-    }
-    this.closeComposer(); this.uploadedFiles = []; this.render();
-    alert('✅ ' + (finalStatus === 'published' ? 'Posted!' : finalStatus === 'scheduled' ? 'Scheduled!' : 'Draft saved!'));
-  },
-
+  // ==================== PUBLISH DRAFT ====================
   async publishDraft(id) {
     const doc = await db.collection('socialPosts').doc(id).get();
     const post = doc.data();
@@ -317,17 +76,21 @@ const Social = {
         else throw new Error(result.error?.message);
       } else {
         if (!post.media?.length) throw new Error('No media');
-        const igUserId = cfg.accountId;
         const params = new URLSearchParams({ caption: post.message, image_url: post.media[0], access_token: cfg.accessToken });
-        const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: params });
+        const cr = await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media`, { method: 'POST', body: params });
         const cd = await cr.json();
         if (!cd.id) throw new Error(cd.error?.message);
-        await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
+        await fetch(`https://graph.facebook.com/v22.0/${cfg.accountId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
         await db.collection('socialPosts').doc(id).update({ status: 'published' });
       }
       alert('✅ Published!'); this.render();
     } catch (err) { alert('Error: ' + err.message); }
   },
 
-  async deletePost(id) { if (!confirm('Delete?')) return; await db.collection('socialPosts').doc(id).delete(); this.render(); }
+  // ==================== DELETE POST ====================
+  async deletePost(id) {
+    if (!confirm('Delete?')) return;
+    await db.collection('socialPosts').doc(id).delete();
+    this.render();
+  }
 };
