@@ -88,11 +88,7 @@ const SocialComposer = {
               <div class="card"><div class="card-title">Caption</div>
                 <textarea id="composerCaption" class="form-control" rows="5" placeholder="Write a caption..." style="border-radius:8px;" oninput="SocialComposer.onCaptionInput()"></textarea>
                 <div class="d-flex justify-content-between align-items-center mt-1">
-                  <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-light" onclick="SocialComposer.insertEmoji('😊')">😊</button>
-                    <button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('@')">@</button>
-                    <button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('#')">#</button>
-                  </div>
+                  <div class="d-flex gap-1"><button class="btn btn-sm btn-light" onclick="SocialComposer.insertEmoji('😊')">😊</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('@')">@</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('#')">#</button></div>
                   <small class="text-muted" id="charCount">0 chars</small>
                 </div>
               </div>
@@ -125,15 +121,7 @@ const SocialComposer = {
   },
 
   handleKeyboard(e) { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); SocialComposer.saveDraft(); } },
-  setPostType(type) {
-    this.postType = type;
-    document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    if (type === 'story') this.previewMode = 'story';
-    else if (type === 'reel') this.previewMode = 'reel';
-    else this.previewMode = 'feed';
-    this.updatePreview();
-  },
+  setPostType(type) { this.postType = type; document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); if (type === 'story') this.previewMode = 'story'; else if (type === 'reel') this.previewMode = 'reel'; else this.previewMode = 'feed'; this.updatePreview(); },
   onCaptionInput() { const c = document.getElementById('composerCaption'); const cnt = document.getElementById('charCount'); if (cnt) cnt.innerText = (c?.value?.length || 0) + ' chars'; this.hasUnsavedChanges = true; this.updatePreview(); },
   insertText(t) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += t; this.onCaptionInput(); } },
   insertEmoji(e) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += e; this.onCaptionInput(); } },
@@ -145,8 +133,7 @@ const SocialComposer = {
     for (const file of files) {
       if (this.uploadedFiles.length >= max) { this.showToast('Max ' + max + ' files', 'error'); break; }
       const tempId = 't' + Date.now();
-      const fObj = { id: tempId, url: null, progress: 0, name: file.name };
-      this.uploadedFiles.push(fObj);
+      this.uploadedFiles.push({ id: tempId, url: null, progress: 0, name: file.name });
       this.refreshMediaGrid();
       const ref = firebase.storage().ref('social/' + Date.now() + '_' + file.name);
       const task = ref.put(file);
@@ -170,7 +157,7 @@ const SocialComposer = {
     if (this.uploadedFiles.length === 0) { g.innerHTML = '<p class="text-muted small">No media yet.</p>'; return; }
     g.innerHTML = this.uploadedFiles.map((f, i) => {
       let inner = f.url ? (f.url.match(/\.(mp4|mov|webm)/i) ? `<video src="${f.url}" controls></video>` : `<img src="${f.url}">`) : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#666;">${f.name}</div>`;
-      const bar = f.progress < 100 ? `<div style="position:absolute;bottom:0;left:0;width:100%;height:6px;background:rgba(0,0,0,0.3);"><div style="height:100%;background:#1877f2;width:${f.progress}%;"></div></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;color:#1877f2;background:rgba(255,255,255,0.9);padding:2px 8px;border-radius:4px;">${f.progress}%</div>` : '';
+      let bar = f.progress < 100 ? `<div style="position:absolute;bottom:0;left:0;width:100%;height:6px;background:rgba(0,0,0,0.3);"><div style="height:100%;background:#1877f2;width:${f.progress}%;"></div></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;color:#1877f2;background:rgba(255,255,255,0.9);padding:2px 8px;border-radius:4px;">${f.progress}%</div>` : '';
       return `<div class="media-item">${inner}${bar}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
     }).join('');
     this.updatePreview();
@@ -222,7 +209,6 @@ const SocialComposer = {
     const postType = this.postType;
 
     if (!this.activePlatforms.facebook && !this.activePlatforms.instagram) return this.showToast('Select a platform', 'error');
-    if (media.length === 0 && postType !== 'post') return this.showToast('Upload media', 'error');
 
     for (const platform of ['facebook', 'instagram']) {
       if (!this.activePlatforms[platform]) continue;
@@ -231,26 +217,27 @@ const SocialComposer = {
 
       try {
         if (platform === 'facebook') {
+          // Facebook: Post each media as separate photo
           if (media.length > 0) {
-            // Photo/Video Post — use /photos endpoint for images
-            const isVideo = media[0].match(/\.(mp4|mov|webm)/i);
-            if (isVideo) {
-              const params = new URLSearchParams({ access_token: cfg.accessToken, file_url: media[0], description: msg });
-              const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/videos`, { method: 'POST', body: params });
-              const d = await res.json();
-              if (!d.id) throw new Error(d.error?.message);
-            } else {
-              const params = new URLSearchParams({ access_token: cfg.accessToken, url: media[0], caption: msg });
-              const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/photos`, { method: 'POST', body: params });
-              const d = await res.json();
-              if (!d.id && !d.post_id) throw new Error(d.error?.message || 'Photo upload failed');
+            for (const url of media) {
+              const isVideo = url.match(/\.(mp4|mov|webm)/i);
+              if (isVideo) {
+                const p = new URLSearchParams({ access_token: cfg.accessToken, file_url: url, description: msg });
+                const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/videos`, { method: 'POST', body: p });
+                const d = await res.json();
+                if (!d.id) throw new Error(d.error?.message || 'Video failed');
+              } else {
+                const p = new URLSearchParams({ access_token: cfg.accessToken, url: url, caption: msg });
+                const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/photos`, { method: 'POST', body: p });
+                const d = await res.json();
+                if (!d.id && !d.post_id) throw new Error(d.error?.message || 'Photo failed');
+              }
             }
           } else {
-            // Text-only post
-            const params = new URLSearchParams({ message: msg, access_token: cfg.accessToken });
-            const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
+            const p = new URLSearchParams({ message: msg, access_token: cfg.accessToken });
+            const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: p });
             const d = await res.json();
-            if (!d.id) throw new Error(d.error?.message);
+            if (!d.id) throw new Error(d.error?.message || 'Post failed');
           }
         } else {
           // Instagram
@@ -259,7 +246,8 @@ const SocialComposer = {
           if (postType === 'reel') mediaType = 'REELS';
           else if (postType === 'story') mediaType = 'STORIES';
 
-          if (postType === 'carousel') {
+          if (postType === 'carousel' && media.length > 1) {
+            // Step 1: Create individual media containers
             const children = [];
             for (const url of media.slice(0, 10)) {
               const isV = url.match(/\.(mp4|mov)/i);
@@ -269,37 +257,48 @@ const SocialComposer = {
               const r = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: p });
               const d = await r.json();
               if (d.id) children.push(d.id);
-              else throw new Error(d.error?.message);
+              else throw new Error('Carousel item failed: ' + (d.error?.message || JSON.stringify(d)));
             }
+            // Step 2: Create carousel container
             const cp = new URLSearchParams({ caption: msg, media_type: 'CAROUSEL', access_token: cfg.accessToken });
             children.forEach((id, i) => cp.append(`children[${i}]`, id));
             const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: cp });
             const cd = await cr.json();
-            if (cd.id) {
-              const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
-              const pd = await pr.json();
-              if (!pd.id) throw new Error(pd.error?.message);
-            } else throw new Error(cd.error?.message);
+            if (!cd.id) throw new Error('Carousel create failed: ' + (cd.error?.message || JSON.stringify(cd)));
+            // Step 3: Publish carousel
+            const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
+            const pd = await pr.json();
+            if (!pd.id) throw new Error('Carousel publish failed: ' + (pd.error?.message || JSON.stringify(pd)));
           } else {
+            // Single media (Post, Reel, Story)
             for (const url of media.slice(0, 1)) {
               const isV = url.match(/\.(mp4|mov|webm)/i);
               const p = new URLSearchParams({ caption: msg, access_token: cfg.accessToken });
               if (isV || mediaType) {
                 p.append('media_type', mediaType || (isV ? 'VIDEO' : 'IMAGE'));
                 p.append(isV ? 'video_url' : 'image_url', url);
-              } else p.append('image_url', url);
+              } else {
+                p.append('image_url', url);
+              }
+              // Step 1: Create media container
               const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: p });
               const cd = await cr.json();
-              if (cd.id) {
-                const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
-                const pd = await pr.json();
-                if (!pd.id) throw new Error(pd.error?.message);
-              } else throw new Error(cd.error?.message);
+              if (!cd.id) throw new Error('Media create failed: ' + (cd.error?.message || JSON.stringify(cd)));
+              // Step 2: Wait a bit for processing (especially for REELS)
+              if (mediaType === 'REELS') {
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+              }
+              // Step 3: Publish
+              const pr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cd.id, access_token: cfg.accessToken }) });
+              const pd = await pr.json();
+              if (!pd.id) throw new Error('Publish failed: ' + (pd.error?.message || JSON.stringify(pd)));
             }
           }
         }
         await db.collection('socialPosts').add({ platform, message: msg, media, postType, status: finalStatus, scheduledAt, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-      } catch (err) { return this.showToast(platform + ': ' + err.message, 'error'); }
+      } catch (err) {
+        return this.showToast(platform + ': ' + err.message, 'error');
+      }
     }
     this.close();
     Social.render();
