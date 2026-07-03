@@ -7,6 +7,7 @@ const SocialComposer = {
   previewDevice: 'desktop',
   autoSaveTimer: null,
   hasUnsavedChanges: false,
+  carouselIndex: 0,
 
   render() {
     const container = document.getElementById('composerContainer');
@@ -14,6 +15,7 @@ const SocialComposer = {
 
     this.uploadedFiles = [];
     this.hasUnsavedChanges = false;
+    this.carouselIndex = 0;
     this.startAutoSave();
 
     container.innerHTML = `
@@ -37,11 +39,30 @@ const SocialComposer = {
         .media-item .progress-bar-wrap { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.3); }
         .media-item .progress-bar-fill { height: 100%; background: #1877f2; width: 0%; }
         .media-item .uploading-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 11px; font-weight: 600; color: #1877f2; background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 4px; }
-        .preview-feed { background: #fff; border-radius: 8px; padding: 12px; }
-        .preview-story { background: #000; border-radius: 12px; min-height: 400px; color: #fff; position: relative; padding: 16px; overflow: hidden; }
+
+        /* Carousel Slider */
+        .carousel-slider { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
+        .carousel-slider .slides { display: flex; transition: transform 0.3s ease; }
+        .carousel-slider .slide { min-width: 100%; }
+        .carousel-slider .slide img { width: 100%; height: 300px; object-fit: contain; }
+        .carousel-slider .dots { display: flex; justify-content: center; gap: 6px; padding: 8px; position: absolute; bottom: 8px; left: 0; right: 0; }
+        .carousel-slider .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; }
+        .carousel-slider .dot.active { background: #1877f2; }
+        .carousel-slider .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; z-index: 2; display: flex; align-items: center; justify-content: center; }
+        .carousel-slider .nav-prev { left: 8px; }
+        .carousel-slider .nav-next { right: 8px; }
+
+        /* Story Preview */
+        .preview-story { background: #000; border-radius: 12px; width: 100%; aspect-ratio: 9/16; max-height: 500px; color: #fff; position: relative; overflow: hidden; }
         .preview-story img, .preview-story video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
-        .preview-reel { background: #000; border-radius: 8px; aspect-ratio: 9/16; color: #fff; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+
+        /* Reel Preview */
+        .preview-reel { background: #000; border-radius: 8px; width: 100%; aspect-ratio: 9/16; max-height: 500px; color: #fff; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .preview-reel video, .preview-reel img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+
+        /* Feed Preview */
+        .preview-feed { background: #fff; border-radius: 8px; padding: 12px; }
+
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; z-index: 9999; animation: slideUp 0.3s ease; }
         .toast-success { background: #31a24c; }
         .toast-error { background: #fa3e3e; }
@@ -95,7 +116,7 @@ const SocialComposer = {
                     <button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('@')">@</button>
                     <button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('#')">#</button>
                   </div>
-                  <small class="text-muted" id="charCount">0</small>
+                  <small class="text-muted" id="charCount">0 chars</small>
                 </div>
               </div>
               <div class="card">
@@ -127,9 +148,7 @@ const SocialComposer = {
     document.addEventListener('keydown', this.handleKeyboard);
   },
 
-  handleKeyboard(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); SocialComposer.saveDraft(); }
-  },
+  handleKeyboard(e) { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); SocialComposer.saveDraft(); } },
 
   setPostType(type) {
     this.postType = type;
@@ -138,8 +157,6 @@ const SocialComposer = {
     if (type === 'story') this.previewMode = 'story';
     else if (type === 'reel') this.previewMode = 'reel';
     else this.previewMode = 'feed';
-    const s = document.querySelector('#composerPreview + div select:last-child');
-    if (s) s.value = this.previewMode;
     this.updatePreview();
   },
 
@@ -205,14 +222,52 @@ const SocialComposer = {
 
   removeMedia(i) { this.uploadedFiles.splice(i, 1); this.refreshMediaGrid(); this.hasUnsavedChanges = true; },
 
+  // ==================== PREVIEW ====================
+  getCarouselSliderHTML(media) {
+    let html = '<div class="carousel-slider">';
+    html += '<button class="nav-btn nav-prev" onclick="SocialComposer.carouselPrev()">‹</button>';
+    html += '<button class="nav-btn nav-next" onclick="SocialComposer.carouselNext()">›</button>';
+    html += '<div class="slides" style="transform:translateX(-' + (this.carouselIndex * 100) + '%);">';
+    media.forEach(m => {
+      html += '<div class="slide">' + (m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;height:300px;object-fit:contain;"></video>` : `<img src="${m}" style="width:100%;height:300px;object-fit:contain;">`) + '</div>';
+    });
+    html += '</div>';
+    html += '<div class="dots">';
+    media.forEach((_, i) => {
+      html += `<span class="dot ${i === this.carouselIndex ? 'active' : ''}" onclick="SocialComposer.carouselGoTo(${i})"></span>`;
+    });
+    html += '</div>';
+    html += '</div>';
+    return html;
+  },
+
+  carouselPrev() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex - 1 + this.uploadedFiles.length) % this.uploadedFiles.length; this.updatePreview(); } },
+  carouselNext() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex + 1) % this.uploadedFiles.length; this.updatePreview(); } },
+  carouselGoTo(i) { this.carouselIndex = i; this.updatePreview(); },
+
   getPreviewHTML() {
     const caption = document.getElementById?.('composerCaption')?.value || '';
     const media = this.uploadedFiles.filter(f => f.url).map(f => f.url);
     if (!caption && media.length === 0) return '<p class="text-muted text-center py-4">Preview</p>';
-    if (this.previewMode === 'story') return `<div class="preview-story">${media[0] ? (media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" autoplay muted loop></video>` : `<img src="${media[0]}">`) : ''}<div style="position:absolute;top:12px;left:12px;font-weight:600;">11 Avatar Digital Hub</div><div style="position:absolute;bottom:12px;left:12px;right:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;">${caption}</div></div>`;
-    if (this.previewMode === 'reel') return `<div class="preview-reel">${media[0] && media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" controls></video>` : '<p style="color:#aaa;">Upload video for Reel</p>'}</div>`;
+
+    // Story Preview
+    if (this.previewMode === 'story') {
+      return `<div class="preview-story">${media[0] ? (media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" autoplay muted loop></video>` : `<img src="${media[0]}">`) : ''}<div style="position:absolute;top:12px;left:12px;font-weight:600;font-size:13px;">11 Avatar Digital Hub</div><div style="position:absolute;bottom:12px;left:12px;right:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;font-size:13px;">${caption}</div></div>`;
+    }
+
+    // Reel Preview
+    if (this.previewMode === 'reel') {
+      return `<div class="preview-reel">${media[0] && media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" controls></video>` : '<p style="color:#aaa;">Upload video for Reel</p>'}</div>`;
+    }
+
+    // Carousel Preview
+    if (this.postType === 'carousel' && media.length > 0) {
+      return `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div>${this.getCarouselSliderHTML(media)}<p style="margin-top:8px;">${caption}</p></div>`;
+    }
+
+    // Feed Preview
     let h = `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div>`;
-    media.forEach(m => h += m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;border-radius:8px;margin-bottom:4px;"></video>` : `<img src="${m}" style="width:100%;border-radius:8px;margin-bottom:4px;">`);
+    media.forEach(m => h += m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;border-radius:8px;margin-bottom:4px;max-height:300px;"></video>` : `<img src="${m}" style="width:100%;border-radius:8px;margin-bottom:4px;max-height:300px;object-fit:cover;">`);
     h += `<p style="margin-top:8px;">${caption}</p></div>`;
     return h;
   },
