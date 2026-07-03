@@ -177,7 +177,6 @@ const SocialComposer = {
   },
 
   removeMedia(i) { this.uploadedFiles.splice(i, 1); this.refreshMediaGrid(); this.hasUnsavedChanges = true; },
-
   carouselPrev() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex - 1 + this.uploadedFiles.length) % this.uploadedFiles.length; this.updatePreview(); } },
   carouselNext() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex + 1) % this.uploadedFiles.length; this.updatePreview(); } },
   carouselGoTo(i) { this.carouselIndex = i; this.updatePreview(); },
@@ -223,7 +222,7 @@ const SocialComposer = {
     const postType = this.postType;
 
     if (!this.activePlatforms.facebook && !this.activePlatforms.instagram) return this.showToast('Select a platform', 'error');
-    if (media.length === 0) return this.showToast('Upload media', 'error');
+    if (media.length === 0 && postType !== 'post') return this.showToast('Upload media', 'error');
 
     for (const platform of ['facebook', 'instagram']) {
       if (!this.activePlatforms[platform]) continue;
@@ -232,18 +231,22 @@ const SocialComposer = {
 
       try {
         if (platform === 'facebook') {
-          // Facebook Post — बिना Link के सिर्फ Message
-          if (postType === 'reel' || postType === 'story') {
-            // Facebook Reel/Story के लिए Video Upload
-            if (media[0]?.match(/\.(mp4|mov)/i)) {
-              const ep = postType === 'story' ? `/${cfg.pageId}/video_stories` : `/${cfg.pageId}/videos`;
+          if (media.length > 0) {
+            // Photo/Video Post — use /photos endpoint for images
+            const isVideo = media[0].match(/\.(mp4|mov|webm)/i);
+            if (isVideo) {
               const params = new URLSearchParams({ access_token: cfg.accessToken, file_url: media[0], description: msg });
-              const res = await fetch(`https://graph.facebook.com/v22.0${ep}`, { method: 'POST', body: params });
+              const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/videos`, { method: 'POST', body: params });
               const d = await res.json();
               if (!d.id) throw new Error(d.error?.message);
+            } else {
+              const params = new URLSearchParams({ access_token: cfg.accessToken, url: media[0], caption: msg });
+              const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/photos`, { method: 'POST', body: params });
+              const d = await res.json();
+              if (!d.id && !d.post_id) throw new Error(d.error?.message || 'Photo upload failed');
             }
           } else {
-            // Simple Text Post (बिना Link)
+            // Text-only post
             const params = new URLSearchParams({ message: msg, access_token: cfg.accessToken });
             const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.pageId}/feed`, { method: 'POST', body: params });
             const d = await res.json();
@@ -279,7 +282,7 @@ const SocialComposer = {
             } else throw new Error(cd.error?.message);
           } else {
             for (const url of media.slice(0, 1)) {
-              const isV = url.match(/\.(mp4|mov)/i);
+              const isV = url.match(/\.(mp4|mov|webm)/i);
               const p = new URLSearchParams({ caption: msg, access_token: cfg.accessToken });
               if (isV || mediaType) {
                 p.append('media_type', mediaType || (isV ? 'VIDEO' : 'IMAGE'));
