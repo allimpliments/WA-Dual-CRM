@@ -106,14 +106,18 @@ const sectionSubMenus = {
 
 function loadSection(section) {
   contentArea.innerHTML = '';
+
+  // HIDE SIDEBAR - Full Screen Mode
   document.body.classList.add('sidebar-hidden');
   if (sidebar) sidebar.style.display = 'none';
   const mainArea = document.querySelector('.main-area');
   if (mainArea) mainArea.style.marginLeft = '0';
   if (currentSectionTitle) currentSectionTitle.textContent = section;
+
+  // Remove old global components
   document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-  // FIXED HEADER
+  // ADD GLOBAL HEADER
   const headerHTML = `
     <div class="global-top-header">
       <span style="font-weight:700;font-size:15px;color:#1877f2;">📱 11 Avatar CRM</span>
@@ -124,7 +128,7 @@ function loadSection(section) {
   `;
   document.body.insertAdjacentHTML('afterbegin', headerHTML);
 
-  // BOTTOM SUB MENU
+  // ADD BOTTOM SUB MENU
   if (sectionSubMenus[section]) {
     const subHTML = `
       <div class="global-bottom-menu">
@@ -138,6 +142,10 @@ function loadSection(section) {
     document.body.insertAdjacentHTML('beforeend', subHTML);
   }
 
+  // SET CONTENT TOP PADDING
+  if (contentArea) contentArea.style.paddingTop = '60px';
+
+  // RENDER SECTION
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
@@ -159,10 +167,6 @@ function loadSection(section) {
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
-  // Switch case के बाद
-  switch (section) {
-    // ... sab cases
-  }
 
   // Ensure content area has top padding
   if (contentArea) contentArea.style.paddingTop = '60px';
