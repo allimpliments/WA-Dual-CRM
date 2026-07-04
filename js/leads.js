@@ -1,23 +1,38 @@
 const Leads = {
   currentFilter: 'all',
   currentSource: 'all',
+  dateFrom: null,
+  dateTo: null,
+  currentAssignee: null,
 
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading leads...</p>';
 
     let leads = [];
+    let users = [];
     try {
-      const snap = await db.collection('leads').orderBy('createdAt', 'desc').get();
+      // Load all leads
+      let query = db.collection('leads').orderBy('createdAt', 'desc');
+      // Apply date filters if set
+      if (this.dateFrom) query = query.where('createdAt', '>=', new Date(this.dateFrom));
+      if (this.dateTo) query = query.where('createdAt', '<=', new Date(this.dateTo + 'T23:59:59'));
+      const snap = await query.get();
       leads = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Load users for assignee filter
+      const userSnap = await db.collection('users').get();
+      users = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (err) { console.error(err); }
 
-    // Filter by source
+    // Apply source & status & assignee filters after fetch (client-side)
     if (this.currentSource !== 'all') {
       leads = leads.filter(l => l.source === this.currentSource);
     }
-    // Filter by status
     if (this.currentFilter !== 'all') {
       leads = leads.filter(l => l.status === this.currentFilter);
+    }
+    if (this.currentAssignee) {
+      leads = leads.filter(l => l.assignedTo === this.currentAssignee);
     }
 
     const sources = [...new Set(leads.map(l => l.source).filter(Boolean))];
@@ -31,7 +46,7 @@ const Leads = {
         .lead-stat.active { border-color: #1877f2; background: #e7f3ff; }
         .lead-stat .stat-count { font-size: 20px; font-weight: 700; }
         .lead-stat .stat-label { font-size: 10px; color: #65676b; text-transform: uppercase; }
-        .lead-filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .lead-filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .lead-filter-chip { padding: 6px 12px; border-radius: 16px; font-size: 11px; cursor: pointer; border: 1px solid #dadde1; background: #fff; }
         .lead-filter-chip.active { background: #1877f2; color: #fff; border-color: #1877f2; }
         .lead-table { width: 100%; border-collapse: collapse; }
@@ -73,12 +88,25 @@ const Leads = {
         `).join('')}
       </div>
 
-      <!-- Source Filters -->
+      <!-- Advanced Filters -->
       <div class="lead-filters">
         <div class="lead-filter-chip ${this.currentSource==='all'?'active':''}" onclick="Leads.currentSource='all';Leads.render();">All Sources</div>
         ${sources.map(s => `
           <div class="lead-filter-chip ${this.currentSource===s?'active':''}" onclick="Leads.currentSource='${s}';Leads.render();">${s}</div>
         `).join('')}
+        <div class="d-flex gap-2 align-items-center ms-2">
+          <label class="form-label small mb-0">Date:</label>
+          <input type="date" class="form-control form-control-sm" style="width:130px;" id="dateFrom" value="${this.dateFrom||''}" onchange="Leads.dateFrom=this.value;Leads.render();">
+          <span>-</span>
+          <input type="date" class="form-control form-control-sm" style="width:130px;" id="dateTo" value="${this.dateTo||''}" onchange="Leads.dateTo=this.value;Leads.render();">
+        </div>
+        <div class="ms-2">
+          <label class="form-label small mb-0">Assigned to:</label>
+          <select id="assigneeFilter" class="form-select form-select-sm" style="width:auto;" onchange="Leads.currentAssignee=this.value||null;Leads.render();">
+            <option value="">Anyone</option>
+            ${users.map(u => `<option value="${u.id}" ${Leads.currentAssignee===u.id?'selected':''}>${u.name||u.email}</option>`).join('')}
+          </select>
+        </div>
       </div>
 
       <!-- Table -->
@@ -88,11 +116,11 @@ const Leads = {
           <table class="lead-table">
             <thead>
               <tr>
-                <th>Name</th><th>Contact</th><th>Source</th><th>Status</th><th>Created</th><th>Actions</th>
+                <th>Name</th><th>Contact</th><th>Source</th><th>Status</th><th>Assigned To</th><th>Created</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              ${leads.length === 0 ? '<tr><td colspan="6" class="text-center text-muted py-4">No leads found.</td></tr>' : leads.map(lead => `
+              ${leads.length === 0 ? '<tr><td colspan="7" class="text-center text-muted py-4">No leads found.</td></tr>' : leads.map(lead => `
                 <tr>
                   <td><strong>${lead.name || '-'}</strong></td>
                   <td>${lead.phone || lead.email || '-'}</td>
@@ -102,9 +130,11 @@ const Leads = {
                       ${statuses.map(s => `<option value="${s}" ${lead.status === s ? 'selected' : ''}>${s}</option>`).join('')}
                     </select>
                   </td>
+                  <td><small>${this.getAssignedName(lead.assignedTo, users)}</small></td>
                   <td><small>${lead.createdAt?.toDate().toLocaleDateString() || '-'}</small></td>
                   <td>
-                    <button class="btn btn-sm btn-outline-danger" style="font-size:10px;" onclick="Leads.deleteLead('${lead.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-outline-info me-1" onclick="Leads.showEditForm('${lead.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="Leads.deleteLead('${lead.id}')"><i class="fas fa-trash"></i></button>
                   </td>
                 </tr>
               `).join('')}
@@ -116,7 +146,14 @@ const Leads = {
     contentArea.innerHTML = html;
   },
 
+  getAssignedName(uid, users) {
+    if (!uid) return 'Unassigned';
+    const user = users.find(u => u.id === uid);
+    return user ? (user.name || user.email) : uid;
+  },
+
   showAddForm() {
+    // Use LeadCapture.fromManual inside addLead()
     document.getElementById('leadFormContainer').innerHTML = `
       <div class="card mb-3 border-primary">
         <div class="card-body p-2">
@@ -146,14 +183,12 @@ const Leads = {
   async addLead() {
     const name = document.getElementById('leadName').value.trim();
     if (!name) return alert('Name required!');
-    await db.collection('leads').add({
+    await LeadCapture.fromManual(
       name,
-      phone: document.getElementById('leadPhone').value.trim(),
-      email: document.getElementById('leadEmail').value.trim(),
-      source: document.getElementById('leadSource').value,
-      status: 'new',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+      document.getElementById('leadPhone').value.trim(),
+      document.getElementById('leadEmail').value.trim(),
+      document.getElementById('leadSource').value
+    );
     alert('✅ Lead added!');
     this.render();
   },
