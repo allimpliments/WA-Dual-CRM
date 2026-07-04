@@ -1,4 +1,4 @@
-// auth.js – fixed: public form + login, with graceful contact/lead creation
+// auth.js – fixed: public form + login, with LeadCapture integration
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -126,47 +126,20 @@ if (formId) {
         });
 
         try {
-          // 1. Save submission (always allowed with updated rules)
+          // 1. Save submission
           await db.collection('formSubmissions').add({
             formId: formId,
             data: formData,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
 
-          // 2. Increment submission count on the form document
+          // 2. Increment submission count
           await db.collection('forms').doc(formId).update({
             submissionCount: firebase.firestore.FieldValue.increment(1)
           });
 
-          // 3. Create Contact / Lead based on form source
-          const source = form.source || 'General';
-          const contactData = {
-            firstName: formData['Name'] || formData['Full Name'] || formData['First Name'] || '',
-            lastName: formData['Last Name'] || '',
-            mobile: formData['Phone'] || formData['Mobile'] || formData['Phone Number'] || '',
-            email: formData['Email'] || formData['Email Address'] || '',
-            group: source === 'WhatsApp' ? 'Leads' : source === 'Facebook' ? 'Leads' : 'Customers',
-            source: source,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          };
-
-          if (contactData.firstName || contactData.mobile || contactData.email) {
-            try {
-              await db.collection('contacts').add(contactData);
-              if (source === 'WhatsApp' || source === 'Facebook') {
-                await db.collection('leads').add({
-                  name: `${contactData.firstName} ${contactData.lastName}`.trim(),
-                  phone: contactData.mobile,
-                  email: contactData.email,
-                  source: source,
-                  status: 'New',
-                  createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-              }
-            } catch (innerErr) {
-              console.warn('Contact/Lead creation skipped:', innerErr.message);
-            }
-          }
+          // 3. Use LeadCapture for centralized lead & contact creation
+          await LeadCapture.fromForm(formData, formId);
 
           document.getElementById('publicFormMsg').innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
           document.getElementById('publicFormForm').reset();
