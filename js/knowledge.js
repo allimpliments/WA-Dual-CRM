@@ -12,8 +12,11 @@ const Knowledge = {
     tools: 'js/knowledge/tools.js',
     community: 'js/knowledge/community.js',
     healthscore: 'js/knowledge/healthScore.js',
-    roi: 'js/knowledge/roiCalculator.js'
-  },
+    roi: 'js/knowledge/roiCalculator.js',
+    blog: 'js/knowledge/blog.js',           // ✅ ADD
+    webinars: 'js/knowledge/webinars.js',   // ✅ ADD
+    templates: 'js/knowledge/templates.js'  // ✅ ADD
+},
 
   async render() {
     contentArea.style.paddingTop = '60px';
