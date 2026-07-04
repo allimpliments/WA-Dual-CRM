@@ -93,7 +93,6 @@ function buildSidebar(role) {
       loadSection(section);
       document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
       link.classList.add('active');
-      currentSectionTitle.textContent = link.textContent.trim();
     });
   });
 }
@@ -101,14 +100,77 @@ function buildSidebar(role) {
 function loadSection(section) {
   contentArea.innerHTML = '';
 
-  // Restore CRM sidebar when leaving social tab
-  if (section !== 'social') {
-    const crmSidebar = document.getElementById('sidebar');
-    if (crmSidebar) crmSidebar.style.display = '';
-    const mainArea = document.querySelector('.main-area');
-    if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
-  }
+  // ====== GLOBAL: Auto-hide sidebar for all sections ======
+  const crmSidebar = document.getElementById('sidebar');
+  const mainArea = document.querySelector('.main-area');
+  if (crmSidebar) crmSidebar.style.display = 'none';
+  if (mainArea) mainArea.style.marginLeft = '0';
 
+  // ====== GLOBAL: Top Auto-Hide Header ======
+  const crmSections = [
+    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
+    { name: 'Chats', icon: 'fa-comments', section: 'chats' },
+    { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
+    { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
+    { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
+    { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
+    { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
+    { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
+    { name: 'Social', icon: 'fa-globe', section: 'social' },
+    { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+  ];
+
+  const topHeaderHTML = `
+    <div class="header-trigger-zone" onmouseenter="document.getElementById('globalTopHeader').classList.add('visible')"></div>
+    <div class="global-top-header" id="globalTopHeader" onmouseleave="document.getElementById('globalTopHeader').classList.remove('visible')">
+      <span style="font-weight:700;font-size:12px;color:#1877f2;">📱 CRM</span>
+      <div class="global-crm-nav">
+        ${crmSections.map(s => `<a href="#" onclick="loadSection('${s.section}')"><i class="fas ${s.icon}"></i> ${s.name}</a>`).join('')}
+      </div>
+      <span style="font-size:11px;color:#65676b;" id="globalSectionTitle">${section}</span>
+    </div>
+  `;
+
+  // Remove existing top header if any
+  const existingHeader = document.querySelector('.global-top-header');
+  if (existingHeader) existingHeader.remove();
+  const existingTrigger = document.querySelector('.header-trigger-zone');
+  if (existingTrigger) existingTrigger.remove();
+
+  // Inject top header into body
+  const headerDiv = document.createElement('div');
+  headerDiv.innerHTML = topHeaderHTML;
+  document.body.insertAdjacentHTML('afterbegin', topHeaderHTML);
+
+  // ====== GLOBAL: Bottom Sticky Menu ======
+  const bottomSections = [
+    { name: 'Home', icon: 'fa-home', section: 'dashboard' },
+    { name: 'Chats', icon: 'fa-comments', section: 'chats' },
+    { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
+    { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
+    { name: 'Social', icon: 'fa-globe', section: 'social' },
+    { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
+    { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+  ];
+
+  const existingBottom = document.querySelector('.global-bottom-menu');
+  if (existingBottom) existingBottom.remove();
+
+  const bottomHTML = `
+    <div class="global-bottom-menu">
+      ${bottomSections.map(s => `
+        <div class="bottom-tab ${section === s.section ? 'active' : ''}" onclick="loadSection('${s.section}')">
+          <i class="fas ${s.icon}"></i><br>${s.name}
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', bottomHTML);
+
+  // Update current section title in topbar
+  if (currentSectionTitle) currentSectionTitle.textContent = section;
+
+  // ====== Render Section Content ======
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
@@ -129,10 +191,6 @@ function loadSection(section) {
     case 'plan': Plan.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
-  document.querySelectorAll('.sidebar .nav-link').forEach(l => {
-    l.classList.remove('active');
-    if (l.dataset.section === section) l.classList.add('active');
-  });
 }
 
 function initApp(role) {
@@ -143,27 +201,3 @@ function initApp(role) {
 menuToggle.addEventListener('click', () => {
   sidebar.classList.toggle('mobile-open');
 });
-
-function addMobileNav() {
-  if (window.innerWidth < 768) {
-    const nav = document.createElement('div');
-    nav.className = 'bottom-nav';
-    nav.innerHTML = `
-      <a href="#" class="nav-item active" data-mob="dashboard"><i class="fas fa-home"></i><br>Home</a>
-      <a href="#" class="nav-item" data-mob="chats"><i class="fas fa-comment"></i><br>Chats</a>
-      <a href="#" class="nav-item" data-mob="contacts"><i class="fas fa-users"></i><br>Contacts</a>
-      <a href="#" class="nav-item" data-mob="leads"><i class="fas fa-funnel-dollar"></i><br>Leads</a>
-      <a href="#" class="nav-item" data-mob="social"><i class="fas fa-share-alt"></i><br>Social</a>
-    `;
-    document.body.appendChild(nav);
-    nav.querySelectorAll('[data-mob]').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        loadSection(item.dataset.mob);
-        nav.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-      });
-    });
-  }
-}
-addMobileNav();
