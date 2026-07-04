@@ -1,4 +1,4 @@
-// js/social.js — Final Version (Popup Window, NOT New Tab)
+// js/social.js — Final Version (Chrome Popup Window - Mobile Size)
 const Social = {
   currentTab: 'facebook',
   savedAccounts: {},
@@ -99,33 +99,27 @@ const Social = {
       ytstudio: 'https://studio.youtube.com/'
     };
     const url = urls[platform] || 'about:blank';
-    const name = this.getName(platform);
-    
-    // Remove existing
-    const existing = document.querySelector('.social-fullscreen-frame');
-    if (existing) existing.remove();
 
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'social-fullscreen-frame';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
-    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    // Mobile size Chrome Popup Window
+    const width = 430;
+    const height = 850;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
 
-    // Create popup
-    const popup = document.createElement('div');
-    popup.style.cssText = 'width:400px;max-width:95vw;height:85vh;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);display:flex;flex-direction:column;';
-    popup.innerHTML = `
-      <div style="height:44px;background:#f8f9fa;display:flex;align-items:center;padding:0 14px;gap:8px;border-bottom:1px solid #e0e0e0;flex-shrink:0;">
-        <span style="width:10px;height:10px;border-radius:50%;background:#fa3e3e;cursor:pointer;" onclick="this.closest('.social-fullscreen-frame').remove()" title="Close"></span>
-        <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span>
-        <span style="width:10px;height:10px;border-radius:50%;background:#31a24c;"></span>
-        <span style="font-size:13px;color:#333;font-weight:500;flex:1;text-align:center;">${name}</span>
-        <button onclick="window.open('${url}','_blank')" style="background:none;border:1px solid #dadde1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">↗ Open in Browser</button>
-      </div>
-      <iframe src="${url}" style="width:100%;height:100%;border:none;flex:1;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
-    `;
+    const features = [
+      'width=' + width,
+      'height=' + height,
+      'left=' + left,
+      'top=' + top,
+      'resizable=yes',
+      'scrollbars=yes',
+      'toolbar=no',
+      'menubar=no',
+      'status=no',
+      'location=yes',
+      'titlebar=yes'
+    ].join(',');
 
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
+    window.open(url, 'socialPopup_' + platform, features);
   }
 };
