@@ -104,7 +104,6 @@ const headerSections = [
   { name: 'Plan', icon: 'fa-wallet', section: 'plan', status: 'coming' },
 ];
 
-// ========== SUB MENUS FOR ALL SECTIONS ==========
 const sectionSubMenus = {
   'social': [
     { name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', action: `Social.switchTab('facebook')` },
@@ -139,11 +138,6 @@ const sectionSubMenus = {
     { name: 'Form Builder', icon: 'fa-wpforms', color: '#1877f2', action: `Forms.currentTab='forms';Forms.render()` },
     { name: 'Submissions', icon: 'fa-list', color: '#1877f2', action: `Forms.currentTab='submissions';Forms.render()` },
   ],
-  'kanban': [
-    { name: 'To Do', icon: 'fa-clipboard-list', color: '#1877f2', action: `` },
-    { name: 'In Progress', icon: 'fa-spinner', color: '#f59e0b', action: `` },
-    { name: 'Done', icon: 'fa-check-circle', color: '#31a24c', action: `` },
-  ],
 };
 
 function loadSection(section) {
@@ -153,39 +147,11 @@ function loadSection(section) {
   const mainArea = document.querySelector('.main-area');
   if (mainArea) mainArea.style.marginLeft = '0';
   if (currentSectionTitle) currentSectionTitle.textContent = section;
-  document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-  // Header with status badges
-  const headerHTML = `
-    <div class="global-top-header">
-      <span style="font-weight:700;font-size:15px;color:#1877f2;">📱 11 Avatar CRM</span>
-      <div class="global-crm-nav">
-        ${headerSections.map(s => `
-          <a href="#" onclick="loadSection('${s.section}')" style="${section===s.section?'background:#e7f3ff;color:#1877f2;font-weight:600;':''}">
-            <i class="fas ${s.icon}"></i> ${s.name}
-            ${s.status === 'coming' ? '<span class="coming-soon-badge">Soon</span>' : ''}
-          </a>
-        `).join('')}
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('afterbegin', headerHTML);
+  // FIXED: Header ko remove nahi karenge, update karenge
+  renderGlobalHeader(section);
 
-  // Sub menu
-  if (sectionSubMenus[section]) {
-    const subHTML = `
-      <div class="global-bottom-menu">
-        ${sectionSubMenus[section].map(s => `
-          <div class="bottom-tab" onclick="${s.action}">
-            <i class="fab ${s.icon}" style="color:${s.color};font-size:15px;"></i> ${s.name}
-          </div>
-        `).join('')}
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', subHTML);
-  }
-
-  if (contentArea) contentArea.style.paddingTop = '80px';
+  if (contentArea) contentArea.style.paddingTop = '0px';
 
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
@@ -214,15 +180,40 @@ function loadSection(section) {
   }
 }
 
-function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
-menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); });
+// FIXED: New function — header ko remove nahi, sirf update karega
+function renderGlobalHeader(currentSection) {
+  // Purane header hatao
+  document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-function addMobileNav() {
-  if (window.innerWidth < 768) {
-    const nav = document.createElement('div'); nav.className = 'bottom-nav';
-    nav.innerHTML = `<a href="#" class="nav-item active" data-mob="dashboard"><i class="fas fa-home"></i><br>Home</a><a href="#" class="nav-item" data-mob="chats"><i class="fas fa-comment"></i><br>Chats</a><a href="#" class="nav-item" data-mob="contacts"><i class="fas fa-users"></i><br>Contacts</a><a href="#" class="nav-item" data-mob="leads"><i class="fas fa-funnel-dollar"></i><br>Leads</a><a href="#" class="nav-item" data-mob="social"><i class="fas fa-share-alt"></i><br>Social</a>`;
-    document.body.appendChild(nav);
-    nav.querySelectorAll('[data-mob]').forEach(item => { item.addEventListener('click', (e) => { e.preventDefault(); loadSection(item.dataset.mob); nav.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); item.classList.add('active'); }); });
+  const headerHTML = `
+    <div class="global-top-header">
+      <span style="font-weight:700;font-size:15px;color:#1877f2;">📱 11 Avatar CRM</span>
+      <div class="global-crm-nav">
+        ${headerSections.map(s => `
+          <a href="#" onclick="loadSection('${s.section}')" style="${currentSection===s.section?'background:#e7f3ff;color:#1877f2;font-weight:600;':''}">
+            <i class="fas ${s.icon}"></i> ${s.name}
+            ${s.status === 'coming' ? '<span class="coming-soon-badge">Soon</span>' : ''}
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('afterbegin', headerHTML);
+
+  // Sub menu
+  if (sectionSubMenus[currentSection]) {
+    const subHTML = `
+      <div class="global-bottom-menu">
+        ${sectionSubMenus[currentSection].map(s => `
+          <div class="bottom-tab" onclick="${s.action}">
+            <i class="fab ${s.icon}" style="color:${s.color};font-size:15px;"></i> ${s.name}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', subHTML);
   }
 }
-addMobileNav();
+
+function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
+menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); });
