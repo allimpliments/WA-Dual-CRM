@@ -128,3 +128,12 @@ body.sidebar-hidden .main-area { margin-left: 0 !important; }
   .global-bottom-menu { bottom: 8px; padding: 6px 10px; }
   .global-bottom-menu .bottom-tab { padding: 6px 10px; font-size: 11px; }
 }
+/* Content top padding for fixed header */
+#contentArea {
+  padding-top: 60px !important;
+}
+
+/* Ensure all section content starts below header */
+.section-page {
+  padding-top: 10px;
+}
