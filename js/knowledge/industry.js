@@ -31,4 +31,4 @@ function(Knowledge, contentArea, db, firebase) {
       `).join('')}
     </div>
   `;
-}
+} 
