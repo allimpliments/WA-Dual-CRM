@@ -136,4 +136,4 @@ function(Knowledge, contentArea, db, firebase) {
       if (!isVisible) detail.scrollIntoView({ behavior: 'smooth' });
     });
   });
-}
+} 
