@@ -100,10 +100,11 @@ function buildSidebar(role) {
 function loadSection(section) {
   contentArea.innerHTML = '';
 
-  // ====== GLOBAL: Auto-hide sidebar for all sections ======
+  // Hide CRM sidebar using CSS class
+  document.body.classList.add('sidebar-hidden');
   const crmSidebar = document.getElementById('sidebar');
-  const mainArea = document.querySelector('.main-area');
   if (crmSidebar) crmSidebar.style.display = 'none';
+  const mainArea = document.querySelector('.main-area');
   if (mainArea) mainArea.style.marginLeft = '0';
 
   // ====== GLOBAL: Top Auto-Hide Header ======
