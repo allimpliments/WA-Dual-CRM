@@ -158,4 +158,4 @@ const Knowledge = {
       alert('Subscribed successfully.');
     }
   }
-}; 
+};
