@@ -152,9 +152,23 @@ const Chats = {
 
   setupRealtimeListener() {
     if (window._chatUnsubscribe) window._chatUnsubscribe();
-    window._chatUnsubscribe = db.collection('messages').orderBy('createdAt','desc').limit(100).onSnapshot(async snap=>{
+    window._chatUnsubscribe = db.collection('messages').orderBy('createdAt','desc').limit(100).onSnapshot(async snap => {
       const msgs = snap.docs.map(d=>({id:d.id,...d.data()}));
-      for(const m of msgs){if(m.from&&m.from!=='unknown') await this.getContactName(m.from);if(m.to&&m.to!=='342354115627791') await this.getContactName(m.to);}
+      for(const m of msgs){
+        if(m.from && m.from !== 'unknown' && m.from !== '342354115627791') {
+          await this.getContactName(m.from);
+          // ✅ Lead Capture: अगर incoming मैसेज नया है तो लीड बनाएँ
+          if (m.type === 'incoming') {
+            const phone = m.from.replace(/^\+/, '');
+            const existing = await db.collection('leads').where('phone', '==', phone).limit(1).get();
+            if (existing.empty) {
+              // नया लीड बनाएँ (LeadCapture इंजन यूज़ करें)
+              await LeadCapture.fromWhatsApp(phone, m.body || '', this.contactCache[m.from] || '');
+            }
+          }
+        }
+        if(m.to && m.to !== '342354115627791') await this.getContactName(m.to);
+      }
       const filtered = msgs.filter(m=>!this.isSystemMessage(m));
       const list = document.getElementById('messageList'); if(!list) return;
       list.innerHTML = filtered.length===0?'<p class="text-muted text-center py-4">No messages.</p>':filtered.map(msg=>`
