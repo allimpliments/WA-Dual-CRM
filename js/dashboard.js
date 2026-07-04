@@ -6,43 +6,37 @@ const Dashboard = {
 
     let totalLeads = 0, totalContacts = 0, totalCampaigns = 0, totalMessages = 0;
     let wonLeads = 0, totalValue = 0, recentLeads = [], leadSources = {};
+    let waConnected = false;
+    const planName = (window.currentUser?.role === 'admin') ? 'Premium' : 'Free';
 
     try {
-      const [leadsSnap, contactsSnap, campaignsSnap, messagesSnap, settingsSnap] = await Promise.all([
-        db.collection('leads').get(),
-        db.collection('contacts').get(),
-        db.collection('campaigns').get(),
-        db.collection('messages').get(),
-        db.collection('settings').doc('whatsapp').get()
-      ]);
+      const leadsSnap = await db.collection('leads').get();
+      const contactsSnap = await db.collection('contacts').get();
+      const campaignsSnap = await db.collection('campaigns').get();
+      const messagesSnap = await db.collection('messages').get();
+      const settingsDoc = await db.collection('settings').doc('whatsapp').get();
 
       totalLeads = leadsSnap.size;
       totalContacts = contactsSnap.size;
       totalCampaigns = campaignsSnap.size;
       totalMessages = messagesSnap.size;
+      waConnected = settingsDoc.exists && settingsDoc.data().phoneNumberId;
 
-      // Won leads
       wonLeads = leadsSnap.docs.filter(d => d.data().status === 'won').length;
 
-      // Total value
       leadsSnap.forEach(d => { const v = parseInt(d.data().value) || 0; totalValue += v; });
 
-      // Recent leads (last 5)
       recentLeads = leadsSnap.docs
         .sort((a,b) => (b.data().createdAt?.toMillis()||0) - (a.data().createdAt?.toMillis()||0))
         .slice(0, 5)
         .map(d => ({ id: d.id, ...d.data() }));
 
-      // Lead sources
       leadsSnap.forEach(d => {
         const s = d.data().source || 'Unknown';
         leadSources[s] = (leadSources[s] || 0) + 1;
       });
 
     } catch (err) { console.error('Dashboard error:', err); }
-
-    const waConnected = settingsSnap.exists && settingsSnap.data().phoneNumberId;
-    const planName = (window.currentUser?.role === 'admin') ? 'Premium' : 'Free';
 
     const sourceLabels = Object.keys(leadSources);
     const sourceData = Object.values(leadSources);
@@ -65,7 +59,6 @@ const Dashboard = {
         .db-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
       </style>
 
-      <!-- Welcome Banner -->
       <div class="db-welcome">
         <div class="row align-items-center">
           <div class="col-md-8">
@@ -78,7 +71,6 @@ const Dashboard = {
         </div>
       </div>
 
-      <!-- Stats Row -->
       <div class="row g-3 mb-4">
         <div class="col-6 col-md-3" onclick="Leads.render()">
           <div class="db-stat-card">
@@ -106,9 +98,7 @@ const Dashboard = {
         </div>
       </div>
 
-      <!-- Charts & Recent Row -->
       <div class="row g-3">
-        <!-- Lead Sources Chart -->
         <div class="col-md-8">
           <div class="card-widget" style="min-height:320px;">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -118,8 +108,6 @@ const Dashboard = {
             <div style="height:250px;"><canvas id="leadSourceChart"></canvas></div>
           </div>
         </div>
-
-        <!-- Recent Leads -->
         <div class="col-md-4">
           <div class="card-widget" style="min-height:320px;">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -143,7 +131,6 @@ const Dashboard = {
         </div>
       </div>
 
-      <!-- Quick Actions -->
       <div class="row g-3 mt-3">
         <div class="col-md-3">
           <button class="btn btn-primary w-100 py-3" onclick="Leads.showAddForm()"><i class="fas fa-plus-circle me-2"></i> Add Lead</button>
@@ -162,10 +149,9 @@ const Dashboard = {
 
     contentArea.innerHTML = html;
 
-    // Render Chart
     setTimeout(() => {
       const ctx = document.getElementById('leadSourceChart')?.getContext('2d');
-      if (ctx) {
+      if (ctx && sourceLabels.length > 0) {
         if (this.chart) this.chart.destroy();
         this.chart = new Chart(ctx, {
           type: 'doughnut',
