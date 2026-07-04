@@ -302,3 +302,17 @@ body.sidebar-hidden .main-area {
     font-size: 11px;
   }
 }
+.coming-soon-badge {
+  background: linear-gradient(135deg, #f59e0b, #ff8c00);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
