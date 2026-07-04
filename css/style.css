@@ -1,15 +1,14 @@
 /* css/style.css – Complete file for 11 Avatar WA Dual CRM */
 
 :root {
+  --sidebar-width: 260px;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
   --bg-primary: #f0f2f5;
   --bg-card: #ffffff;
   --text-primary: #1c1e21;
   --text-secondary: #65676b;
   --border-color: #dadde1;
-  --primary: #1877f2;
-  --primary-hover: #166fe5;
-  --danger: #fa3e3e;
-  --success: #31a24c;
 }
 
 [data-theme="dark"] {
@@ -18,18 +17,6 @@
   --text-primary: #e4e6eb;
   --text-secondary: #b0b3b8;
   --border-color: #3e4042;
-  --primary: #2d88ff;
-  --primary-hover: #1a7eff;
-}
-
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-:root {
-  --sidebar-width: 260px;
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
 }
 
 body {
