@@ -9,4 +9,4 @@
       <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-trophy"></i></div><h6 style="font-weight:600;">Transformation Stories</h6><p style="font-size:11px;color:#6b7280;">Real businesses, real metrics, real growth.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Read Stories</button></div></div>
     </div>
   `;
-})
+}) 
