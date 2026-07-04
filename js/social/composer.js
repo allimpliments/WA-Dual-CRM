@@ -8,6 +8,7 @@ const SocialComposer = {
   autoSaveTimer: null,
   hasUnsavedChanges: false,
   carouselIndex: 0,
+  isPublishing: false,
 
   render() {
     const container = document.getElementById('composerContainer');
@@ -16,6 +17,7 @@ const SocialComposer = {
     this.uploadedFiles = [];
     this.hasUnsavedChanges = false;
     this.carouselIndex = 0;
+    this.isPublishing = false;
     this.startAutoSave();
 
     container.innerHTML = `
@@ -37,6 +39,9 @@ const SocialComposer = {
         .media-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #f0f0f0; }
         .media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
         .media-item .remove-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; z-index: 2; }
+        .media-item .progress-wrap { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.3); }
+        .media-item .progress-fill { height: 100%; background: #1877f2; transition: width 0.3s; }
+        .media-item .progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 11px; font-weight: 600; color: #1877f2; background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 4px; }
         .carousel-slider { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
         .carousel-slider .slides { display: flex; transition: transform 0.3s ease; }
         .carousel-slider .slide { min-width: 100%; }
@@ -156,8 +161,17 @@ const SocialComposer = {
     const g = document.getElementById('composerMediaGrid'); if (!g) return;
     if (this.uploadedFiles.length === 0) { g.innerHTML = '<p class="text-muted small">No media yet.</p>'; return; }
     g.innerHTML = this.uploadedFiles.map((f, i) => {
-      let inner = f.url ? (f.url.match(/\.(mp4|mov|webm)/i) ? `<video src="${f.url}" controls></video>` : `<img src="${f.url}">`) : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#666;">${f.name}</div>`;
-      return `<div class="media-item">${inner}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
+      let inner = '';
+      if (f.url) {
+        inner = f.url.match(/\.(mp4|mov|webm)/i) ? `<video src="${f.url}" controls></video>` : `<img src="${f.url}">`;
+      } else {
+        inner = `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#666;">${f.name}</div>`;
+      }
+      let progressBar = '';
+      if (f.progress < 100) {
+        progressBar = `<div class="progress-wrap"><div class="progress-fill" style="width:${f.progress}%;"></div></div><div class="progress-text">${f.progress}%</div>`;
+      }
+      return `<div class="media-item">${inner}${progressBar}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
     }).join('');
     this.updatePreview();
   },
@@ -199,8 +213,15 @@ const SocialComposer = {
   },
 
   async publish() {
+    if (this.isPublishing) return;
+    this.isPublishing = true;
+
     const btn = document.getElementById('publishBtn');
     if (btn) { btn.disabled = true; btn.innerText = '⏳ Publishing...'; }
+
+    // Close composer immediately, show toast
+    this.close();
+    this.showToast('🚀 Publishing in background...', 'info');
 
     const msg = document.getElementById('composerCaption')?.value || '';
     const scheduleDate = document.getElementById('scheduleDate')?.value;
@@ -212,7 +233,7 @@ const SocialComposer = {
 
     if (!this.activePlatforms.facebook && !this.activePlatforms.instagram) {
       this.showToast('Select a platform', 'error');
-      if (btn) { btn.disabled = false; btn.innerText = '🚀 Publish Now'; }
+      this.isPublishing = false;
       return;
     }
 
@@ -285,9 +306,10 @@ const SocialComposer = {
       }
     }
 
-    if (btn) { btn.disabled = false; btn.innerText = '🚀 Publish Now'; }
-    if (done > 0) { this.close(); Social.render(); this.showToast('✅ Posted to ' + done + ' platform(s)!'); }
-    else { this.showToast('❌ Post failed', 'error'); }
+    this.isPublishing = false;
+    Social.render();
+    if (done > 0) this.showToast('✅ Posted to ' + done + ' platform(s)!');
+    else this.showToast('❌ Post failed', 'error');
   },
 
   close() {
