@@ -3,13 +3,6 @@ const Social = {
   savedAccounts: {},
 
   async render() {
-    // Auto-hide CRM sidebar when social tab is active
-    const crmSidebar = document.getElementById('sidebar');
-    if (crmSidebar) crmSidebar.style.display = 'none';
-    const mainArea = document.querySelector('.main-area');
-    if (mainArea) mainArea.style.marginLeft = '0';
-
-    contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
     await this.loadAccounts();
 
     const platforms = [
@@ -22,67 +15,97 @@ const Social = {
       { id: 'ytstudio', name: 'YT Studio', icon: 'fa-youtube', color: '#FF0000', url: 'https://studio.youtube.com/' },
     ];
 
+    const crmSections = [
+      { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
+      { name: 'Chats', icon: 'fa-comments', section: 'chats' },
+      { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
+      { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
+      { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
+      { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
+      { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
+      { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
+      { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+    ];
+
     let html = `
       <style>
-        .social-full { height: calc(100vh - 60px); display: flex; flex-direction: column; background: #f0f2f5; }
-        .social-topbar { height: 48px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
-        .social-topbar .platform-tabs { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
-        .social-topbar .platform-tab { padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid #dadde1; background: #fff; transition: 0.15s; }
-        .social-topbar .platform-tab:hover { background: #f5f6f7; }
-        .social-topbar .platform-tab.active { background: #1877f2; color: #fff; border-color: #1877f2; }
-        .social-topbar .saved-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-left: 4px; }
-        .social-topbar .saved-dot.yes { background: #31a24c; }
-        .social-topbar .saved-dot.no { background: #dadde1; }
-        .social-frame-wrap { flex: 1; background: #e8eaed; display: flex; align-items: center; justify-content: center; padding: 16px; }
-        .phone-frame { width: 420px; max-width: 100%; height: 100%; background: #fff; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.12); overflow: hidden; display: flex; flex-direction: column; }
-        .phone-frame .phone-header { height: 40px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0; }
-        .phone-frame .phone-header .dot { width: 8px; height: 8px; border-radius: 50%; }
-        .phone-frame .phone-header .dot.r { background: #fa3e3e; } .phone-frame .phone-header .dot.y { background: #f59e0b; } .phone-frame .phone-header .dot.g { background: #31a24c; }
-        .phone-frame .phone-header .addr { flex: 1; padding: 3px 8px; background: #fff; border: 1px solid #dadde1; border-radius: 4px; font-size: 10px; text-align: center; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .social-full { height: 100vh; display: flex; flex-direction: column; background: #f0f2f5; overflow: hidden; }
+        
+        /* Auto-hide header */
+        .social-header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; transform: translateY(-100%); transition: transform 0.3s ease; background: #fff; border-bottom: 1px solid #e0e0e0; padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
+        .social-header.visible { transform: translateY(0); }
+        .social-header .crm-sections { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
+        .social-header .crm-sections a { padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; text-decoration: none; color: #1c1e21; white-space: nowrap; }
+        .social-header .crm-sections a:hover { background: #f0f2f5; }
+        .social-header .crm-sections a i { margin-right: 4px; }
+        
+        /* Trigger zone */
+        .header-trigger { position: fixed; top: 0; left: 0; right: 0; height: 12px; z-index: 101; }
+        
+        /* Sticky sub menu */
+        .social-submenu { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 8px 16px; display: flex; gap: 4px; }
+        .social-submenu .sub-tab { padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; border: 1px solid #dadde1; background: #fff; transition: 0.15s; }
+        .social-submenu .sub-tab:hover { background: #f5f6f7; }
+        .social-submenu .sub-tab.active { background: #1877f2; color: #fff; border-color: #1877f2; }
+        .social-submenu .sub-tab .saved-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-left: 4px; }
+        .social-submenu .sub-tab .saved-dot.yes { background: #31a24c; }
+        .social-submenu .sub-tab .saved-dot.no { background: #dadde1; }
+        
+        /* Main content */
+        .social-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; margin-top: 0; }
+        .phone-frame { width: 420px; max-width: 100%; height: 100%; max-height: 750px; background: #fff; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.12); overflow: hidden; display: flex; flex-direction: column; }
+        .phone-frame .phone-top { height: 36px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0; }
+        .phone-frame .phone-top .dot { width: 7px; height: 7px; border-radius: 50%; }
+        .phone-frame .phone-top .dot.r { background: #fa3e3e; } .dot.y { background: #f59e0b; } .dot.g { background: #31a24c; }
+        .phone-frame .phone-top .addr { flex: 1; padding: 2px 6px; background: #fff; border: 1px solid #dadde1; border-radius: 4px; font-size: 9px; text-align: center; color: #888; }
         .phone-frame .phone-body { flex: 1; position: relative; overflow: hidden; }
         .phone-frame .phone-body iframe { width: 100%; height: 100%; border: none; }
         .phone-frame .phone-body .blocked { display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; padding: 20px; text-align: center; background: #fafbfc; }
-        .cred-bar { padding: 8px 12px; background: #fff; border-top: 1px solid #e0e0e0; display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-        .cred-bar input { flex: 1; padding: 5px 8px; border: 1px solid #dadde1; border-radius: 6px; font-size: 11px; }
-        .cred-bar button { padding: 5px 10px; font-size: 11px; white-space: nowrap; }
-        @media (max-width: 768px) { .phone-frame { width: 100%; border-radius: 0; } }
+        .phone-frame .cred-row { padding: 6px 10px; background: #fff; border-top: 1px solid #e0e0e0; display: flex; gap: 4px; flex-shrink: 0; }
+        .phone-frame .cred-row input { flex: 1; padding: 4px 6px; border: 1px solid #dadde1; border-radius: 4px; font-size: 10px; }
+        .phone-frame .cred-row button { padding: 4px 8px; font-size: 10px; }
+        @media (max-width: 768px) { .phone-frame { width: 100%; border-radius: 0; max-height: 100%; } .social-submenu { bottom: 10px; padding: 6px 10px; } .social-submenu .sub-tab { padding: 6px 10px; font-size: 10px; } }
       </style>
 
-      <div class="social-full">
-        <div class="social-topbar">
-          <span style="font-weight:700;font-size:13px;color:#1c1e21;">📱</span>
-          <div class="platform-tabs">
-            ${platforms.map(p => `
-              <div class="platform-tab ${this.currentTab === p.id ? 'active' : ''}" onclick="Social.switchTab('${p.id}')">
-                <i class="fab ${p.icon}" style="color:${this.currentTab===p.id?'#fff':p.color};"></i> ${p.name}
-                <span class="saved-dot ${this.savedAccounts[p.id] ? 'yes' : 'no'}"></span>
-              </div>
-            `).join('')}
-          </div>
+      <!-- Auto-hide header with CRM sections -->
+      <div class="header-trigger" onmouseenter="Social.showHeader()"></div>
+      <div class="social-header" id="socialHeader" onmouseleave="Social.hideHeader()">
+        <div class="crm-sections">
+          ${crmSections.map(s => `<a href="#" onclick="Social.goToSection('${s.section}')"><i class="fas ${s.icon}"></i> ${s.name}</a>`).join('')}
         </div>
+      </div>
 
-        <div class="social-frame-wrap">
-          <div class="phone-frame">
-            <div class="phone-header">
-              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-              <div class="addr">${this.getPlatformUrl(this.currentTab)}</div>
-            </div>
-            <div class="phone-body" id="phoneBody">
-              <div class="blocked" id="blockedMsg">
-                <i class="fab ${this.getPlatformIcon(this.currentTab)} fa-3x" style="color:#1877f2;margin-bottom:10px;"></i>
-                <h6>${this.getPlatformName(this.currentTab)}</h6>
-                <p class="text-muted small">This platform blocks direct embedding in iframe.</p>
-                <button class="btn btn-primary btn-sm" onclick="Social.openPopup('${this.currentTab}')">🔐 Open ${this.getPlatformName(this.currentTab)} in Popup Window</button>
-              </div>
-              <iframe id="socialFrame" style="display:none;" src="about:blank"></iframe>
-            </div>
-            <div class="cred-bar">
-              <input type="text" id="credUser" placeholder="Username/Email">
-              <input type="password" id="credPass" placeholder="Password">
-              <button class="btn btn-sm btn-primary" onclick="Social.saveCredentials('${this.currentTab}')">💾 Save</button>
+      <!-- Main content -->
+      <div class="social-main">
+        <div class="phone-frame">
+          <div class="phone-top">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <div class="addr">${this.getPlatformUrl(this.currentTab)}</div>
+          </div>
+          <div class="phone-body">
+            <div class="blocked">
+              <i class="fab ${this.getPlatformIcon(this.currentTab)} fa-3x" style="color:#1877f2;margin-bottom:10px;"></i>
+              <h6>${this.getPlatformName(this.currentTab)}</h6>
+              <p class="text-muted small">This platform blocks iframe embedding.</p>
+              <button class="btn btn-primary btn-sm" onclick="Social.openPopup('${this.currentTab}')">🔐 Open ${this.getPlatformName(this.currentTab)}</button>
             </div>
           </div>
+          <div class="cred-row">
+            <input type="text" id="credUser" placeholder="User/Email">
+            <input type="password" id="credPass" placeholder="Password">
+            <button class="btn btn-sm btn-primary" onclick="Social.saveCredentials('${this.currentTab}')">💾</button>
+          </div>
         </div>
+      </div>
+
+      <!-- Sticky sub menu -->
+      <div class="social-submenu">
+        ${platforms.map(p => `
+          <div class="sub-tab ${this.currentTab === p.id ? 'active' : ''}" onclick="Social.switchTab('${p.id}')">
+            <i class="fab ${p.icon}"></i> ${p.name}
+            <span class="saved-dot ${this.savedAccounts[p.id] ? 'yes' : 'no'}"></span>
+          </div>
+        `).join('')}
       </div>
     `;
     contentArea.innerHTML = html;
@@ -98,9 +121,18 @@ const Social = {
     return { facebook: 'fa-facebook', instagram: 'fa-instagram', meta: 'fa-meta', linkedin: 'fa-linkedin', twitter: 'fa-twitter', youtube: 'fa-youtube', ytstudio: 'fa-youtube' }[id] || 'fa-globe';
   },
 
-  switchTab(id) {
-    this.currentTab = id;
-    this.render();
+  showHeader() { document.getElementById('socialHeader')?.classList.add('visible'); },
+  hideHeader() { document.getElementById('socialHeader')?.classList.remove('visible'); },
+
+  switchTab(id) { this.currentTab = id; this.render(); },
+
+  goToSection(section) {
+    // Restore sidebar then navigate
+    const crmSidebar = document.getElementById('sidebar');
+    if (crmSidebar) crmSidebar.style.display = '';
+    const mainArea = document.querySelector('.main-area');
+    if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
+    loadSection(section);
   },
 
   async loadAccounts() {
@@ -129,18 +161,8 @@ const Social = {
       youtube: 'https://m.youtube.com/',
       ytstudio: 'https://studio.youtube.com/'
     };
-    const url = urls[platform] || 'about:blank';
-    // Open a popup window styled like it's inside our app
-    const w = 430, h = 800;
+    const w = 430, h = 750;
     const left = (screen.width - w) / 2, top = (screen.height - h) / 2;
-    window.open(url, 'socialPopup', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
-  },
-
-  // Cleanup when leaving social tab
-  destroy() {
-    const crmSidebar = document.getElementById('sidebar');
-    if (crmSidebar) crmSidebar.style.display = '';
-    const mainArea = document.querySelector('.main-area');
-    if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
+    window.open(urls[platform] || 'about:blank', 'socialPopup', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
   }
 };
