@@ -1,12 +1,15 @@
-// js/app.js – Complete Fixed File (No Syntax Errors)
 const sidebar = document.getElementById('sidebar');
 const contentArea = document.getElementById('contentArea');
 const menuToggle = document.getElementById('menuToggle');
 const currentSectionTitle = document.getElementById('currentSectionTitle');
 
 const navSections = [
-  { title: 'Main', items: [{ name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client'] }] },
-  { title: 'Setup', items: [{ name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }] },
+  { title: 'Main', items: [
+    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client'] }
+  ]},
+  { title: 'Setup', items: [
+    { name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }
+  ]},
   { title: 'Communication', items: [
     { name: 'All Chats', icon: 'fa-comments', section: 'chats', roles: ['admin','team'] },
     { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads', roles: ['admin','team'] },
@@ -15,18 +18,34 @@ const navSections = [
     { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', roles: ['admin','team'] },
     { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin','team'] }
   ]},
-  { title: 'Social Media', items: [{ name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin','team'] }] },
-  { title: 'Forms', items: [{ name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin','team'] }] },
-  { title: 'E-commerce', items: [{ name: 'E-commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }] },
+  { title: 'Social Media', items: [
+    { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin','team'] }
+  ]},
+  { title: 'Marketing', items: [
+    { name: 'Ads Manager', icon: 'fa-ad', section: 'marketing', roles: ['admin','team'] }
+  ]},
+  { title: 'Forms', items: [
+    { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin','team'] }
+  ]},
+  { title: 'E‑commerce', items: [
+    { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
+  ]},
   { title: 'Automation', items: [
     { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin','team'] },
     { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
   ]},
-  { title: 'Marketing', items: [{ name: 'Ads Manager', icon: 'fa-ad', section: 'marketing', roles: ['admin','team'] }] },
   { title: 'Management', items: [
     { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin'] },
     { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin'] },
     { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin','team'] }
+  ]},
+  { title: 'Support', items: [
+    { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets', roles: ['admin','team'] },
+    { name: 'Knowledge Base', icon: 'fa-book', section: 'knowledge', roles: ['admin','team'] }
+  ]},
+  { title: 'Reports', items: [
+    { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics', roles: ['admin'] },
+    { name: 'Reports', icon: 'fa-file-alt', section: 'reports', roles: ['admin'] }
   ]},
   { title: 'Account', items: [
     { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client'] },
@@ -59,24 +78,33 @@ function buildSidebar(role) {
   });
 }
 
+// ========== ALL 45 FEATURES HEADER ==========
 const headerSections = [
-  { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
-  { name: 'Chats', icon: 'fa-comments', section: 'chats' },
-  { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
-  { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
-  { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
-  { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
-  { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
-  { name: 'Social', icon: 'fa-globe', section: 'social' },
-  { name: 'Marketing', icon: 'fa-ad', section: 'marketing' },
-  { name: 'E-commerce', icon: 'fa-store', section: 'ecommerce' },
-  { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
-  { name: 'Integrations', icon: 'fa-plug', section: 'integrations' },
-  { name: 'Agents', icon: 'fa-user-tie', section: 'agents' },
-  { name: 'Clients', icon: 'fa-building', section: 'clients' },
-  { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+  { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', status: 'done' },
+  { name: 'Chats', icon: 'fa-comments', section: 'chats', status: 'done' },
+  { name: 'Contacts', icon: 'fa-users', section: 'contacts', status: 'done' },
+  { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads', status: 'done' },
+  { name: 'Templates', icon: 'fa-layer-group', section: 'templates', status: 'done' },
+  { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', status: 'done' },
+  { name: 'Flows', icon: 'fa-sitemap', section: 'flows', status: 'done' },
+  { name: 'Social', icon: 'fa-globe', section: 'social', status: 'done' },
+  { name: 'Marketing', icon: 'fa-ad', section: 'marketing', status: 'done' },
+  { name: 'Forms', icon: 'fa-wpforms', section: 'forms', status: 'done' },
+  { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce', status: 'coming' },
+  { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', status: 'done' },
+  { name: 'Integrations', icon: 'fa-plug', section: 'integrations', status: 'coming' },
+  { name: 'Agents', icon: 'fa-user-tie', section: 'agents', status: 'coming' },
+  { name: 'Clients', icon: 'fa-building', section: 'clients', status: 'coming' },
+  { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', status: 'done' },
+  { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets', status: 'coming' },
+  { name: 'Knowledge', icon: 'fa-book', section: 'knowledge', status: 'coming' },
+  { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics', status: 'coming' },
+  { name: 'Reports', icon: 'fa-file-alt', section: 'reports', status: 'coming' },
+  { name: 'Setup', icon: 'fa-cog', section: 'setup', status: 'done' },
+  { name: 'Plan', icon: 'fa-wallet', section: 'plan', status: 'coming' },
 ];
 
+// ========== SUB MENUS FOR ALL SECTIONS ==========
 const sectionSubMenus = {
   'social': [
     { name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', action: `Social.switchTab('facebook')` },
@@ -86,6 +114,12 @@ const sectionSubMenus = {
     { name: 'Twitter/X', icon: 'fa-twitter', color: '#1DA1F2', action: `Social.switchTab('twitter')` },
     { name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', action: `Social.switchTab('youtube')` },
     { name: 'YT Studio', icon: 'fa-youtube', color: '#FF0000', action: `Social.switchTab('ytstudio')` },
+  ],
+  'marketing': [
+    { name: 'Meta Ads', icon: 'fa-meta', color: '#0668E1', action: `Marketing.switchTab('metaads')` },
+    { name: 'Google Ads', icon: 'fa-google', color: '#4285F4', action: `Marketing.switchTab('googleads')` },
+    { name: 'LinkedIn Ads', icon: 'fa-linkedin', color: '#0A66C2', action: `Marketing.switchTab('linkedinads')` },
+    { name: 'Pinterest Ads', icon: 'fa-pinterest', color: '#E60023', action: `Marketing.switchTab('pinterestads')` },
   ],
   'chats': [
     { name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366', action: `Chats.switchChatTab('whatsapp')` },
@@ -105,12 +139,11 @@ const sectionSubMenus = {
     { name: 'Form Builder', icon: 'fa-wpforms', color: '#1877f2', action: `Forms.currentTab='forms';Forms.render()` },
     { name: 'Submissions', icon: 'fa-list', color: '#1877f2', action: `Forms.currentTab='submissions';Forms.render()` },
   ],
-  'marketing': [
-  { name: 'Meta Ads', icon: 'fa-meta', color: '#0668E1', action: `Marketing.switchTab('metaads')` },
-  { name: 'Google Ads', icon: 'fa-google', color: '#4285F4', action: `Marketing.switchTab('googleads')` },
-  { name: 'LinkedIn Ads', icon: 'fa-linkedin', color: '#0A66C2', action: `Marketing.switchTab('linkedinads')` },
-  { name: 'Pinterest Ads', icon: 'fa-pinterest', color: '#E60023', action: `Marketing.switchTab('pinterestads')` },
-],
+  'kanban': [
+    { name: 'To Do', icon: 'fa-clipboard-list', color: '#1877f2', action: `` },
+    { name: 'In Progress', icon: 'fa-spinner', color: '#f59e0b', action: `` },
+    { name: 'Done', icon: 'fa-check-circle', color: '#31a24c', action: `` },
+  ],
 };
 
 function loadSection(section) {
@@ -122,16 +155,23 @@ function loadSection(section) {
   if (currentSectionTitle) currentSectionTitle.textContent = section;
   document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
+  // Header with status badges
   const headerHTML = `
     <div class="global-top-header">
       <span style="font-weight:700;font-size:15px;color:#1877f2;">📱 11 Avatar CRM</span>
       <div class="global-crm-nav">
-        ${headerSections.map(s => `<a href="#" onclick="loadSection('${s.section}')" style="${section===s.section?'background:#e7f3ff;color:#1877f2;font-weight:600;':''}"><i class="fas ${s.icon}"></i> ${s.name}</a>`).join('')}
+        ${headerSections.map(s => `
+          <a href="#" onclick="loadSection('${s.section}')" style="${section===s.section?'background:#e7f3ff;color:#1877f2;font-weight:600;':''}">
+            <i class="fas ${s.icon}"></i> ${s.name}
+            ${s.status === 'coming' ? '<span class="coming-soon-badge">Soon</span>' : ''}
+          </a>
+        `).join('')}
       </div>
     </div>
   `;
   document.body.insertAdjacentHTML('afterbegin', headerHTML);
 
+  // Sub menu
   if (sectionSubMenus[section]) {
     const subHTML = `
       <div class="global-bottom-menu">
@@ -145,7 +185,7 @@ function loadSection(section) {
     document.body.insertAdjacentHTML('beforeend', subHTML);
   }
 
-  if (contentArea) contentArea.style.paddingTop = '60px';
+  if (contentArea) contentArea.style.paddingTop = '80px';
 
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
@@ -166,6 +206,10 @@ function loadSection(section) {
     case 'social': Social.render(); break;
     case 'marketing': Marketing.render(); break;
     case 'plan': Plan.render(); break;
+    case 'tickets': Tickets.render(); break;
+    case 'knowledge': Knowledge.render(); break;
+    case 'analytics': Analytics.render(); break;
+    case 'reports': Reports.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
