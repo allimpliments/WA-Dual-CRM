@@ -1,4 +1,4 @@
-// js/social.js – Final Working Version (All Platforms Open in New Tab)
+// js/social.js — Final Version (Mobile Popup Window, No Iframe, No New Tab)
 const Social = {
   currentTab: 'facebook',
   savedAccounts: {},
@@ -45,7 +45,7 @@ const Social = {
               <div class="platform-card">
                 <i class="fab ${this.getIcon(this.currentTab)}" style="color:${this.getColor(this.currentTab)};"></i>
                 <h5>${this.getName(this.currentTab)}</h5>
-                <p class="text-muted small">Click below to open ${this.getName(this.currentTab)} in a new tab</p>
+                <p class="text-muted small">Click below to open ${this.getName(this.currentTab)}</p>
                 <button class="btn btn-primary btn-sm mt-2" onclick="Social.openPlatform('${this.currentTab}')">
                   🔐 Open ${this.getName(this.currentTab)}
                 </button>
@@ -100,7 +100,15 @@ const Social = {
     };
     const url = urls[platform] || 'about:blank';
     
-    // Open in new tab - this ALWAYS works
-    window.open(url, '_blank');
+    // Mobile size popup window — feels like a phone
+    const w = 430, h = 850;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    
+    window.open(
+      url,
+      'socialPopup',
+      `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,status=no,location=no`
+    );
   }
 };
