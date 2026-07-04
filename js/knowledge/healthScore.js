@@ -12,4 +12,4 @@
       <div id="hsResult"></div>
     </div>
   `;
-})
+}) 
