@@ -29,7 +29,7 @@ const Knowledge = {
 
   async loadAndRender(moduleKey) {
     if (!this.modules[moduleKey]) {
-      contentArea.innerHTML = `<div class="card-widget text-center py-5"><h4>Module Not Found</h4></div>`;
+      document.getElementById('contentArea').innerHTML = `<div class="card-widget text-center py-5"><h4>Module Not Found</h4></div>`;
       return;
     }
 
@@ -41,10 +41,10 @@ const Knowledge = {
         this.moduleCache[moduleKey] = new Function('Knowledge', 'contentArea', 'db', 'firebase', code);
       }
       
-      this.moduleCache[moduleKey](this, contentArea, db, firebase);
+      this.moduleCache[moduleKey](this, document.getElementById('contentArea'), db, firebase);
     } catch(e) {
       console.error(`Module ${moduleKey} error:`, e);
-      contentArea.innerHTML = `<div class="card-widget text-center py-5"><i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i><h5>Module Loading Failed</h5><p class="text-muted">Please try again or contact support.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button></div>`;
+      document.getElementById('contentArea').innerHTML = `<div class="card-widget text-center py-5"><i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i><h5>Module Loading Failed</h5><p class="text-muted">${e.message}</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button></div>`;
     }
   },
 
