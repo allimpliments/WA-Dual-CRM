@@ -1,90 +1,85 @@
 const Social = {
   currentTab: 'facebook',
   savedAccounts: {},
-  sidebarOpen: true,
 
   async render() {
+    // Auto-hide CRM sidebar when social tab is active
+    const crmSidebar = document.getElementById('sidebar');
+    if (crmSidebar) crmSidebar.style.display = 'none';
+    const mainArea = document.querySelector('.main-area');
+    if (mainArea) mainArea.style.marginLeft = '0';
+
     contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
     await this.loadAccounts();
 
     const platforms = [
-      { id: 'facebook', name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', url: 'https://m.facebook.com/' },
-      { id: 'instagram', name: 'Instagram', icon: 'fa-instagram', color: '#E4405F', url: 'https://www.instagram.com/' },
-      { id: 'meta', name: 'Meta Business', icon: 'fa-meta', color: '#0668E1', url: 'https://business.facebook.com/' },
-      { id: 'linkedin', name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2', url: 'https://www.linkedin.com/' },
-      { id: 'twitter', name: 'Twitter/X', icon: 'fa-twitter', color: '#1DA1F2', url: 'https://x.com/' },
+      { id: 'facebook', name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', url: 'https://m.facebook.com/login.php' },
+      { id: 'instagram', name: 'Instagram', icon: 'fa-instagram', color: '#E4405F', url: 'https://www.instagram.com/accounts/login/' },
+      { id: 'meta', name: 'Meta Business', icon: 'fa-meta', color: '#0668E1', url: 'https://business.facebook.com/login/' },
+      { id: 'linkedin', name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2', url: 'https://www.linkedin.com/login' },
+      { id: 'twitter', name: 'Twitter/X', icon: 'fa-twitter', color: '#1DA1F2', url: 'https://x.com/i/flow/login' },
       { id: 'youtube', name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', url: 'https://m.youtube.com/' },
       { id: 'ytstudio', name: 'YT Studio', icon: 'fa-youtube', color: '#FF0000', url: 'https://studio.youtube.com/' },
     ];
 
     let html = `
       <style>
-        .social-shell { display: flex; height: calc(100vh - 90px); position: relative; overflow: hidden; }
-        .social-sidebar { width: 240px; background: #fff; border-right: 1px solid #e0e0e0; overflow-y: auto; flex-shrink: 0; transition: margin-left 0.3s ease; z-index: 10; }
-        .social-sidebar.collapsed { margin-left: -240px; }
-        .social-sidebar .platform-item { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
-        .social-sidebar .platform-item:hover { background: #f5f6f7; }
-        .social-sidebar .platform-item.active { background: #e7f3ff; color: #1877f2; border-left: 3px solid #1877f2; }
-        .social-main { flex: 1; display: flex; flex-direction: column; background: #e8eaed; align-items: center; justify-content: center; padding: 20px; }
-        .phone-frame { width: 430px; max-width: 100%; height: 100%; background: #fff; border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.12); overflow: hidden; display: flex; flex-direction: column; position: relative; }
-        .phone-frame .phone-toolbar { height: 44px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
-        .phone-frame .phone-toolbar .dot { width: 10px; height: 10px; border-radius: 50%; }
-        .phone-frame .phone-toolbar .dot.red { background: #fa3e3e; }
-        .phone-frame .phone-toolbar .dot.yellow { background: #f59e0b; }
-        .phone-frame .phone-toolbar .dot.green { background: #31a24c; }
-        .phone-frame .phone-toolbar .url-bar { flex: 1; padding: 4px 10px; background: #fff; border: 1px solid #dadde1; border-radius: 6px; font-size: 11px; text-align: center; color: #666; }
-        .phone-frame .phone-content { flex: 1; overflow: hidden; position: relative; }
-        .phone-frame .phone-content webview, .phone-frame .phone-content iframe { width: 100%; height: 100%; border: none; }
-        .phone-frame .phone-content .blocked-msg { display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; padding: 20px; text-align: center; }
-        .toggle-sidebar-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); background: #1877f2; color: #fff; border: none; border-radius: 0 8px 8px 0; padding: 16px 6px; cursor: pointer; z-index: 20; font-size: 14px; box-shadow: 2px 0 8px rgba(0,0,0,0.1); }
-        .save-float { position: absolute; bottom: 10px; right: 10px; background: #fff; border-radius: 12px; padding: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); display: flex; gap: 4px; z-index: 5; }
-        .save-float input { width: 100px; padding: 4px 6px; border: 1px solid #dadde1; border-radius: 4px; font-size: 10px; }
-        .save-float button { padding: 4px 8px; font-size: 10px; }
-        @media (max-width: 768px) {
-          .phone-frame { width: 100%; border-radius: 0; }
-          .social-sidebar { position: absolute; left: 0; top: 0; height: 100%; }
-        }
+        .social-full { height: calc(100vh - 60px); display: flex; flex-direction: column; background: #f0f2f5; }
+        .social-topbar { height: 48px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+        .social-topbar .platform-tabs { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
+        .social-topbar .platform-tab { padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid #dadde1; background: #fff; transition: 0.15s; }
+        .social-topbar .platform-tab:hover { background: #f5f6f7; }
+        .social-topbar .platform-tab.active { background: #1877f2; color: #fff; border-color: #1877f2; }
+        .social-topbar .saved-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-left: 4px; }
+        .social-topbar .saved-dot.yes { background: #31a24c; }
+        .social-topbar .saved-dot.no { background: #dadde1; }
+        .social-frame-wrap { flex: 1; background: #e8eaed; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .phone-frame { width: 420px; max-width: 100%; height: 100%; background: #fff; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.12); overflow: hidden; display: flex; flex-direction: column; }
+        .phone-frame .phone-header { height: 40px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0; }
+        .phone-frame .phone-header .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .phone-frame .phone-header .dot.r { background: #fa3e3e; } .phone-frame .phone-header .dot.y { background: #f59e0b; } .phone-frame .phone-header .dot.g { background: #31a24c; }
+        .phone-frame .phone-header .addr { flex: 1; padding: 3px 8px; background: #fff; border: 1px solid #dadde1; border-radius: 4px; font-size: 10px; text-align: center; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .phone-frame .phone-body { flex: 1; position: relative; overflow: hidden; }
+        .phone-frame .phone-body iframe { width: 100%; height: 100%; border: none; }
+        .phone-frame .phone-body .blocked { display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; padding: 20px; text-align: center; background: #fafbfc; }
+        .cred-bar { padding: 8px 12px; background: #fff; border-top: 1px solid #e0e0e0; display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+        .cred-bar input { flex: 1; padding: 5px 8px; border: 1px solid #dadde1; border-radius: 6px; font-size: 11px; }
+        .cred-bar button { padding: 5px 10px; font-size: 11px; white-space: nowrap; }
+        @media (max-width: 768px) { .phone-frame { width: 100%; border-radius: 0; } }
       </style>
 
-      <div class="social-shell">
-        <button class="toggle-sidebar-btn" onclick="Social.toggleSidebar()" title="Toggle Sidebar">
-          <i class="fas fa-chevron-${this.sidebarOpen ? 'left' : 'right'}"></i>
-        </button>
-
-        <div class="social-sidebar ${this.sidebarOpen ? '' : 'collapsed'}">
-          <div style="padding:14px 16px;font-weight:700;font-size:12px;color:#65676b;">Platforms</div>
-          ${platforms.map(p => `
-            <div class="platform-item ${this.currentTab === p.id ? 'active' : ''}" onclick="Social.switchTab('${p.id}')">
-              <i class="fab ${p.icon}" style="color:${p.color};width:18px;"></i> ${p.name}
-              <span style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:${this.savedAccounts[p.id] ? '#31a24c' : '#dadde1'};"></span>
-            </div>
-          `).join('')}
-          <div style="padding:12px 16px;margin-top:auto;border-top:1px solid #e0e0e0;">
-            <small class="text-muted">💡 Tip: Use mobile versions for better experience</small>
+      <div class="social-full">
+        <div class="social-topbar">
+          <span style="font-weight:700;font-size:13px;color:#1c1e21;">📱</span>
+          <div class="platform-tabs">
+            ${platforms.map(p => `
+              <div class="platform-tab ${this.currentTab === p.id ? 'active' : ''}" onclick="Social.switchTab('${p.id}')">
+                <i class="fab ${p.icon}" style="color:${this.currentTab===p.id?'#fff':p.color};"></i> ${p.name}
+                <span class="saved-dot ${this.savedAccounts[p.id] ? 'yes' : 'no'}"></span>
+              </div>
+            `).join('')}
           </div>
         </div>
 
-        <div class="social-main">
+        <div class="social-frame-wrap">
           <div class="phone-frame">
-            <div class="phone-toolbar">
-              <span class="dot red"></span>
-              <span class="dot yellow"></span>
-              <span class="dot green"></span>
-              <div class="url-bar">${this.getPlatformUrl(this.currentTab)}</div>
-              <button class="btn btn-sm btn-light" style="font-size:10px;" onclick="Social.openInNewTab('${this.currentTab}')">↗</button>
+            <div class="phone-header">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <div class="addr">${this.getPlatformUrl(this.currentTab)}</div>
             </div>
-            <div class="phone-content" id="phoneContent">
-              <div class="blocked-msg">
-                <i class="fab ${this.getPlatformIcon(this.currentTab)} fa-4x" style="color:#1877f2;margin-bottom:12px;"></i>
+            <div class="phone-body" id="phoneBody">
+              <div class="blocked" id="blockedMsg">
+                <i class="fab ${this.getPlatformIcon(this.currentTab)} fa-3x" style="color:#1877f2;margin-bottom:10px;"></i>
                 <h6>${this.getPlatformName(this.currentTab)}</h6>
-                <p class="text-muted small">This platform blocks embedding. Use the ↗ button to open in a new tab.</p>
-                <button class="btn btn-primary btn-sm mt-2" onclick="Social.openInNewTab('${this.currentTab}')">🔗 Open ${this.getPlatformName(this.currentTab)}</button>
+                <p class="text-muted small">This platform blocks direct embedding in iframe.</p>
+                <button class="btn btn-primary btn-sm" onclick="Social.openPopup('${this.currentTab}')">🔐 Open ${this.getPlatformName(this.currentTab)} in Popup Window</button>
               </div>
+              <iframe id="socialFrame" style="display:none;" src="about:blank"></iframe>
             </div>
-            <div class="save-float">
-              <input type="text" id="credUser" placeholder="User">
-              <input type="password" id="credPass" placeholder="Pass">
-              <button class="btn btn-sm btn-primary" onclick="Social.saveCredentials('${this.currentTab}')">💾</button>
+            <div class="cred-bar">
+              <input type="text" id="credUser" placeholder="Username/Email">
+              <input type="password" id="credPass" placeholder="Password">
+              <button class="btn btn-sm btn-primary" onclick="Social.saveCredentials('${this.currentTab}')">💾 Save</button>
             </div>
           </div>
         </div>
@@ -94,22 +89,13 @@ const Social = {
   },
 
   getPlatformUrl(id) {
-    const urls = { facebook: 'm.facebook.com', instagram: 'instagram.com', meta: 'business.facebook.com', linkedin: 'linkedin.com', twitter: 'x.com', youtube: 'm.youtube.com', ytstudio: 'studio.youtube.com' };
-    return urls[id] || '';
+    return { facebook: 'm.facebook.com', instagram: 'instagram.com', meta: 'business.facebook.com', linkedin: 'linkedin.com', twitter: 'x.com', youtube: 'm.youtube.com', ytstudio: 'studio.youtube.com' }[id] || '';
   },
   getPlatformName(id) {
-    const names = { facebook: 'Facebook', instagram: 'Instagram', meta: 'Meta Business', linkedin: 'LinkedIn', twitter: 'Twitter/X', youtube: 'YouTube', ytstudio: 'YT Studio' };
-    return names[id] || '';
+    return { facebook: 'Facebook', instagram: 'Instagram', meta: 'Meta Business', linkedin: 'LinkedIn', twitter: 'Twitter/X', youtube: 'YouTube', ytstudio: 'YT Studio' }[id] || '';
   },
   getPlatformIcon(id) {
     return { facebook: 'fa-facebook', instagram: 'fa-instagram', meta: 'fa-meta', linkedin: 'fa-linkedin', twitter: 'fa-twitter', youtube: 'fa-youtube', ytstudio: 'fa-youtube' }[id] || 'fa-globe';
-  },
-
-  toggleSidebar() {
-    this.sidebarOpen = !this.sidebarOpen;
-    document.querySelector('.social-sidebar').classList.toggle('collapsed');
-    const btn = document.querySelector('.toggle-sidebar-btn i');
-    if (btn) btn.className = 'fas fa-chevron-' + (this.sidebarOpen ? 'left' : 'right');
   },
 
   switchTab(id) {
@@ -133,8 +119,28 @@ const Social = {
     alert('✅ Saved!');
   },
 
-  openInNewTab(platform) {
-    const urls = { facebook: 'https://m.facebook.com/', instagram: 'https://www.instagram.com/', meta: 'https://business.facebook.com/', linkedin: 'https://www.linkedin.com/', twitter: 'https://x.com/', youtube: 'https://m.youtube.com/', ytstudio: 'https://studio.youtube.com/' };
-    window.open(urls[platform] || 'about:blank', '_blank');
+  openPopup(platform) {
+    const urls = {
+      facebook: 'https://m.facebook.com/login.php',
+      instagram: 'https://www.instagram.com/accounts/login/',
+      meta: 'https://business.facebook.com/login/',
+      linkedin: 'https://www.linkedin.com/login',
+      twitter: 'https://x.com/i/flow/login',
+      youtube: 'https://m.youtube.com/',
+      ytstudio: 'https://studio.youtube.com/'
+    };
+    const url = urls[platform] || 'about:blank';
+    // Open a popup window styled like it's inside our app
+    const w = 430, h = 800;
+    const left = (screen.width - w) / 2, top = (screen.height - h) / 2;
+    window.open(url, 'socialPopup', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+  },
+
+  // Cleanup when leaving social tab
+  destroy() {
+    const crmSidebar = document.getElementById('sidebar');
+    if (crmSidebar) crmSidebar.style.display = '';
+    const mainArea = document.querySelector('.main-area');
+    if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
   }
 };
