@@ -25,4 +25,4 @@
     </div>
     <div class="text-center mt-4"><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Request Custom Playbook</button></div>
   `;
-})
+}) 
