@@ -159,7 +159,14 @@ function loadSection(section) {
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
+  // Switch case के बाद
+  switch (section) {
+    // ... sab cases
+  }
 
+  // Ensure content area has top padding
+  if (contentArea) contentArea.style.paddingTop = '60px';
+}
 function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
 menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); });
 
