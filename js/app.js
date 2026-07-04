@@ -1,3 +1,4 @@
+// js/app.js – Complete Fixed File (No Syntax Errors)
 const sidebar = document.getElementById('sidebar');
 const contentArea = document.getElementById('contentArea');
 const menuToggle = document.getElementById('menuToggle');
@@ -106,18 +107,13 @@ const sectionSubMenus = {
 
 function loadSection(section) {
   contentArea.innerHTML = '';
-
-  // HIDE SIDEBAR - Full Screen Mode
   document.body.classList.add('sidebar-hidden');
   if (sidebar) sidebar.style.display = 'none';
   const mainArea = document.querySelector('.main-area');
   if (mainArea) mainArea.style.marginLeft = '0';
   if (currentSectionTitle) currentSectionTitle.textContent = section;
-
-  // Remove old global components
   document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-  // ADD GLOBAL HEADER
   const headerHTML = `
     <div class="global-top-header">
       <span style="font-weight:700;font-size:15px;color:#1877f2;">📱 11 Avatar CRM</span>
@@ -128,7 +124,6 @@ function loadSection(section) {
   `;
   document.body.insertAdjacentHTML('afterbegin', headerHTML);
 
-  // ADD BOTTOM SUB MENU
   if (sectionSubMenus[section]) {
     const subHTML = `
       <div class="global-bottom-menu">
@@ -142,10 +137,8 @@ function loadSection(section) {
     document.body.insertAdjacentHTML('beforeend', subHTML);
   }
 
-  // SET CONTENT TOP PADDING
   if (contentArea) contentArea.style.paddingTop = '60px';
 
-  // RENDER SECTION
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
@@ -168,9 +161,6 @@ function loadSection(section) {
   }
 }
 
-  // Ensure content area has top padding
-  if (contentArea) contentArea.style.paddingTop = '60px';
-}
 function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
 menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); });
 
