@@ -270,6 +270,7 @@ function loadSection(section) {
     case 'agents': Agents.render(); break;
     case 'clients': Clients.render(); break;
     case 'kanban': Kanban.render(); break;
+    case 'knowledge': Knowledge.render(); break;   // ✅ ADD THIS
     case 'social': Social.render(); break;
     case 'marketing': Marketing.render(); break;
     case 'plan': Plan.render(); break;
