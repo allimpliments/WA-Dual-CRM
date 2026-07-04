@@ -1,420 +1,469 @@
-// js/flows.js — WhatsApp Flow Builder (Meta Flows API)
+// js/flows.js — Combined: Meta Templates + Visual Builder + My Flows
 const Flows = {
-  currentTab: 'list', // list, create, edit
-  editingFlow: null,
-  flowSteps: [],
-  currentStepIndex: 0,
+  currentTab: 'templates', // templates, builder, myflows
+  editingFlowId: null,
+  canvasNodes: [],
+  canvasConnections: [],
+  selectedNode: null,
+  isDragging: false,
+  dragNode: null,
+  dragOffset: { x: 0, y: 0 },
+  connectingFrom: null,
+  canvasScale: 1,
+  canvasPan: { x: 0, y: 0 },
+  isPanning: false,
+  panStart: { x: 0, y: 0 },
 
   async render() {
-    contentArea.innerHTML = '<p class="text-center py-5">Loading flows...</p>';
+    contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
 
-    if (this.currentTab === 'create' || this.currentTab === 'edit') {
-      await this.renderBuilder();
-      return;
-    }
-
-    await this.renderList();
+    if (this.currentTab === 'builder') { await this.renderBuilder(); return; }
+    if (this.currentTab === 'myflows') { await this.renderMyFlows(); return; }
+    await this.renderTemplates();
   },
-  
-  // ==================== FLOW LIST ====================
-  async renderList() {
+
+  // ==================== TAB NAVIGATION ====================
+  renderTabs(active) {
+    return `
+      <style>
+        .flow-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+        .flow-tab { padding: 10px 20px; border-radius: 24px; cursor: pointer; font-weight: 600; font-size: 13px; border: 2px solid #e0e0e0; background: #fff; transition: 0.2s; text-align: center; }
+        .flow-tab:hover { border-color: #1877f2; }
+        .flow-tab.active { background: #1877f2; color: #fff; border-color: #1877f2; }
+        .flow-tab .tab-note { display: block; font-size: 9px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+        .flow-tab.active .tab-note { opacity: 1; }
+      </style>
+      <div class="flow-tabs">
+        <div class="flow-tab ${active==='templates'?'active':''}" onclick="Flows.currentTab='templates';Flows.render();">
+          📋 Meta Templates
+          <span class="tab-note">🔒 Paid • Meta API</span>
+        </div>
+        <div class="flow-tab ${active==='builder'?'active':''}" onclick="Flows.currentTab='builder';Flows.editingFlowId=null;Flows.canvasNodes=[];Flows.canvasConnections=[];Flows.render();">
+          🎨 Visual Builder
+          <span class="tab-note">🆓 Free • Unlimited</span>
+        </div>
+        <div class="flow-tab ${active==='myflows'?'active':''}" onclick="Flows.currentTab='myflows';Flows.render();">
+          ⭐ My Flows
+          <span class="tab-note">📦 Active ({window._myFlowCount||0})</span>
+        </div>
+      </div>
+    `;
+  },
+
+  // ==================== 1. META TEMPLATES ====================
+  async renderTemplates() {
     let flows = [];
     try {
-      const snap = await db.collection('botFlows').orderBy('createdAt', 'desc').get();
-      flows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch(e) { console.error(e); }
+      const snap = await db.collection('botFlows').where('source', '==', 'meta').orderBy('category').get();
+      flows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
+
+    const categories = ['Sign up','Log in','Appointment booking','Lead generation','Shopping','Contact us','Customer support','Survey','Other'];
 
     let html = `
-      <style>
-        .flow-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: 0.2s; cursor: pointer; }
-        .flow-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); border-color: #1877f2; }
-        .flow-visual { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 8px 0; }
-        .flow-node { background: #e7f3ff; color: #1877f2; border-radius: 16px; padding: 4px 10px; font-size: 11px; font-weight: 500; white-space: nowrap; }
-        .flow-arrow { color: #94a3b8; font-size: 12px; }
-        .flow-step-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 8px; position: relative; }
-        .flow-step-card:not(:last-child)::after { content: '↓'; position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); color: #1877f2; font-size: 18px; font-weight: bold; z-index: 1; }
-        .step-type-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-        .step-type-badge.message { background: #dcfce7; color: #166534; }
-        .step-type-badge.question { background: #e0e7ff; color: #3730a3; }
-        .step-type-badge.input { background: #fef3c7; color: #92400e; }
-        .step-type-badge.condition { background: #fce7f3; color: #9d174d; }
-        .step-type-badge.action { background: #e0f2fe; color: #0369a1; }
-      </style>
-
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      ${this.renderTabs('templates')}
+      <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <h4 class="mb-0"><i class="fas fa-sitemap text-primary me-2"></i>WhatsApp Flows</h4>
-          <small class="text-muted">Interactive multi-step conversations for WhatsApp</small>
+          <h4 class="mb-0"><i class="fab fa-meta text-primary me-2"></i>Meta Flow Templates</h4>
+          <small class="text-muted">Ready-made interactive WhatsApp flows • Requires Meta Business Account</small>
         </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-info btn-sm" onclick="window.open('https://business.facebook.com/wa/manage/flows/','_blank')">
-            <i class="fas fa-external-link-alt me-1"></i> Meta Flow Manager
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="Flows.currentTab='create'; Flows.flowSteps=[]; Flows.editingFlow=null; Flows.render();">
-            <i class="fas fa-plus me-1"></i> Create Flow
-          </button>
-        </div>
+        <button class="btn btn-info btn-sm" onclick="Flows.syncFromMeta()"><i class="fas fa-sync-alt me-1"></i> Sync from Meta</button>
       </div>
 
       <div class="row g-3">
         ${flows.length === 0 ? `
           <div class="col-12 text-center py-5">
-            <i class="fas fa-sitemap fa-3x text-muted mb-3"></i>
-            <h5>No Flows Yet</h5>
-            <p class="text-muted">Create interactive WhatsApp conversations with buttons, questions, and conditions.</p>
-            <button class="btn btn-primary" onclick="Flows.currentTab='create'; Flows.flowSteps=[]; Flows.render();">
-              <i class="fas fa-plus me-1"></i> Create Your First Flow
-            </button>
+            <i class="fab fa-meta fa-3x text-muted mb-3"></i>
+            <h5>No Meta Templates</h5>
+            <p class="text-muted">Click "Sync from Meta" to load ready-made flow templates</p>
+            <button class="btn btn-primary" onclick="Flows.syncFromMeta()"><i class="fas fa-sync-alt me-1"></i> Sync Now</button>
           </div>
-        ` : flows.map(flow => {
-          const steps = flow.steps || [];
-          return `
-            <div class="col-md-6 col-lg-4">
-              <div class="flow-card" onclick="Flows.currentTab='edit'; Flows.editingFlow='${flow.id}'; Flows.flowSteps=${JSON.stringify(steps).replace(/"/g,'&quot;')}; Flows.render();">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div>
-                    <h6 class="mb-1">${flow.title || 'Untitled Flow'}</h6>
-                    <span class="badge bg-${flow.status==='active'?'success':'secondary'}">${flow.status||'draft'}</span>
-                    <span class="badge bg-info ms-1">${steps.length} steps</span>
-                  </div>
-                </div>
-                <div class="flow-visual mt-2">
-                  ${steps.map((s, i) => `
-                    <span class="flow-node">${s.type||'message'}</span>
-                    ${i < steps.length-1 ? '<span class="flow-arrow">→</span>' : ''}
-                  `).join('')}
-                </div>
-                <small class="text-muted">${flow.description || 'No description'}</small>
-                <div class="mt-2 d-flex gap-1">
-                  <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); Flows.activateFlow('${flow.id}')">
-                    <i class="fas fa-${flow.status==='active'?'pause':'play'}"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); Flows.previewFlow('${flow.id}')">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); Flows.deleteFlow('${flow.id}')">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
+        ` : flows.map(flow => `
+          <div class="col-md-6 col-lg-4">
+            <div class="card-widget border-primary" style="cursor:pointer;" onclick="Flows.previewFlow('${flow.id}')">
+              <div class="d-flex justify-content-between">
+                <strong>${flow.title||'Untitled'}</strong>
+                <span class="badge bg-primary">Meta</span>
+              </div>
+              <small class="text-muted">${flow.category||'Other'} · ${(flow.steps||[]).length} screens · ${flow.endpointType==='with'?'Endpoint':'No Endpoint'}</small>
+              <div class="mt-2 d-flex gap-1">
+                <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation();Flows.copyToMyFlows('${flow.id}')"><i class="fas fa-copy me-1"></i> Copy to My Flows</button>
+                <button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation();Flows.previewFlow('${flow.id}')"><i class="fas fa-eye"></i></button>
               </div>
             </div>
-          `;
-        }).join('')}
+          </div>
+        `).join('')}
       </div>
-
       <div id="flowPreviewModal"></div>
     `;
     contentArea.innerHTML = html;
   },
 
-  // ==================== FLOW BUILDER ====================
+  // ==================== 2. VISUAL FLOW BUILDER ====================
   async renderBuilder() {
-    const isEdit = this.currentTab === 'edit' && this.editingFlow;
-    let existingData = { title: '', description: '', triggerKeyword: '' };
-
-    if (isEdit) {
+    if (this.editingFlowId) {
       try {
-        const doc = await db.collection('botFlows').doc(this.editingFlow).get();
+        const doc = await db.collection('botFlows').doc(this.editingFlowId).get();
         if (doc.exists) {
-          const d = doc.data();
-          existingData = { title: d.title || '', description: d.description || '', triggerKeyword: d.triggerKeyword || '' };
-          if (!this.flowSteps.length) this.flowSteps = d.steps || [];
+          const data = doc.data();
+          this.canvasNodes = data.canvasNodes || [];
+          this.canvasConnections = data.canvasConnections || [];
         }
       } catch(e) {}
     }
+    if (this.canvasNodes.length === 0) {
+      this.canvasNodes = [
+        { id: 'start', type: 'trigger', label: 'Start', x: 400, y: 50, color: '#10b981' },
+        { id: 'msg1', type: 'message', label: 'Welcome Message', x: 400, y: 180, color: '#1877f2', text: 'Hello! How can I help you?' }
+      ];
+      this.canvasConnections = [{ from: 'start', to: 'msg1' }];
+    }
 
     let html = `
+      ${this.renderTabs('builder')}
       <style>
-        .builder-container { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
-        .step-card { background: #fff; border: 2px solid #e0e0e0; border-radius: 12px; padding: 16px; margin-bottom: 12px; position: relative; transition: 0.2s; }
-        .step-card.active { border-color: #1877f2; box-shadow: 0 4px 12px rgba(24,119,242,0.1); }
-        .step-card .step-number { position: absolute; top: -12px; left: 12px; background: #1877f2; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 11px; font-weight: 600; }
-        .step-connector { text-align: center; color: #1877f2; font-size: 20px; margin: -8px 0; }
-        .preview-phone { width: 340px; background: #e5ddd5; border-radius: 20px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); position: sticky; top: 20px; }
-        .preview-screen { background: #efeae2; border-radius: 12px; min-height: 500px; padding: 16px; }
-        .preview-msg { max-width: 80%; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
-        .preview-msg.bot { background: #fff; margin-right: auto; }
-        .preview-msg.user { background: #d9fdd3; margin-left: auto; text-align: right; }
-        .preview-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-        .preview-btn { background: #fff; border: 1px solid #1877f2; color: #1877f2; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; }
-        .preview-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; margin: 4px 0; }
-        @media (max-width: 900px) { .builder-container { grid-template-columns: 1fr; } }
+        .builder-wrap { display: grid; grid-template-columns: 200px 1fr 300px; gap: 12px; height: calc(100vh - 200px); }
+        .node-palette { background: #fff; border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; overflow-y: auto; }
+        .palette-node { padding: 10px; border-radius: 8px; cursor: grab; margin-bottom: 6px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; border: 1px solid #e0e0e0; transition: 0.15s; }
+        .palette-node:hover { border-color: #1877f2; background: #e7f3ff; }
+        .canvas-wrap { background: #f8fafc; border-radius: 12px; border: 2px dashed #c0c0c0; overflow: hidden; position: relative; }
+        .canvas-inner { width: 2000px; height: 2000px; position: relative; transform-origin: 0 0; }
+        .canvas-node { position: absolute; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 500; color: #fff; min-width: 120px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid transparent; transition: box-shadow 0.2s; }
+        .canvas-node:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+        .canvas-node.selected { border-color: #000 !important; }
+        .canvas-node .node-delete { position: absolute; top: -8px; right: -8px; background: #fa3e3e; color: #fff; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: none; align-items: center; justify-content: center; cursor: pointer; }
+        .canvas-node:hover .node-delete { display: flex; }
+        .canvas-svg { position: absolute; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%; }
+        .canvas-svg line { stroke: #94a3b8; stroke-width: 2; }
+        .props-panel { background: #fff; border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; overflow-y: auto; }
+        @media (max-width: 1024px) { .builder-wrap { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; } }
       </style>
 
-      <div class="d-flex align-items-center mb-3">
-        <button class="btn btn-outline-secondary btn-sm me-2" onclick="Flows.currentTab='list'; Flows.render();">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <h4 class="mb-0">${isEdit ? 'Edit' : 'Create'} Flow</h4>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex gap-2">
+          <input type="text" id="flowName" class="form-control form-control-sm" placeholder="Flow Name" value="${this.editingFlowId ? 'Editing Flow' : ''}" style="width:200px;">
+          <button class="btn btn-success btn-sm" onclick="Flows.saveCanvasFlow()"><i class="fas fa-save me-1"></i> Save</button>
+        </div>
+        <div class="d-flex gap-1">
+          <button class="btn btn-outline-secondary btn-sm" onclick="Flows.canvasScale-=0.1;Flows.updateCanvasTransform();">🔍−</button>
+          <span class="btn btn-light btn-sm disabled">${Math.round(this.canvasScale*100)}%</span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="Flows.canvasScale+=0.1;Flows.updateCanvasTransform();">🔍+</button>
+          <button class="btn btn-outline-info btn-sm" onclick="Flows.testFlow()">▶ Test</button>
+        </div>
       </div>
 
-      <div class="builder-container">
-        <div>
-          <!-- Flow Settings -->
-          <div class="card-widget mb-3">
-            <h5>Flow Settings</h5>
-            <div class="row g-2">
-              <div class="col-md-6">
-                <label class="form-label small fw-bold">Flow Name *</label>
-                <input type="text" id="flowTitle" class="form-control form-control-sm" value="${existingData.title}" placeholder="e.g. Welcome Flow">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small fw-bold">Trigger Keyword</label>
-                <input type="text" id="flowTrigger" class="form-control form-control-sm" value="${existingData.triggerKeyword}" placeholder="e.g. start, help, menu">
-                <small class="text-muted">When user sends this word, flow starts automatically</small>
-              </div>
-            </div>
-            <div class="mt-2">
-              <label class="form-label small fw-bold">Description</label>
-              <input type="text" id="flowDesc" class="form-control form-control-sm" value="${existingData.description}" placeholder="What this flow does...">
-            </div>
-          </div>
-
-          <!-- Steps -->
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="mb-0">Flow Steps</h5>
-            <div class="d-flex gap-1">
-              <button class="btn btn-outline-primary btn-sm" onclick="Flows.addStep('message')"><i class="fas fa-comment me-1"></i> Message</button>
-              <button class="btn btn-outline-info btn-sm" onclick="Flows.addStep('question')"><i class="fas fa-question-circle me-1"></i> Question</button>
-              <button class="btn btn-outline-warning btn-sm" onclick="Flows.addStep('input')"><i class="fas fa-keyboard me-1"></i> Input</button>
-              <button class="btn btn-outline-success btn-sm" onclick="Flows.addStep('condition')"><i class="fas fa-code-branch me-1"></i> Condition</button>
-            </div>
-          </div>
-
-          <div id="stepsContainer">
-            ${this.flowSteps.length === 0 ? `
-              <div class="text-center py-4 text-muted">
-                <i class="fas fa-plus-circle fa-2x mb-2"></i>
-                <p>Add steps to build your flow</p>
-              </div>
-            ` : this.flowSteps.map((step, i) => this.renderStepCard(step, i)).join('')}
-          </div>
-
-          <button class="btn btn-primary w-100 mt-3" onclick="Flows.saveFlow()">
-            <i class="fas fa-save me-1"></i> ${isEdit ? 'Update' : 'Save'} Flow
-          </button>
+      <div class="builder-wrap">
+        <!-- Node Palette -->
+        <div class="node-palette">
+          <h6 class="mb-2">Nodes</h6>
+          <div class="palette-node" draggable="true" ondragstart="event.dataTransfer.setData('nodeType','message')" style="color:#1877f2;">💬 Message</div>
+          <div class="palette-node" draggable="true" ondragstart="event.dataTransfer.setData('nodeType','question')" style="color:#6366f1;">❓ Question</div>
+          <div class="palette-node" draggable="true" ondragstart="event.dataTransfer.setData('nodeType','input')" style="color:#f59e0b;">⌨️ Input</div>
+          <div class="palette-node" draggable="true" ondragstart="event.dataTransfer.setData('nodeType','condition')" style="color:#ec4899;">🔀 Condition</div>
+          <div class="palette-node" draggable="true" ondragstart="event.dataTransfer.setData('nodeType','delay')" style="color:#06b6d4;">⏱ Delay</div>
+          <div class="palette-node" draggable="true" ondragstart="event.dataTransfer.setData('nodeType','action')" style="color:#8b5cf6;">⚡ Action</div>
+          <hr>
+          <small class="text-muted">Drag nodes onto canvas. Click node to edit. Right-click to connect.</small>
         </div>
 
-        <!-- Live Preview -->
-        <div class="preview-phone">
-          <div style="text-align:center;color:#666;font-size:11px;margin-bottom:6px;">📱 Live Preview</div>
-          <div class="preview-screen" id="flowPreview">
-            <div class="text-center text-muted py-4">
-              <i class="fab fa-whatsapp fa-2x mb-2" style="color:#25D366;"></i>
-              <p class="small">Flow preview will appear here</p>
-              <button class="btn btn-sm btn-outline-primary" onclick="Flows.startPreview()">▶ Preview Flow</button>
-            </div>
+        <!-- Canvas -->
+        <div class="canvas-wrap" id="flowCanvas"
+             ondragover="event.preventDefault()"
+             ondrop="Flows.onCanvasDrop(event)"
+             onmousedown="Flows.onCanvasMouseDown(event)"
+             onmousemove="Flows.onCanvasMouseMove(event)"
+             onmouseup="Flows.onCanvasMouseUp(event)">
+          <div class="canvas-inner" id="canvasInner" style="transform: scale(${this.canvasScale});">
+            <svg class="canvas-svg" id="canvasSvg">${this.renderConnections()}</svg>
+            ${this.canvasNodes.map(n => this.renderCanvasNode(n)).join('')}
           </div>
         </div>
+
+        <!-- Properties Panel -->
+        <div class="props-panel" id="propsPanel">
+          <h6>Properties</h6>
+          <p class="text-muted small">Select a node on canvas</p>
+        </div>
+      </div>
+
+      <div id="flowTestModal"></div>
+    `;
+    contentArea.innerHTML = html;
+    setTimeout(() => this.updateCanvasTransform(), 100);
+  },
+
+  renderCanvasNode(node) {
+    const colors = { trigger:'#10b981', message:'#1877f2', question:'#6366f1', input:'#f59e0b', condition:'#ec4899', delay:'#06b6d4', action:'#8b5cf6' };
+    node.color = colors[node.type] || '#1877f2';
+    return `
+      <div class="canvas-node ${this.selectedNode===node.id?'selected':''}" id="node-${node.id}"
+           style="left:${node.x}px;top:${node.y}px;background:${node.color};"
+           onmousedown="event.stopPropagation();Flows.selectNode('${node.id}',event)"
+           oncontextmenu="event.preventDefault();Flows.startConnection('${node.id}')">
+        ${node.label||node.type}
+        <div class="node-delete" onclick="event.stopPropagation();Flows.deleteNode('${node.id}')">×</div>
+      </div>
+    `;
+  },
+
+  renderConnections() {
+    return this.canvasConnections.map(c => {
+      const from = this.canvasNodes.find(n => n.id === c.from);
+      const to = this.canvasNodes.find(n => n.id === c.to);
+      if (!from || !to) return '';
+      return `<line x1="${from.x+60}" y1="${from.y+20}" x2="${to.x+60}" y2="${to.y}" marker-end="url(#arrowhead)"/>`;
+    }).join('');
+  },
+
+  onCanvasDrop(e) {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('nodeType');
+    if (!type) return;
+    const rect = document.getElementById('flowCanvas').getBoundingClientRect();
+    const x = (e.clientX - rect.left) / this.canvasScale - 60;
+    const y = (e.clientY - rect.top) / this.canvasScale - 20;
+    const id = 'node_' + Date.now();
+    const labels = { message:'New Message', question:'New Question', input:'New Input', condition:'New Condition', delay:'Delay', action:'New Action' };
+    this.canvasNodes.push({ id, type, label: labels[type]||type, x: Math.max(0,x), y: Math.max(0,y), text: '' });
+    this.selectedNode = id;
+    this.renderBuilder();
+  },
+
+  selectNode(id, e) {
+    if (this.connectingFrom && this.connectingFrom !== id) {
+      this.canvasConnections.push({ from: this.connectingFrom, to: id });
+      this.connectingFrom = null;
+      this.renderBuilder();
+      return;
+    }
+    this.connectingFrom = null;
+    this.selectedNode = id;
+    const node = this.canvasNodes.find(n => n.id === id);
+    this.dragNode = node;
+    this.isDragging = true;
+    this.dragOffset = { x: e.clientX - node.x * this.canvasScale, y: e.clientY - node.y * this.canvasScale };
+    this.showNodeProps(node);
+  },
+
+  onCanvasMouseDown(e) {
+    if (e.target.closest('.canvas-node')) return;
+    this.selectedNode = null;
+    this.isDragging = false;
+    this.isPanning = true;
+    this.panStart = { x: e.clientX, y: e.clientY };
+    document.getElementById('propsPanel').innerHTML = '<h6>Properties</h6><p class="text-muted small">Select a node</p>';
+  },
+
+  onCanvasMouseMove(e) {
+    if (this.isDragging && this.dragNode) {
+      this.dragNode.x = Math.max(0, (e.clientX - this.dragOffset.x) / this.canvasScale);
+      this.dragNode.y = Math.max(0, (e.clientY - this.dragOffset.y) / this.canvasScale);
+      this.renderBuilder();
+    }
+  },
+
+  onCanvasMouseUp() {
+    this.isDragging = false;
+    this.dragNode = null;
+    this.isPanning = false;
+  },
+
+  startConnection(id) {
+    this.connectingFrom = id;
+    this.showToast('Now click another node to connect', 'info');
+  },
+
+  deleteNode(id) {
+    this.canvasNodes = this.canvasNodes.filter(n => n.id !== id);
+    this.canvasConnections = this.canvasConnections.filter(c => c.from !== id && c.to !== id);
+    if (this.selectedNode === id) this.selectedNode = null;
+    this.renderBuilder();
+  },
+
+  showNodeProps(node) {
+    let html = `<h6>Edit Node</h6><label class="form-label small">Type: <strong>${node.type}</strong></label>`;
+    if (node.type === 'message' || node.type === 'question') {
+      html += `<textarea class="form-control form-control-sm mb-2" onchange="Flows.updateNodeProp('${node.id}','text',this.value)">${node.text||''}</textarea>`;
+    }
+    if (node.type === 'question') {
+      html += `<input type="text" class="form-control form-control-sm mb-2" placeholder="Options (comma separated)" onchange="Flows.updateNodeProp('${node.id}','options',this.value)" value="${(node.options||[]).join(',')}">`;
+    }
+    if (node.type === 'input') {
+      html += `<input type="text" class="form-control form-control-sm mb-1" placeholder="Question" onchange="Flows.updateNodeProp('${node.id}','text',this.value)" value="${node.text||''}">
+               <select class="form-select form-select-sm mb-1" onchange="Flows.updateNodeProp('${node.id}','inputType',this.value)"><option>text</option><option>number</option><option>email</option><option>phone</option></select>
+               <input type="text" class="form-control form-control-sm" placeholder="Variable name" onchange="Flows.updateNodeProp('${node.id}','variable',this.value)" value="${node.variable||''}">`;
+    }
+    if (node.type === 'delay') {
+      html += `<input type="number" class="form-control form-control-sm" placeholder="Hours" onchange="Flows.updateNodeProp('${node.id}','hours',this.value)" value="${node.hours||''}">`;
+    }
+    document.getElementById('propsPanel').innerHTML = html;
+  },
+
+  updateNodeProp(id, prop, value) {
+    const node = this.canvasNodes.find(n => n.id === id);
+    if (!node) return;
+    if (prop === 'options') node.options = value.split(',').map(o => o.trim());
+    else node[prop] = value;
+  },
+
+  updateCanvasTransform() {
+    const inner = document.getElementById('canvasInner');
+    if (inner) inner.style.transform = `scale(${this.canvasScale})`;
+  },
+
+  async saveCanvasFlow() {
+    const name = document.getElementById('flowName')?.value?.trim() || 'Untitled Flow';
+    const data = {
+      title: name,
+      source: 'builder',
+      canvasNodes: this.canvasNodes,
+      canvasConnections: this.canvasConnections,
+      status: 'draft',
+      addedToMy: true,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+      if (this.editingFlowId) {
+        await db.collection('botFlows').doc(this.editingFlowId).update(data);
+      } else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        const ref = await db.collection('botFlows').add(data);
+        this.editingFlowId = ref.id;
+      }
+      alert('✅ Flow saved!');
+    } catch(e) { alert('Error: ' + e.message); }
+  },
+
+  // ==================== 3. MY FLOWS ====================
+  async renderMyFlows() {
+    let flows = [];
+    try {
+      const snap = await db.collection('botFlows').where('addedToMy', '==', true).orderBy('updatedAt', 'desc').get();
+      flows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      window._myFlowCount = flows.length;
+    } catch(e) {}
+
+    let html = `
+      ${this.renderTabs('myflows')}
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="fas fa-star text-warning me-2"></i>My Flows</h4>
+        <button class="btn btn-primary btn-sm" onclick="Flows.currentTab='builder';Flows.editingFlowId=null;Flows.canvasNodes=[];Flows.canvasConnections=[];Flows.render();">
+          <i class="fas fa-plus me-1"></i> Create New
+        </button>
+      </div>
+      <div class="row g-3">
+        ${flows.length === 0 ? '<div class="col-12 text-center py-4 text-muted">No flows yet. Browse Meta templates or create your own!</div>' : flows.map(f => `
+          <div class="col-md-6 col-lg-4">
+            <div class="card-widget">
+              <div class="d-flex justify-content-between">
+                <h6>${f.title||'Untitled'}</h6>
+                <span class="badge bg-${f.source==='meta'?'primary':'info'}">${f.source==='meta'?'Meta':'Custom'}</span>
+              </div>
+              <small class="text-muted">${(f.canvasNodes||f.steps||[]).length} nodes · ${f.status||'draft'}</small>
+              <div class="mt-2 d-flex gap-1">
+                ${f.source==='builder' ? `<button class="btn btn-sm btn-outline-info" onclick="Flows.currentTab='builder';Flows.editingFlowId='${f.id}';Flows.render();"><i class="fas fa-edit"></i></button>` : ''}
+                <button class="btn btn-sm btn-${f.status==='active'?'warning':'success'}" onclick="Flows.toggleFlow('${f.id}')">${f.status==='active'?'Deactivate':'Activate'}</button>
+                <button class="btn btn-sm btn-outline-info" onclick="Flows.copyFlowLink('${f.id}')"><i class="fas fa-link"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="Flows.removeFromMy('${f.id}')"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
     `;
     contentArea.innerHTML = html;
   },
 
-  renderStepCard(step, index) {
-    const types = {
-      message: { icon: 'fa-comment', color: '#10b981', label: 'Message' },
-      question: { icon: 'fa-question-circle', color: '#6366f1', label: 'Question' },
-      input: { icon: 'fa-keyboard', color: '#f59e0b', label: 'User Input' },
-      condition: { icon: 'fa-code-branch', color: '#ec4899', label: 'Condition' }
-    };
-    const t = types[step.type] || types.message;
-
-    let configHTML = '';
-    if (step.type === 'message') {
-      configHTML = `
-        <textarea class="form-control form-control-sm mt-1" placeholder="Message text..." onchange="Flows.flowSteps[${index}].text=this.value">${step.text||''}</textarea>
-        <input type="text" class="form-control form-control-sm mt-1" placeholder="Button text (optional)" onchange="Flows.flowSteps[${index}].button=this.value" value="${step.button||''}">
-      `;
-    } else if (step.type === 'question') {
-      configHTML = `
-        <input type="text" class="form-control form-control-sm mt-1" placeholder="Question text" onchange="Flows.flowSteps[${index}].text=this.value" value="${step.text||''}">
-        <div class="mt-1"><small>Options (comma separated):</small></div>
-        <input type="text" class="form-control form-control-sm" placeholder="Yes, No, Maybe" onchange="Flows.flowSteps[${index}].options=this.value.split(',').map(o=>o.trim())" value="${(step.options||[]).join(', ')}">
-      `;
-    } else if (step.type === 'input') {
-      configHTML = `
-        <input type="text" class="form-control form-control-sm mt-1" placeholder="Question text" onchange="Flows.flowSteps[${index}].text=this.value" value="${step.text||''}">
-        <select class="form-select form-select-sm mt-1" onchange="Flows.flowSteps[${index}].inputType=this.value">
-          <option value="text" ${step.inputType==='text'?'selected':''}>Text</option>
-          <option value="number" ${step.inputType==='number'?'selected':''}>Number</option>
-          <option value="email" ${step.inputType==='email'?'selected':''}>Email</option>
-          <option value="phone" ${step.inputType==='phone'?'selected':''}>Phone</option>
-        </select>
-        <input type="text" class="form-control form-control-sm mt-1" placeholder="Save answer as (variable name)" onchange="Flows.flowSteps[${index}].variable=this.value" value="${step.variable||''}">
-      `;
-    } else if (step.type === 'condition') {
-      configHTML = `
-        <input type="text" class="form-control form-control-sm mt-1" placeholder="Variable name" onchange="Flows.flowSteps[${index}].variable=this.value" value="${step.variable||''}">
-        <select class="form-select form-select-sm mt-1" onchange="Flows.flowSteps[${index}].operator=this.value">
-          <option value="equals" ${step.operator==='equals'?'selected':''}>Equals</option>
-          <option value="contains" ${step.operator==='contains'?'selected':''}>Contains</option>
-          <option value="greater" ${step.operator==='greater'?'selected':''}>Greater than</option>
-        </select>
-        <input type="text" class="form-control form-control-sm mt-1" placeholder="Value to compare" onchange="Flows.flowSteps[${index}].compareValue=this.value" value="${step.compareValue||''}">
-        <div class="row g-1 mt-1">
-          <div class="col-6"><small>If TRUE → Step</small><input type="number" class="form-control form-control-sm" placeholder="Step #" onchange="Flows.flowSteps[${index}].trueStep=parseInt(this.value)" value="${step.trueStep||''}"></div>
-          <div class="col-6"><small>If FALSE → Step</small><input type="number" class="form-control form-control-sm" placeholder="Step #" onchange="Flows.flowSteps[${index}].falseStep=parseInt(this.value)" value="${step.falseStep||''}"></div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="step-card">
-        <span class="step-number">Step ${index + 1}</span>
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="step-type-badge ${step.type}" style="background:${t.color}20;color:${t.color};">
-            <i class="fas ${t.icon} me-1"></i> ${t.label}
-          </span>
-          <div>
-            ${index > 0 ? `<button class="btn btn-xs btn-outline-secondary me-1" onclick="Flows.moveStep(${index},'up')">↑</button>` : ''}
-            ${index < this.flowSteps.length-1 ? `<button class="btn btn-xs btn-outline-secondary me-1" onclick="Flows.moveStep(${index},'down')">↓</button>` : ''}
-            <button class="btn btn-xs btn-outline-danger" onclick="Flows.removeStep(${index})">×</button>
-          </div>
-        </div>
-        ${configHTML}
-      </div>
-      <div class="step-connector">↓</div>
-    `;
-  },
-
-  // ==================== STEP MANAGEMENT ====================
-  addStep(type) {
-    const newStep = { type, text: '', options: [], inputType: 'text', variable: '', operator: 'equals', compareValue: '', button: '' };
-    this.flowSteps.push(newStep);
-    this.renderBuilder();
-  },
-
-  removeStep(index) {
-    this.flowSteps.splice(index, 1);
-    this.renderBuilder();
-  },
-
-  moveStep(index, direction) {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= this.flowSteps.length) return;
-    const temp = this.flowSteps[index];
-    this.flowSteps[index] = this.flowSteps[newIndex];
-    this.flowSteps[newIndex] = temp;
-    this.renderBuilder();
-  },
-
-  // ==================== SAVE ====================
-  async saveFlow() {
-    const title = document.getElementById('flowTitle').value.trim();
-    if (!title) return alert('Flow name required!');
-    if (this.flowSteps.length === 0) return alert('Add at least 1 step!');
-
-    const data = {
-      title,
-      description: document.getElementById('flowDesc').value.trim(),
-      triggerKeyword: document.getElementById('flowTrigger').value.trim().toLowerCase(),
-      steps: this.flowSteps,
-      status: this.editingFlow ? undefined : 'draft',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    try {
-      if (this.currentTab === 'edit' && this.editingFlow) {
-        await db.collection('botFlows').doc(this.editingFlow).update(data);
-      } else {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await db.collection('botFlows').add(data);
+  // ==================== SHARED FUNCTIONS ====================
+  async syncFromMeta() {
+    const metaTemplates = [
+      { title:'Welcome', source:'meta', category:'Contact us', endpointType:'without', steps:[{type:'message',text:'Hello World'},{type:'message',text:'Let\'s start building things!'}] },
+      { title:'Collect Purchase Interest', source:'meta', category:'Shopping', endpointType:'without', steps:[{type:'input',text:'Name',inputType:'text'},{type:'input',text:'Email',inputType:'email'},{type:'question',text:'Category?',options:['Phones','TVs','Audio']}] },
+      { title:'Get Feedback', source:'meta', category:'Survey', endpointType:'without', steps:[{type:'question',text:'Recommend us?',options:['Yes','No']},{type:'input',text:'How improve?',inputType:'text'}] },
+      { title:'Customer Support', source:'meta', category:'Customer support', endpointType:'without', steps:[{type:'input',text:'Name',inputType:'text'},{type:'input',text:'Order #',inputType:'text'},{type:'question',text:'Topic',options:['Orders','Delivery','Returns']}] },
+      { title:'Pre-approved Loan', source:'meta', category:'Lead generation', endpointType:'with', steps:[{type:'message',text:'Your pre-approved offer!'},{type:'input',text:'Amount',inputType:'number'},{type:'input',text:'Tenure',inputType:'number'}] },
+      { title:'Insurance Quote', source:'meta', category:'Lead generation', endpointType:'with', steps:[{type:'question',text:'Cover?',options:['Self','Family']},{type:'input',text:'Name',inputType:'text'}] },
+      { title:'Appointment Booking', source:'meta', category:'Appointment booking', endpointType:'with', steps:[{type:'input',text:'Dept',inputType:'text'},{type:'input',text:'Date',inputType:'date'},{type:'input',text:'Name',inputType:'text'},{type:'input',text:'Phone',inputType:'phone'}] },
+      { title:'Account Sign-in', source:'meta', category:'Sign up', endpointType:'with', steps:[{type:'input',text:'Email',inputType:'email'},{type:'input',text:'Password',inputType:'text'}] },
+    ];
+    let added = 0;
+    for (const tpl of metaTemplates) {
+      const ex = await db.collection('botFlows').where('title','==',tpl.title).where('source','==','meta').get();
+      if (ex.empty) {
+        await db.collection('botFlows').add({...tpl, status:'draft', addedToMy:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        added++;
       }
-      alert('✅ Flow saved!');
-      this.currentTab = 'list';
-      this.flowSteps = [];
-      this.editingFlow = null;
-      this.render();
-    } catch(e) { alert('Error: ' + e.message); }
-  },
-
-  // ==================== ACTIVATE / DEACTIVATE ====================
-  async activateFlow(id) {
-    const doc = await db.collection('botFlows').doc(id).get();
-    const current = doc.data().status || 'draft';
-    const newStatus = current === 'active' ? 'draft' : 'active';
-    await db.collection('botFlows').doc(id).update({ status: newStatus });
+    }
+    alert(`✅ ${added} new templates synced!`);
     this.render();
   },
 
-  // ==================== PREVIEW ====================
-  startPreview() {
-    if (this.flowSteps.length === 0) return;
-    this.currentStepIndex = 0;
-    this.renderPreviewStep();
+  async copyToMyFlows(id) {
+    await db.collection('botFlows').doc(id).update({ addedToMy: true });
+    alert('✅ Copied to My Flows!');
+    this.render();
   },
 
-  renderPreviewStep(userInput = null) {
-    if (this.currentStepIndex >= this.flowSteps.length) {
-      document.getElementById('flowPreview').innerHTML = `
-        <div class="text-center py-4">
-          <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-          <p class="small">Flow Complete! ✅</p>
-          <button class="btn btn-sm btn-outline-primary" onclick="Flows.startPreview()">🔄 Restart</button>
-        </div>
-      `;
-      return;
-    }
-
-    const step = this.flowSteps[this.currentStepIndex];
-    let html = '';
-
-    if (step.type === 'message') {
-      html += `<div class="preview-msg bot">${step.text||'Hello!'}</div>`;
-      if (step.button) {
-        html += `<div class="preview-buttons"><button class="preview-btn" onclick="Flows.flowSteps[${this.currentStepIndex}]._clicked=true; Flows.currentStepIndex++; Flows.renderPreviewStep();">${step.button}</button></div>`;
-      } else {
-        html += `<button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="Flows.currentStepIndex++; Flows.renderPreviewStep();">Continue →</button>`;
-      }
-    } else if (step.type === 'question') {
-      html += `<div class="preview-msg bot">${step.text||'Choose an option:'}</div>`;
-      html += `<div class="preview-buttons">${(step.options||['Yes','No']).map(o => `<button class="preview-btn" onclick="Flows.flowSteps[${this.currentStepIndex}]._answer='${o}'; Flows.currentStepIndex++; Flows.renderPreviewStep();">${o}</button>`).join('')}</div>`;
-    } else if (step.type === 'input') {
-      html += `<div class="preview-msg bot">${step.text||'Please enter:'}</div>`;
-      html += `<input type="${step.inputType||'text'}" class="preview-input" id="previewInput" placeholder="Type here...">`;
-      html += `<button class="btn btn-sm btn-primary w-100 mt-1" onclick="Flows.flowSteps[${this.currentStepIndex}]._answer=document.getElementById('previewInput').value; Flows.currentStepIndex++; Flows.renderPreviewStep();">Submit</button>`;
-    } else if (step.type === 'condition') {
-      const answer = Flows.flowSteps.find(s => s.variable === step.variable)?._answer || '';
-      let match = false;
-      if (step.operator === 'equals') match = answer === step.compareValue;
-      else if (step.operator === 'contains') match = answer.includes(step.compareValue);
-      else if (step.operator === 'greater') match = parseInt(answer) > parseInt(step.compareValue);
-      this.currentStepIndex = match ? (step.trueStep-1) : (step.falseStep-1);
-      this.renderPreviewStep();
-      return;
-    }
-
-    document.getElementById('flowPreview').innerHTML = html;
+  async removeFromMy(id) {
+    await db.collection('botFlows').doc(id).update({ addedToMy: false, status: 'draft' });
+    this.render();
   },
 
-  async previewFlow(id) {
+  async toggleFlow(id) {
     const doc = await db.collection('botFlows').doc(id).get();
-    const flow = doc.data();
-    const steps = flow.steps || [];
+    const status = doc.data().status === 'active' ? 'draft' : 'active';
+    await db.collection('botFlows').doc(id).update({ status });
+    this.render();
+  },
 
-    let previewHTML = '<div style="max-height:400px;overflow-y:auto;">';
-    steps.forEach((s, i) => {
-      previewHTML += `<div class="preview-msg bot"><strong>Step ${i+1}:</strong> ${s.text||'(No text)'}</div>`;
-      if (s.options?.length) previewHTML += `<div class="preview-buttons">${s.options.map(o=>`<span class="preview-btn">${o}</span>`).join('')}</div>`;
+  copyFlowLink(id) {
+    const link = `${window.location.origin}${window.location.pathname}?flow=${id}`;
+    prompt('Share via WhatsApp:', link);
+  },
+
+  previewFlow(id) {
+    db.collection('botFlows').doc(id).get().then(doc => {
+      const f = doc.data();
+      const steps = f.steps || f.canvasNodes || [];
+      let h = `<div style="max-height:400px;overflow-y:auto;">`;
+      steps.forEach((s,i) => {
+        h += `<div style="background:#fff;padding:8px;margin:4px 0;border-radius:8px;"><strong>${i+1}.</strong> ${s.label||s.text||s.type}</div>`;
+        if (s.options) h += `<div style="display:flex;gap:4px;flex-wrap:wrap;">${s.options.map(o=>`<span style="background:#e7f3ff;padding:2px 8px;border-radius:10px;font-size:11px;">${o}</span>`).join('')}</div>`;
+      });
+      h += '</div>';
+      document.getElementById('flowPreviewModal').innerHTML = `
+        <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;" onclick="this.innerHTML=''">
+          <div class="card-widget" style="width:380px;max-width:90vw;" onclick="event.stopPropagation()"><h5>📱 ${f.title}</h5>${h}<button class="btn btn-sm btn-secondary w-100 mt-2" onclick="document.getElementById('flowPreviewModal').innerHTML=''">Close</button></div>
+        </div>`;
     });
-    previewHTML += '</div>';
-
-    document.getElementById('flowPreviewModal').innerHTML = `
-      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;" onclick="document.getElementById('flowPreviewModal').innerHTML=''">
-        <div class="card-widget" style="width:380px;max-width:90vw;" onclick="event.stopPropagation()">
-          <h5>📱 ${flow.title}</h5>
-          ${previewHTML}
-          <button class="btn btn-secondary btn-sm w-100 mt-2" onclick="document.getElementById('flowPreviewModal').innerHTML=''">Close</button>
-        </div>
-      </div>
-    `;
   },
 
-  // ==================== DELETE ====================
-  async deleteFlow(id) {
-    if (!confirm('Delete this flow?')) return;
-    await db.collection('botFlows').doc(id).delete();
-    this.render();
+  testFlow() {
+    if (this.canvasNodes.length === 0) return alert('Add nodes first!');
+    let steps = '';
+    this.canvasNodes.forEach((n,i) => {
+      steps += `<div style="background:#fff;padding:6px 10px;margin:4px 0;border-radius:6px;font-size:11px;">${i+1}. ${n.label||n.type} ${n.text?': '+n.text:''}</div>`;
+    });
+    document.getElementById('flowTestModal').innerHTML = `
+      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;" onclick="this.innerHTML=''">
+        <div class="card-widget" style="width:360px;max-width:90vw;background:#e5ddd5;" onclick="event.stopPropagation()">
+          <div style="text-align:center;color:#666;font-size:10px;margin-bottom:4px;">📱 Flow Test</div>
+          ${steps}
+          <button class="btn btn-sm btn-success w-100 mt-2">▶ Send via WhatsApp</button>
+          <button class="btn btn-sm btn-light w-100 mt-1" onclick="document.getElementById('flowTestModal').innerHTML=''">Close</button>
+        </div>
+      </div>`;
+  },
+
+  showToast(msg, type) {
+    const old = document.querySelector('.toast');
+    if (old) old.remove();
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + (type || 'success');
+    t.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:8px;color:#fff;z-index:9999;';
+    t.style.background = type === 'error' ? '#fa3e3e' : type === 'info' ? '#1877f2' : '#31a24c';
+    t.innerText = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
   }
 };
