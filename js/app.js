@@ -272,6 +272,8 @@ function loadSection(section) {
     case 'kanban': Kanban.render(); break;
     case 'knowledge': Knowledge.render(); break;   // ✅ ADD THIS
     case 'social': Social.render(); break;
+    case 'analytics': Analytics.render(); break;
+    case 'reports': Reports.render(); break;
     case 'marketing': Marketing.render(); break;
     case 'plan': Plan.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
