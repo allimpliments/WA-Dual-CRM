@@ -99,13 +99,22 @@ function buildSidebar(role) {
 }
 
 function loadSection(section) {
-  // Restore CRM sidebar if coming from social
+  contentArea.innerHTML = '';
+  
+  // Restore CRM sidebar when leaving social tab
   if (section !== 'social') {
     const crmSidebar = document.getElementById('sidebar');
     if (crmSidebar) crmSidebar.style.display = '';
     const mainArea = document.querySelector('.main-area');
     if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
   }
+
+  switch (section) {
+    case 'dashboard': Dashboard.render(); break;
+    case 'social': Social.render(); break;
+    // ... rest same
+  }
+}
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
     case 'contacts': Contacts.render(); break;
