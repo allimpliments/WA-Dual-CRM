@@ -27,10 +27,10 @@ const navSections = [
       { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin', 'team'] }
     ]
   },
-    {
-     title: 'Social Media',
+  {
+    title: 'Social Media',
     items: [
-    { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin', 'team'] }
+      { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin', 'team'] }
     ]
   },
   {
@@ -100,7 +100,7 @@ function buildSidebar(role) {
 
 function loadSection(section) {
   contentArea.innerHTML = '';
-  
+
   // Restore CRM sidebar when leaving social tab
   if (section !== 'social') {
     const crmSidebar = document.getElementById('sidebar');
@@ -110,11 +110,6 @@ function loadSection(section) {
   }
 
   switch (section) {
-    case 'dashboard': Dashboard.render(); break;
-    case 'social': Social.render(); break;
-    // ... rest same
-  }
-}
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
     case 'contacts': Contacts.render(); break;
@@ -131,9 +126,6 @@ function loadSection(section) {
     case 'clients': Clients.render(); break;
     case 'kanban': Kanban.render(); break;
     case 'social': Social.render(); break;
-    case 'social':
-      Social.render();
-      break;
     case 'plan': Plan.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
