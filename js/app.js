@@ -22,6 +22,7 @@ const navSections = [
     { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin','team'] },
     { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
   ]},
+  { title: 'Marketing', items: [{ name: 'Ads Manager', icon: 'fa-ad', section: 'marketing', roles: ['admin','team'] }] },
   { title: 'Management', items: [
     { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin'] },
     { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin'] },
@@ -67,6 +68,7 @@ const headerSections = [
   { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
   { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
   { name: 'Social', icon: 'fa-globe', section: 'social' },
+  { name: 'Marketing', icon: 'fa-ad', section: 'marketing' },
   { name: 'E-commerce', icon: 'fa-store', section: 'ecommerce' },
   { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
   { name: 'Integrations', icon: 'fa-plug', section: 'integrations' },
@@ -103,6 +105,12 @@ const sectionSubMenus = {
     { name: 'Form Builder', icon: 'fa-wpforms', color: '#1877f2', action: `Forms.currentTab='forms';Forms.render()` },
     { name: 'Submissions', icon: 'fa-list', color: '#1877f2', action: `Forms.currentTab='submissions';Forms.render()` },
   ],
+  'marketing': [
+  { name: 'Meta Ads', icon: 'fa-meta', color: '#0668E1', action: `Marketing.switchTab('metaads')` },
+  { name: 'Google Ads', icon: 'fa-google', color: '#4285F4', action: `Marketing.switchTab('googleads')` },
+  { name: 'LinkedIn Ads', icon: 'fa-linkedin', color: '#0A66C2', action: `Marketing.switchTab('linkedinads')` },
+  { name: 'Pinterest Ads', icon: 'fa-pinterest', color: '#E60023', action: `Marketing.switchTab('pinterestads')` },
+],
 };
 
 function loadSection(section) {
@@ -156,6 +164,7 @@ function loadSection(section) {
     case 'clients': Clients.render(); break;
     case 'kanban': Kanban.render(); break;
     case 'social': Social.render(); break;
+    case 'marketing': Marketing.render(); break;
     case 'plan': Plan.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
