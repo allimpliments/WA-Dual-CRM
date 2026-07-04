@@ -1,11 +1,18 @@
+// js/app.js – Full & Final Version
+// All features | All sections | Big font header | Auto‑hide with top padding | Social full‑screen integration
+
 const sidebar = document.getElementById('sidebar');
 const contentArea = document.getElementById('contentArea');
 const menuToggle = document.getElementById('menuToggle');
 const currentSectionTitle = document.getElementById('currentSectionTitle');
 
 const navSections = [
-  { title: 'Main', items: [{ name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client'] }] },
-  { title: 'Setup', items: [{ name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }] },
+  { title: 'Main', items: [
+    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client'] }
+  ]},
+  { title: 'Setup', items: [
+    { name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }
+  ]},
   { title: 'Communication', items: [
     { name: 'All Chats', icon: 'fa-comments', section: 'chats', roles: ['admin','team'] },
     { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads', roles: ['admin','team'] },
@@ -14,9 +21,15 @@ const navSections = [
     { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', roles: ['admin','team'] },
     { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin','team'] }
   ]},
-  { title: 'Social Media', items: [{ name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin','team'] }] },
-  { title: 'Forms', items: [{ name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin','team'] }] },
-  { title: 'E-commerce', items: [{ name: 'E-commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }] },
+  { title: 'Social Media', items: [
+    { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin','team'] }
+  ]},
+  { title: 'Forms', items: [
+    { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin','team'] }
+  ]},
+  { title: 'E‑commerce', items: [
+    { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
+  ]},
   { title: 'Automation', items: [
     { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin','team'] },
     { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
@@ -58,10 +71,29 @@ function buildSidebar(role) {
   });
 }
 
+// ========== GLOBAL HEADER DATA ==========
+const headerSections = [
+  { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
+  { name: 'Chats', icon: 'fa-comments', section: 'chats' },
+  { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
+  { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
+  { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
+  { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
+  { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
+  { name: 'Social', icon: 'fa-globe', section: 'social' },
+  { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce' },
+  { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
+  { name: 'Integrations', icon: 'fa-plug', section: 'integrations' },
+  { name: 'Agents', icon: 'fa-user-tie', section: 'agents' },
+  { name: 'Clients', icon: 'fa-building', section: 'clients' },
+  { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+];
+
+// ========== LOAD SECTION ==========
 function loadSection(section) {
   contentArea.innerHTML = '';
 
-  // FULL SCREEN
+  // Full screen
   document.body.classList.add('sidebar-hidden');
   if (sidebar) sidebar.style.display = 'none';
   const mainArea = document.querySelector('.main-area');
@@ -69,25 +101,12 @@ function loadSection(section) {
   if (currentSectionTitle) currentSectionTitle.textContent = section;
 
   // Remove old global components
-  document.querySelectorAll('.global-top-header, .header-trigger-zone, .global-bottom-menu').forEach(el => el.remove());
+  document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-  // ========== FIXED TOP HEADER (Always visible, thin bar) ==========
-  const headerSections = [
-    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
-    { name: 'Chats', icon: 'fa-comments', section: 'chats' },
-    { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
-    { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
-    { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
-    { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
-    { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
-    { name: 'Social', icon: 'fa-globe', section: 'social' },
-    { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
-    { name: 'Setup', icon: 'fa-cog', section: 'setup' },
-  ];
-
+  // ====== AUTO‑HIDE HEADER (big fonts, all sections) ======
   const topHTML = `
-    <div class="global-top-header" id="globalTopHeader">
-      <span style="font-weight:700;font-size:13px;color:#1877f2;white-space:nowrap;">📱 11 Avatar CRM</span>
+    <div class="global-top-header" id="globalTopHeader" onmouseenter="clearTimeout(window._hideHeaderTimer)" onmouseleave="window._hideHeaderTimer = setTimeout(() => document.getElementById('globalTopHeader').classList.remove('visible'), 500)">
+      <span style="font-weight:700;font-size:15px;color:#1877f2;white-space:nowrap;">📱 11 Avatar CRM</span>
       <div class="global-crm-nav">
         ${headerSections.map(s => `<a href="#" onclick="loadSection('${s.section}')" style="${section===s.section?'background:#e7f3ff;color:#1877f2;font-weight:600;':''}"><i class="fas ${s.icon}"></i> ${s.name}</a>`).join('')}
       </div>
@@ -95,7 +114,7 @@ function loadSection(section) {
   `;
   document.body.insertAdjacentHTML('afterbegin', topHTML);
 
-  // ========== PREMIUM BOTTOM SUB MENU (Same style as Social tab) ==========
+  // ====== PREMIUM BOTTOM SUB MENU ======
   const sectionSubMenus = {
     'social': [
       { name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', action: `Social.switchTab('facebook')` },
@@ -120,6 +139,10 @@ function loadSection(section) {
       { name: 'All Contacts', icon: 'fa-users', color: '#1877f2', action: `Contacts.currentTab='contacts';Contacts.render()` },
       { name: 'Custom Fields', icon: 'fa-list', color: '#1877f2', action: `Contacts.currentTab='fields';Contacts.render()` },
     ],
+    'forms': [
+      { name: 'Form Builder', icon: 'fa-wpforms', color: '#1877f2', action: `Forms.currentTab='forms';Forms.render()` },
+      { name: 'Submissions', icon: 'fa-list', color: '#1877f2', action: `Forms.currentTab='submissions';Forms.render()` },
+    ],
   };
 
   if (sectionSubMenus[section]) {
@@ -136,6 +159,7 @@ function loadSection(section) {
     document.body.insertAdjacentHTML('beforeend', subHTML);
   }
 
+  // ====== RENDER CONTENT ======
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
