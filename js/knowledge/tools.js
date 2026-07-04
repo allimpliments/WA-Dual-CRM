@@ -26,4 +26,4 @@ function(Knowledge, contentArea, db, firebase) {
     </div>
     <style>.ke-module-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;cursor:pointer;transition:0.25s;}.ke-module-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);transform:translateY(-2px);}</style>
   `;
-}
+} 
