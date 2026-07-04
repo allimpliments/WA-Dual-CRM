@@ -1,4 +1,3 @@
-// js/app.js – Complete file with all fixes
 const sidebar = document.getElementById('sidebar');
 const contentArea = document.getElementById('contentArea');
 const menuToggle = document.getElementById('menuToggle');
@@ -102,17 +101,56 @@ function buildSidebar(role) {
 function loadSection(section) {
   contentArea.innerHTML = '';
 
-  // Hide sidebar for full screen
-  document.body.classList.add('sidebar-hidden');
-  if (sidebar) sidebar.style.display = 'none';
+  // Show sidebar for all sections
+  document.body.classList.remove('sidebar-hidden');
+  if (sidebar) sidebar.style.display = '';
   const mainArea = document.querySelector('.main-area');
-  if (mainArea) mainArea.style.marginLeft = '0';
+  if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
 
-  // Update topbar title
   if (currentSectionTitle) currentSectionTitle.textContent = section;
 
-  // Inject global components
-  injectGlobalComponents(section);
+  // Remove old global components
+  document.querySelectorAll('.global-top-header, .header-trigger-zone, .global-bottom-menu').forEach(el => el.remove());
+
+  // Smart bottom menu - only show relevant sub tabs
+  const sectionSubMenus = {
+    'social': [
+      { name: 'FB', icon: 'fa-facebook', id: 'facebook' },
+      { name: 'IG', icon: 'fa-instagram', id: 'instagram' },
+      { name: 'Meta', icon: 'fa-meta', id: 'meta' },
+      { name: 'LI', icon: 'fa-linkedin', id: 'linkedin' },
+      { name: 'X', icon: 'fa-twitter', id: 'twitter' },
+      { name: 'YT', icon: 'fa-youtube', id: 'youtube' },
+      { name: 'YT St', icon: 'fa-youtube', id: 'ytstudio' },
+    ],
+    'chats': [
+      { name: 'WA', icon: 'fa-whatsapp', id: 'whatsapp' },
+      { name: 'FB', icon: 'fa-facebook-messenger', id: 'facebook' },
+      { name: 'IG', icon: 'fa-instagram', id: 'instagram' },
+    ],
+    'templates': [
+      { name: 'All', id: 'all' },
+      { name: 'Active', id: 'active' },
+      { name: 'Pending', id: 'pending' },
+    ],
+    'forms': [
+      { name: 'Forms', id: 'forms' },
+      { name: 'Fields', id: 'fields' },
+    ],
+  };
+
+  if (sectionSubMenus[section]) {
+    const subHTML = `
+      <div class="global-bottom-menu">
+        ${sectionSubMenus[section].map(s => `
+          <div class="bottom-tab" onclick="(${section === 'social' ? 'Social.switchTab' : section === 'chats' ? 'Chats.switchChatTab' : section === 'templates' ? 'Templates.setTab' : section === 'forms' ? 'Forms.currentTab=\'${s.id}\';Forms.render' : ''})('${s.id}')">
+            <i class="fab ${s.icon || ''}"></i> ${s.name}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', subHTML);
+  }
 
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
@@ -145,55 +183,26 @@ menuToggle.addEventListener('click', () => {
   sidebar.classList.toggle('mobile-open');
 });
 
-// ========== GLOBAL COMPONENTS ==========
-const crmSectionList = [
-  { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
-  { name: 'Chats', icon: 'fa-comments', section: 'chats' },
-  { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
-  { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
-  { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
-  { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
-  { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
-  { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
-  { name: 'Social', icon: 'fa-globe', section: 'social' },
-  { name: 'Setup', icon: 'fa-cog', section: 'setup' },
-];
-
-const bottomTabs = [
-  { name: 'Home', icon: 'fa-home', section: 'dashboard' },
-  { name: 'Chats', icon: 'fa-comments', section: 'chats' },
-  { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
-  { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
-  { name: 'Social', icon: 'fa-globe', section: 'social' },
-  { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
-  { name: 'Setup', icon: 'fa-cog', section: 'setup' },
-];
-
-function injectGlobalComponents(activeSection) {
-  // Remove existing
-  document.querySelectorAll('.global-top-header, .header-trigger-zone, .global-bottom-menu').forEach(el => el.remove());
-
-  // Top auto-hide header
-  const topHTML = `
-    <div class="header-trigger-zone" onmouseenter="document.getElementById('globalTopHeader').classList.add('visible')"></div>
-    <div class="global-top-header" id="globalTopHeader" onmouseleave="document.getElementById('globalTopHeader').classList.remove('visible')">
-      <span style="font-weight:700;font-size:13px;color:#1877f2;">📱 CRM</span>
-      <div class="global-crm-nav">
-        ${crmSectionList.map(s => `<a href="#" onclick="loadSection('${s.section}')"><i class="fas ${s.icon}"></i> ${s.name}</a>`).join('')}
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('afterbegin', topHTML);
-
-  // Bottom sticky menu
-  const bottomHTML = `
-    <div class="global-bottom-menu">
-      ${bottomTabs.map(s => `
-        <div class="bottom-tab ${activeSection === s.section ? 'active' : ''}" onclick="loadSection('${s.section}')">
-          <i class="fas ${s.icon}"></i><br>${s.name}
-        </div>
-      `).join('')}
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', bottomHTML);
+function addMobileNav() {
+  if (window.innerWidth < 768) {
+    const nav = document.createElement('div');
+    nav.className = 'bottom-nav';
+    nav.innerHTML = `
+      <a href="#" class="nav-item active" data-mob="dashboard"><i class="fas fa-home"></i><br>Home</a>
+      <a href="#" class="nav-item" data-mob="chats"><i class="fas fa-comment"></i><br>Chats</a>
+      <a href="#" class="nav-item" data-mob="contacts"><i class="fas fa-users"></i><br>Contacts</a>
+      <a href="#" class="nav-item" data-mob="leads"><i class="fas fa-funnel-dollar"></i><br>Leads</a>
+      <a href="#" class="nav-item" data-mob="social"><i class="fas fa-share-alt"></i><br>Social</a>
+    `;
+    document.body.appendChild(nav);
+    nav.querySelectorAll('[data-mob]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadSection(item.dataset.mob);
+        nav.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+  }
 }
+addMobileNav();
