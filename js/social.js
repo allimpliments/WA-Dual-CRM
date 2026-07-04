@@ -1,4 +1,4 @@
-// js/social.js — Full Fixed Version
+// js/social.js – Full Fixed File (Popup Working on All Platforms)
 const Social = {
   currentTab: 'facebook',
   savedAccounts: {},
@@ -45,8 +45,10 @@ const Social = {
               <div class="platform-card">
                 <i class="fab ${this.getIcon(this.currentTab)}" style="color:${this.getColor(this.currentTab)};"></i>
                 <h5>${this.getName(this.currentTab)}</h5>
-                <p class="text-muted small">Login to access this platform directly.</p>
-                <button class="btn btn-primary btn-sm mt-2" onclick="Social.openPopup('${this.currentTab}')">🔐 Open ${this.getName(this.currentTab)}</button>
+                <p class="text-muted small">Click below to open ${this.getName(this.currentTab)}</p>
+                <button class="btn btn-primary btn-sm mt-2" onclick="Social.openPopup('${this.currentTab}')" style="cursor:pointer;z-index:10;position:relative;">
+                  🔐 Open ${this.getName(this.currentTab)}
+                </button>
                 ${this.savedAccounts[this.currentTab] ? '<p class="text-success small mt-2">✅ Credentials Saved</p>' : ''}
               </div>
             </div>
@@ -60,6 +62,7 @@ const Social = {
       </div>
     `;
     contentArea.innerHTML = html;
+    if (contentArea) contentArea.style.paddingTop = '0px';
   },
 
   getDomain(id) { return { facebook: 'm.facebook.com', instagram: 'instagram.com', meta: 'business.facebook.com', linkedin: 'linkedin.com', twitter: 'x.com', youtube: 'm.youtube.com', ytstudio: 'studio.youtube.com' }[id]||''; },
@@ -98,27 +101,35 @@ const Social = {
     const url = urls[platform] || 'about:blank';
     const name = this.getName(platform);
 
+    // Remove existing popup
     const existing = document.querySelector('.social-fullscreen-frame');
     if (existing) existing.remove();
 
+    // Create overlay
     const overlay = document.createElement('div');
     overlay.className = 'social-fullscreen-frame';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:20000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
-    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
-
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
+    
+    // Create phone popup
     const popup = document.createElement('div');
-    popup.style.cssText = 'width:420px;max-width:95vw;height:85vh;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);display:flex;flex-direction:column;';
+    popup.style.cssText = 'width:420px;max-width:95vw;height:85vh;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);display:flex;flex-direction:column;';
     popup.innerHTML = `
-      <div style="height:44px;background:#f8f9fa;display:flex;align-items:center;padding:0 14px;gap:10px;border-bottom:1px solid #e0e0e0;flex-shrink:0;">
-        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:#fa3e3e;cursor:pointer;" onclick="this.closest('.social-fullscreen-frame').remove()"></span>
-        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span>
-        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:#31a24c;"></span>
+      <div style="height:44px;background:#f8f9fa;display:flex;align-items:center;padding:0 14px;gap:8px;border-bottom:1px solid #e0e0e0;flex-shrink:0;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#fa3e3e;cursor:pointer;" onclick="this.closest('.social-fullscreen-frame').remove()" title="Close"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#31a24c;"></span>
         <span style="font-size:13px;color:#333;font-weight:500;flex:1;text-align:center;">${name}</span>
-        <button onclick="window.open('${url}','_blank')" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;">↗</button>
+        <button onclick="window.open('${url}','_blank')" style="background:none;border:1px solid #dadde1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">↗ Open in Browser</button>
       </div>
       <iframe src="${url}" style="width:100%;height:100%;border:none;flex:1;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
     `;
-
+    
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
   }
+};
