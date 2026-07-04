@@ -14,4 +14,4 @@ function(Knowledge, contentArea, db, firebase) {
       <div id="roiResult"></div>
     </div>
   `;
-}
+} 
