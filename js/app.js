@@ -27,10 +27,10 @@ const navSections = [
       { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin', 'team'] }
     ]
   },
-  {
-    title: 'Social Media',
+    {
+     title: 'Social Media',
     items: [
-      { name: 'Social Posting', icon: 'fa-share-alt', section: 'social', roles: ['admin', 'team'] }
+    { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin', 'team'] }
     ]
   },
   {
