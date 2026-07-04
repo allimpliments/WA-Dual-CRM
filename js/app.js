@@ -41,7 +41,7 @@ const navSections = [
   ]},
   { title: 'Support', items: [
     { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets', roles: ['admin','team'] },
-    { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge engine', roles: ['admin','team'] }
+    { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge', roles: ['admin','team'] }
   ]},
   { title: 'Reports', items: [
     { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics', roles: ['admin'] },
@@ -101,7 +101,7 @@ const headerMore = [
   { name: 'Agents', icon: 'fa-user-tie', section: 'agents' },
   { name: 'Clients', icon: 'fa-building', section: 'clients' },
   { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets' },
-  { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge engine' },
+  { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge' },
   { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics' },
   { name: 'Reports', icon: 'fa-file-alt', section: 'reports' },
   { name: 'Plan', icon: 'fa-wallet', section: 'plan' },
