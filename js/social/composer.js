@@ -37,6 +37,19 @@ const SocialComposer = {
         .media-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #f0f0f0; }
         .media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
         .media-item .remove-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; z-index: 2; }
+        .carousel-slider { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
+        .carousel-slider .slides { display: flex; transition: transform 0.3s ease; }
+        .carousel-slider .slide { min-width: 100%; }
+        .carousel-slider .slide img { width: 100%; height: 300px; object-fit: contain; }
+        .carousel-slider .dots { display: flex; justify-content: center; gap: 6px; padding: 8px; position: absolute; bottom: 8px; left: 0; right: 0; }
+        .carousel-slider .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; }
+        .carousel-slider .dot.active { background: #1877f2; }
+        .carousel-slider .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; z-index: 2; display: flex; align-items: center; justify-content: center; }
+        .preview-story { background: #000; border-radius: 12px; width: 100%; aspect-ratio: 9/16; max-height: 500px; color: #fff; position: relative; overflow: hidden; }
+        .preview-story img, .preview-story video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+        .preview-reel { background: #000; border-radius: 8px; width: 100%; aspect-ratio: 9/16; max-height: 500px; color: #fff; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .preview-reel video, .preview-reel img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .preview-feed { background: #fff; border-radius: 8px; padding: 12px; }
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; z-index: 9999; animation: slideUp 0.3s ease; }
         .toast-success { background: #31a24c; }
         .toast-error { background: #fa3e3e; }
@@ -47,7 +60,10 @@ const SocialComposer = {
 
       <div class="composer-overlay" onclick="SocialComposer.close()">
         <div class="composer-panel" onclick="event.stopPropagation()">
-          <h4 style="font-weight:700;margin:0 0 16px 0;">Create Post</h4>
+          <div class="d-flex justify-content-between align-items-center mb-3" style="position:sticky;top:0;background:#f0f2f5;padding-bottom:12px;z-index:5;">
+            <h4 style="font-weight:700;margin:0;">Create Post</h4>
+            <button class="btn-close" onclick="SocialComposer.close()"></button>
+          </div>
           <div class="composer-grid">
             <div>
               <div class="card"><div class="card-title">Post to</div>
@@ -57,6 +73,7 @@ const SocialComposer = {
               <div class="card"><div class="card-title">Post Type</div>
                 <div class="d-flex gap-2">
                   <div class="type-tab ${this.postType==='post'?'active':''}" onclick="SocialComposer.setPostType('post')">📄 Post</div>
+                  <div class="type-tab ${this.postType==='story'?'active':''}" onclick="SocialComposer.setPostType('story')">📱 Story</div>
                   <div class="type-tab ${this.postType==='reel'?'active':''}" onclick="SocialComposer.setPostType('reel')">🎬 Reel</div>
                   <div class="type-tab ${this.postType==='carousel'?'active':''}" onclick="SocialComposer.setPostType('carousel')">🖼️ Carousel</div>
                 </div>
@@ -72,7 +89,13 @@ const SocialComposer = {
               </div>
               <div class="card"><div class="card-title">Caption</div>
                 <textarea id="composerCaption" class="form-control" rows="5" placeholder="Write a caption..." style="border-radius:8px;" oninput="SocialComposer.onCaptionInput()"></textarea>
-                <small class="text-muted" id="charCount">0 chars</small>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <div class="d-flex gap-1"><button class="btn btn-sm btn-light" onclick="SocialComposer.insertEmoji('😊')">😊</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertEmoji('😂')">😂</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertEmoji('❤️')">❤️</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertEmoji('🔥')">🔥</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('@')">@</button><button class="btn btn-sm btn-light" onclick="SocialComposer.insertText('#')">#</button></div>
+                  <small class="text-muted" id="charCount">0 chars</small>
+                </div>
+              </div>
+              <div class="card"><div class="card-title">Schedule</div>
+                <div class="row g-2"><div class="col-6"><input type="date" id="scheduleDate" class="form-control form-control-sm" style="border-radius:8px;"></div><div class="col-6"><input type="time" id="scheduleTime" class="form-control form-control-sm" style="border-radius:8px;"></div></div>
               </div>
               <div class="d-flex gap-2">
                 <button class="btn btn-primary flex-grow-1" style="height:48px;" id="publishBtn" onclick="SocialComposer.publish()">🚀 Publish Now</button>
@@ -80,7 +103,17 @@ const SocialComposer = {
               </div>
             </div>
             <div style="position:sticky;top:20px;">
-              <div class="card"><div class="card-title">Preview</div><div id="composerPreview"><p class="text-muted text-center py-4">Preview</p></div></div>
+              <div class="card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="card-title" style="margin:0;">Preview</div>
+                  <div class="d-flex gap-1">
+                    <select class="form-select form-select-sm" style="width:auto;" onchange="SocialComposer.previewPlatform=this.value;SocialComposer.updatePreview();"><option value="facebook">FB</option><option value="instagram">IG</option></select>
+                    <select class="form-select form-select-sm" style="width:auto;" onchange="SocialComposer.previewMode=this.value;SocialComposer.updatePreview();"><option value="feed">Feed</option><option value="story">Story</option><option value="reel">Reel</option></select>
+                    <button class="btn btn-sm btn-light" onclick="SocialComposer.previewDevice=SocialComposer.previewDevice==='desktop'?'mobile':'desktop';SocialComposer.updatePreview();"><i class="fas fa-${this.previewDevice==='desktop'?'mobile-alt':'desktop'}"></i></button>
+                  </div>
+                </div>
+                <div id="composerPreview" style="max-width:${this.previewDevice==='mobile'?'320px':'100%'};margin:0 auto;"><p class="text-muted text-center py-4">Preview</p></div>
+              </div>
             </div>
           </div>
         </div>
@@ -88,8 +121,10 @@ const SocialComposer = {
     `;
   },
 
-  setPostType(type) { this.postType = type; document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); },
-  onCaptionInput() { const c = document.getElementById('composerCaption'); const cnt = document.getElementById('charCount'); if (cnt) cnt.innerText = (c?.value?.length || 0) + ' chars'; this.hasUnsavedChanges = true; },
+  setPostType(type) { this.postType = type; document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); if (type === 'story') this.previewMode = 'story'; else if (type === 'reel') this.previewMode = 'reel'; else this.previewMode = 'feed'; this.updatePreview(); },
+  onCaptionInput() { const c = document.getElementById('composerCaption'); const cnt = document.getElementById('charCount'); if (cnt) cnt.innerText = (c?.value?.length || 0) + ' chars'; this.hasUnsavedChanges = true; this.updatePreview(); },
+  insertText(t) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += t; this.onCaptionInput(); } },
+  insertEmoji(e) { const ta = document.getElementById('composerCaption'); if (ta) { ta.value += e; this.onCaptionInput(); } },
   async handleDrop(e) { e.preventDefault(); await this.uploadFiles(e.dataTransfer.files); },
   async handleFileSelect(e) { if (e.target.files.length > 0) { await this.uploadFiles(e.target.files); e.target.value = ''; } },
 
@@ -124,9 +159,33 @@ const SocialComposer = {
       let inner = f.url ? (f.url.match(/\.(mp4|mov|webm)/i) ? `<video src="${f.url}" controls></video>` : `<img src="${f.url}">`) : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#666;">${f.name}</div>`;
       return `<div class="media-item">${inner}<button class="remove-btn" onclick="SocialComposer.removeMedia(${i})">×</button></div>`;
     }).join('');
+    this.updatePreview();
   },
 
   removeMedia(i) { this.uploadedFiles.splice(i, 1); this.refreshMediaGrid(); this.hasUnsavedChanges = true; },
+  carouselPrev() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex - 1 + this.uploadedFiles.length) % this.uploadedFiles.length; this.updatePreview(); } },
+  carouselNext() { if (this.uploadedFiles.length > 0) { this.carouselIndex = (this.carouselIndex + 1) % this.uploadedFiles.length; this.updatePreview(); } },
+  carouselGoTo(i) { this.carouselIndex = i; this.updatePreview(); },
+
+  getPreviewHTML() {
+    const caption = document.getElementById?.('composerCaption')?.value || '';
+    const media = this.uploadedFiles.filter(f => f.url).map(f => f.url);
+    if (!caption && media.length === 0) return '<p class="text-muted text-center py-4">Preview</p>';
+    if (this.previewMode === 'story') return `<div class="preview-story">${media[0] ? (media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" autoplay muted loop></video>` : `<img src="${media[0]}">`) : ''}<div style="position:absolute;top:12px;left:12px;font-weight:600;">11 Avatar Digital Hub</div><div style="position:absolute;bottom:12px;left:12px;right:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;">${caption}</div></div>`;
+    if (this.previewMode === 'reel') return `<div class="preview-reel">${media[0] && media[0].match(/\.(mp4|mov)/i) ? `<video src="${media[0]}" controls></video>` : '<p>Upload video</p>'}</div>`;
+    if (this.postType === 'carousel' && media.length > 0) {
+      let h = `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div><div class="carousel-slider"><button class="nav-btn" style="left:8px;" onclick="SocialComposer.carouselPrev()">‹</button><button class="nav-btn" style="right:8px;" onclick="SocialComposer.carouselNext()">›</button><div class="slides" style="transform:translateX(-${this.carouselIndex * 100}%);">`;
+      media.forEach(m => h += `<div class="slide">${m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;height:300px;object-fit:contain;"></video>` : `<img src="${m}" style="width:100%;height:300px;object-fit:contain;">`}</div>`);
+      h += `</div><div class="dots">${media.map((_, i) => `<span class="dot ${i === this.carouselIndex ? 'active' : ''}" onclick="SocialComposer.carouselGoTo(${i})"></span>`).join('')}</div></div><p style="margin-top:8px;">${caption}</p></div>`;
+      return h;
+    }
+    let h = `<div class="preview-feed"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:32px;height:32px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;">11</div><div><strong>11 Avatar Digital Hub</strong><br><small style="color:#65676b;">Just now</small></div></div>`;
+    media.forEach(m => h += m.match(/\.(mp4|mov)/i) ? `<video src="${m}" controls style="width:100%;border-radius:8px;margin-bottom:4px;max-height:300px;"></video>` : `<img src="${m}" style="width:100%;border-radius:8px;margin-bottom:4px;max-height:300px;object-fit:cover;">`);
+    h += `<p style="margin-top:8px;">${caption}</p></div>`;
+    return h;
+  },
+
+  updatePreview() { const p = document.getElementById('composerPreview'); if (p) p.innerHTML = this.getPreviewHTML(); },
   startAutoSave() { if (this.autoSaveTimer) clearInterval(this.autoSaveTimer); this.autoSaveTimer = setInterval(() => { if (this.hasUnsavedChanges && document.getElementById('composerCaption')?.value?.trim()) this.saveDraft(true); }, 30000); },
   showToast(msg, type) { const old = document.querySelector('.toast'); if (old) old.remove(); const t = document.createElement('div'); t.className = 'toast toast-' + (type || 'success'); t.innerText = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 4000); },
 
@@ -144,6 +203,10 @@ const SocialComposer = {
     if (btn) { btn.disabled = true; btn.innerText = '⏳ Publishing...'; }
 
     const msg = document.getElementById('composerCaption')?.value || '';
+    const scheduleDate = document.getElementById('scheduleDate')?.value;
+    const scheduleTime = document.getElementById('scheduleTime')?.value;
+    const scheduledAt = (scheduleDate && scheduleTime) ? new Date(scheduleDate + 'T' + scheduleTime).toISOString() : null;
+    const finalStatus = scheduledAt ? 'scheduled' : 'published';
     const media = this.uploadedFiles.filter(f => f.url).map(f => f.url);
     const postType = this.postType;
 
@@ -202,7 +265,6 @@ const SocialComposer = {
             const cr = await fetch(`https://graph.facebook.com/v22.0/${igUserId}/media`, { method: 'POST', body: p });
             const cd = await cr.json();
             if (cd.id) {
-              // Wait for REELS processing
               if (mediaType === 'REELS') {
                 for (let i = 0; i < 30; i++) {
                   await new Promise(r => setTimeout(r, 3000));
@@ -217,7 +279,7 @@ const SocialComposer = {
           }
           done++;
         }
-        await db.collection('socialPosts').add({ platform, message: msg, media, postType, status: 'published', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection('socialPosts').add({ platform, message: msg, media, postType, status: finalStatus, scheduledAt, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
       } catch (err) {
         this.showToast(platform + ': ' + err.message, 'error');
       }
