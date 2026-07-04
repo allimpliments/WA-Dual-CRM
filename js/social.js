@@ -1,3 +1,4 @@
+// js/social.js — Full Fixed Version
 const Social = {
   currentTab: 'facebook',
   savedAccounts: {},
@@ -95,19 +96,32 @@ const Social = {
       ytstudio: 'https://studio.youtube.com/'
     };
     const url = urls[platform] || 'about:blank';
+    const name = this.getName(platform);
+    
+    // Full screen overlay — works for all platforms
     const existing = document.querySelector('.social-fullscreen-frame');
     if (existing) existing.remove();
-    const frameHTML = `
-      <div class="social-fullscreen-frame" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:20000;background:#fff;">
-        <div style="height:40px;background:#f8f9fa;display:flex;align-items:center;padding:0 12px;gap:8px;border-bottom:1px solid #e0e0e0;">
-          <button onclick="this.parentElement.parentElement.remove()" style="background:#fa3e3e;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;">×</button>
-          <span style="font-size:12px;color:#666;">${this.getName(platform)}</span>
-          <span style="flex:1;"></span>
-          <button onclick="window.open('${url}','_blank')" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;">↗ Open in Browser</button>
-        </div>
-        <iframe src="${url}" style="width:100%;height:calc(100% - 40px);border:none;"></iframe>
+
+    const overlay = document.createElement('div');
+    overlay.className = 'social-fullscreen-frame';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:20000;background:#fff;';
+    overlay.innerHTML = `
+      <div style="height:44px;background:#f8f9fa;display:flex;align-items:center;padding:0 14px;gap:10px;border-bottom:1px solid #e0e0e0;">
+        <button id="socialCloseBtn" style="background:#fa3e3e;color:#fff;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:15px;line-height:1;">×</button>
+        <span style="font-size:13px;color:#333;font-weight:500;">${name}</span>
+        <span style="flex:1;"></span>
+        <button id="socialRefreshBtn" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;">↻ Refresh</button>
+        <button id="socialBrowserBtn" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;">↗ Browser</button>
       </div>
+      <webview id="socialWebview" src="${url}" style="width:100%;height:calc(100% - 44px);border:none;"></webview>
     `;
-    document.body.insertAdjacentHTML('beforeend', frameHTML);
+    document.body.appendChild(overlay);
+
+    document.getElementById('socialCloseBtn').onclick = () => overlay.remove();
+    document.getElementById('socialBrowserBtn').onclick = () => window.open(url, '_blank');
+    document.getElementById('socialRefreshBtn').onclick = () => {
+      const wv = document.getElementById('socialWebview');
+      if (wv) wv.reload();
+    };
   }
 };
