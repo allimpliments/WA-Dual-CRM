@@ -97,31 +97,28 @@ const Social = {
     };
     const url = urls[platform] || 'about:blank';
     const name = this.getName(platform);
-    
-    // Full screen overlay — works for all platforms
+
     const existing = document.querySelector('.social-fullscreen-frame');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
     overlay.className = 'social-fullscreen-frame';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:20000;background:#fff;';
-    overlay.innerHTML = `
-      <div style="height:44px;background:#f8f9fa;display:flex;align-items:center;padding:0 14px;gap:10px;border-bottom:1px solid #e0e0e0;">
-        <button id="socialCloseBtn" style="background:#fa3e3e;color:#fff;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:15px;line-height:1;">×</button>
-        <span style="font-size:13px;color:#333;font-weight:500;">${name}</span>
-        <span style="flex:1;"></span>
-        <button id="socialRefreshBtn" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;">↻ Refresh</button>
-        <button id="socialBrowserBtn" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;">↗ Browser</button>
-      </div>
-      <webview id="socialWebview" src="${url}" style="width:100%;height:calc(100% - 44px);border:none;"></webview>
-    `;
-    document.body.appendChild(overlay);
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:20000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
-    document.getElementById('socialCloseBtn').onclick = () => overlay.remove();
-    document.getElementById('socialBrowserBtn').onclick = () => window.open(url, '_blank');
-    document.getElementById('socialRefreshBtn').onclick = () => {
-      const wv = document.getElementById('socialWebview');
-      if (wv) wv.reload();
-    };
+    const popup = document.createElement('div');
+    popup.style.cssText = 'width:420px;max-width:95vw;height:85vh;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);display:flex;flex-direction:column;';
+    popup.innerHTML = `
+      <div style="height:44px;background:#f8f9fa;display:flex;align-items:center;padding:0 14px;gap:10px;border-bottom:1px solid #e0e0e0;flex-shrink:0;">
+        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:#fa3e3e;cursor:pointer;" onclick="this.closest('.social-fullscreen-frame').remove()"></span>
+        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span>
+        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:#31a24c;"></span>
+        <span style="font-size:13px;color:#333;font-weight:500;flex:1;text-align:center;">${name}</span>
+        <button onclick="window.open('${url}','_blank')" style="background:none;border:1px solid #dadde1;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;">↗</button>
+      </div>
+      <iframe src="${url}" style="width:100%;height:100%;border:none;flex:1;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
   }
-};
