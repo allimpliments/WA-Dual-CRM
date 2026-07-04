@@ -101,41 +101,74 @@ function buildSidebar(role) {
 function loadSection(section) {
   contentArea.innerHTML = '';
 
-  // Show sidebar for all sections
-  document.body.classList.remove('sidebar-hidden');
-  if (sidebar) sidebar.style.display = '';
+  // FULL SCREEN for ALL sections
+  document.body.classList.add('sidebar-hidden');
+  if (sidebar) sidebar.style.display = 'none';
   const mainArea = document.querySelector('.main-area');
-  if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
+  if (mainArea) mainArea.style.marginLeft = '0';
 
   if (currentSectionTitle) currentSectionTitle.textContent = section;
 
   // Remove old global components
   document.querySelectorAll('.global-top-header, .header-trigger-zone, .global-bottom-menu').forEach(el => el.remove());
 
-  // Smart bottom menu - only show relevant sub tabs
+  // ========== GLOBAL AUTO-HIDE HEADER (Notion Style) ==========
+  const headerSections = [
+    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
+    { name: 'Chats', icon: 'fa-comments', section: 'chats' },
+    { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
+    { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
+    { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
+    { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
+    { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
+    { name: 'Social Media', icon: 'fa-globe', section: 'social' },
+    { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
+    { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+  ];
+
+  const topHTML = `
+    <div class="header-trigger-zone" onmouseenter="document.getElementById('globalTopHeader').classList.add('visible')"></div>
+    <div class="global-top-header" id="globalTopHeader" onmouseleave="document.getElementById('globalTopHeader').classList.remove('visible')">
+      <span style="font-weight:700;font-size:13px;color:#1877f2;">📱 11 Avatar CRM</span>
+      <div class="global-crm-nav">
+        ${headerSections.map(s => `<a href="#" onclick="loadSection('${s.section}')" style="${section === s.section ? 'background:#e7f3ff;color:#1877f2;font-weight:600;' : ''}"><i class="fas ${s.icon}"></i> ${s.name}</a>`).join('')}
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('afterbegin', topHTML);
+
+  // ========== SMART BOTTOM SUB MENU (Full Names + Official Colors) ==========
   const sectionSubMenus = {
     'social': [
-      { name: 'FB', icon: 'fa-facebook', id: 'facebook' },
-      { name: 'IG', icon: 'fa-instagram', id: 'instagram' },
-      { name: 'Meta', icon: 'fa-meta', id: 'meta' },
-      { name: 'LI', icon: 'fa-linkedin', id: 'linkedin' },
-      { name: 'X', icon: 'fa-twitter', id: 'twitter' },
-      { name: 'YT', icon: 'fa-youtube', id: 'youtube' },
-      { name: 'YT St', icon: 'fa-youtube', id: 'ytstudio' },
+      { name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', action: `Social.switchTab('facebook')` },
+      { name: 'Instagram', icon: 'fa-instagram', color: '#E4405F', action: `Social.switchTab('instagram')` },
+      { name: 'Meta Business', icon: 'fa-meta', color: '#0668E1', action: `Social.switchTab('meta')` },
+      { name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2', action: `Social.switchTab('linkedin')` },
+      { name: 'Twitter/X', icon: 'fa-twitter', color: '#1DA1F2', action: `Social.switchTab('twitter')` },
+      { name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', action: `Social.switchTab('youtube')` },
+      { name: 'YT Studio', icon: 'fa-youtube', color: '#FF0000', action: `Social.switchTab('ytstudio')` },
     ],
     'chats': [
-      { name: 'WA', icon: 'fa-whatsapp', id: 'whatsapp' },
-      { name: 'FB', icon: 'fa-facebook-messenger', id: 'facebook' },
-      { name: 'IG', icon: 'fa-instagram', id: 'instagram' },
+      { name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366', action: `Chats.switchChatTab('whatsapp')` },
+      { name: 'Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF', action: `Chats.switchChatTab('facebook')` },
+      { name: 'Instagram Direct', icon: 'fa-instagram', color: '#E4405F', action: `Chats.switchChatTab('instagram')` },
     ],
     'templates': [
-      { name: 'All', id: 'all' },
-      { name: 'Active', id: 'active' },
-      { name: 'Pending', id: 'pending' },
+      { name: 'All Templates', icon: 'fa-layer-group', color: '#1877f2', action: `Templates.setTab('all')` },
+      { name: 'Active', icon: 'fa-check-circle', color: '#31a24c', action: `Templates.setTab('active')` },
+      { name: 'Pending', icon: 'fa-clock', color: '#f59e0b', action: `Templates.setTab('pending')` },
     ],
     'forms': [
-      { name: 'Forms', id: 'forms' },
-      { name: 'Fields', id: 'fields' },
+      { name: 'Form Builder', icon: 'fa-wpforms', color: '#1877f2', action: `Forms.currentTab='forms';Forms.render()` },
+      { name: 'Custom Fields', icon: 'fa-list', color: '#1877f2', action: `Contacts.currentTab='fields';Contacts.render()` },
+    ],
+    'campaigns': [
+      { name: 'All Campaigns', icon: 'fa-rocket', color: '#1877f2', action: `` },
+      { name: 'New Campaign', icon: 'fa-plus-circle', color: '#31a24c', action: `` },
+    ],
+    'contacts': [
+      { name: 'All Contacts', icon: 'fa-users', color: '#1877f2', action: `Contacts.currentTab='contacts';Contacts.render()` },
+      { name: 'Custom Fields', icon: 'fa-list', color: '#1877f2', action: `Contacts.currentTab='fields';Contacts.render()` },
     ],
   };
 
@@ -143,8 +176,8 @@ function loadSection(section) {
     const subHTML = `
       <div class="global-bottom-menu">
         ${sectionSubMenus[section].map(s => `
-          <div class="bottom-tab" onclick="(${section === 'social' ? 'Social.switchTab' : section === 'chats' ? 'Chats.switchChatTab' : section === 'templates' ? 'Templates.setTab' : section === 'forms' ? 'Forms.currentTab=\'${s.id}\';Forms.render' : ''})('${s.id}')">
-            <i class="fab ${s.icon || ''}"></i> ${s.name}
+          <div class="bottom-tab" onclick="${s.action}" style="color:${s.color};">
+            <i class="fab ${s.icon}" style="color:${s.color};"></i> ${s.name}
           </div>
         `).join('')}
       </div>
