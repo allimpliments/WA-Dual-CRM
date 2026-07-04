@@ -99,8 +99,13 @@ function buildSidebar(role) {
 }
 
 function loadSection(section) {
-  contentArea.innerHTML = '';
-  switch (section) {
+  // Restore CRM sidebar if coming from social
+  if (section !== 'social') {
+    const crmSidebar = document.getElementById('sidebar');
+    if (crmSidebar) crmSidebar.style.display = '';
+    const mainArea = document.querySelector('.main-area');
+    if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-width)';
+  }
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
     case 'contacts': Contacts.render(); break;
@@ -117,6 +122,9 @@ function loadSection(section) {
     case 'clients': Clients.render(); break;
     case 'kanban': Kanban.render(); break;
     case 'social': Social.render(); break;
+    case 'social':
+      Social.render();
+      break;
     case 'plan': Plan.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
