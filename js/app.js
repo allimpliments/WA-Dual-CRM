@@ -51,6 +51,7 @@ const navSections = [
     { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments', roles: ['admin','team'] }
   ]},
   { title: 'Account', items: [
+    { name: 'My Profile', icon: 'fa-user-circle', section: 'profile', roles: ['admin','team','client'] },
     { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client'] },
     { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin','team','client'] }
   ]}
@@ -72,7 +73,11 @@ function buildSidebar(role) {
       e.preventDefault();
       const section = link.dataset.section;
       const action = link.dataset.action;
-      if (action === 'logout') { auth.signOut(); return; }
+      if (action === 'logout') { 
+        auth.signOut();
+        window.location.href = '/WA-Dual-CRM/home.html';
+        return; 
+      }
       loadSection(section);
       document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
       link.classList.add('active');
@@ -88,7 +93,7 @@ const headerMain = [
   { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
   { name: 'Kanban', icon: 'fa-tasks', section: 'kanban' },
   { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
-  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments' },  // ✅ ADD
+  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments' },
   { name: 'Flows', icon: 'fa-sitemap', section: 'flows' },
   { name: 'Marketing', icon: 'fa-ad', section: 'marketing' },
   { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce' },
@@ -107,80 +112,49 @@ const headerMore = [
   { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge' },
   { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics' },
   { name: 'Reports', icon: 'fa-file-alt', section: 'reports' },
-  { name: 'Plan', icon: 'fa-wallet', section: 'plan' },
+  { name: 'Profile', icon: 'fa-user-circle', section: 'profile' },
 ];
 
 const sectionSubMenus = {
   'social': [
     { name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', action: `Social.switchTab('facebook')` },
     { name: 'Instagram', icon: 'fa-instagram', color: '#E4405F', action: `Social.switchTab('instagram')` },
-    { name: 'Meta Business', icon: 'fa-meta', color: '#0668E1', action: `Social.switchTab('meta')` },
-    { name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2', action: `Social.switchTab('linkedin')` },
-    { name: 'Twitter/X', icon: 'fa-twitter', color: '#1DA1F2', action: `Social.switchTab('twitter')` },
-    { name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', action: `Social.switchTab('youtube')` },
-    { name: 'YT Studio', icon: 'fa-youtube', color: '#FF0000', action: `Social.switchTab('ytstudio')` },
-  ],
-  'marketing': [
-    { name: 'Meta Ads', icon: 'fa-meta', color: '#0668E1', action: `Marketing.switchTab('metaads')` },
-    { name: 'Google Ads', icon: 'fa-google', color: '#4285F4', action: `Marketing.switchTab('googleads')` },
-    { name: 'LinkedIn Ads', icon: 'fa-linkedin', color: '#0A66C2', action: `Marketing.switchTab('linkedinads')` },
-    { name: 'Pinterest Ads', icon: 'fa-pinterest', color: '#E60023', action: `Marketing.switchTab('pinterestads')` },
   ],
   'chats': [
     { name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366', action: `Chats.switchChatTab('whatsapp')` },
     { name: 'FB Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF', action: `Chats.switchChatTab('facebook')` },
-    { name: 'Instagram Direct', icon: 'fa-instagram', color: '#E4405F', action: `Chats.switchChatTab('instagram')` },
-    { name: 'LinkedIn Chat', icon: 'fa-linkedin', color: '#0A66C2', action: `Chats.switchChatTab('linkedin')` },
-    { name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', action: `Chats.switchChatTab('youtube')` },
-  ],
-  'templates': [
-    { name: 'All Templates', icon: 'fa-layer-group', color: '#1877f2', action: `Templates.setTab('all')` },
-    { name: 'Active', icon: 'fa-check-circle', color: '#31a24c', action: `Templates.setTab('active')` },
-    { name: 'Pending', icon: 'fa-clock', color: '#f59e0b', action: `Templates.setTab('pending')` },
-    { name: 'Create New', icon: 'fa-plus-circle', color: '#8b5cf6', action: `Templates.showBuilder()` },
   ],
   'contacts': [
     { name: 'All Contacts', icon: 'fa-users', color: '#1877f2', action: `Contacts.currentTab='contacts';Contacts.render()` },
     { name: 'Manage Groups', icon: 'fa-layer-group', color: '#8b5cf6', action: `Contacts.currentTab='groups';Contacts.render()` },
-    { name: 'Custom Fields', icon: 'fa-list', color: '#f59e0b', action: `Contacts.currentTab='fields';Contacts.render()` },
-    { name: 'Import CSV', icon: 'fa-upload', color: '#10b981', action: `document.getElementById('importCSV')?.click()` },
   ],
   'forms': [
     { name: 'Form Builder', icon: 'fa-wpforms', color: '#1877f2', action: `Forms.currentTab='forms';Forms.render()` },
     { name: 'Submissions', icon: 'fa-list', color: '#10b981', action: `Forms.currentTab='submissions';Forms.render()` },
-    { name: 'Create New', icon: 'fa-plus-circle', color: '#8b5cf6', action: `Forms.currentTab='builder';Forms.currentFormId=null;Forms.render()` },
+  ],
+  'templates': [
+    { name: 'All Templates', icon: 'fa-layer-group', color: '#1877f2', action: `Templates.setTab('all')` },
+    { name: 'Active', icon: 'fa-check-circle', color: '#31a24c', action: `Templates.setTab('active')` },
   ],
   'campaigns': [
     { name: 'Bulk Campaigns', icon: 'fa-paper-plane', color: '#1877f2', action: `Campaigns.currentTab='bulk';Campaigns.render()` },
     { name: 'Drip Sequences', icon: 'fa-clock', color: '#f59e0b', action: `Campaigns.currentTab='drip';Campaigns.render()` },
-    { name: 'Create New', icon: 'fa-plus-circle', color: '#10b981', action: `Campaigns.currentTab='bulk';Campaigns.showBulkCreate();Campaigns.render()` },
   ],
   'flows': [
     { name: 'Meta Templates', icon: 'fa-meta', color: '#0668E1', action: `Flows.currentTab='templates';Flows.render()` },
     { name: 'Visual Builder', icon: 'fa-paint-brush', color: '#8b5cf6', action: `Flows.currentTab='builder';Flows.render()` },
-    { name: 'My Flows', icon: 'fa-star', color: '#f59e0b', action: `Flows.currentTab='myflows';Flows.render()` },
   ],
   'kanban': [
     { name: 'Pipeline View', icon: 'fa-tasks', color: '#1877f2', action: `Kanban.render()` },
     { name: 'List View', icon: 'fa-list', color: '#10b981', action: `Leads.render()` },
-    { name: 'Add Deal', icon: 'fa-plus-circle', color: '#f59e0b', action: `Kanban.showAddForm()` },
-  ],
-  'chatbot': [
-    { name: 'AI Settings', icon: 'fa-robot', color: '#8b5cf6', action: `Chatbot.render()` },
-    { name: 'Keywords', icon: 'fa-bolt', color: '#f59e0b', action: `Chatbot.render()` },
-    { name: 'Test AI', icon: 'fa-flask', color: '#10b981', action: `Chatbot.testAI()` },
   ],
   'dashboard': [
     { name: 'Add Lead', icon: 'fa-plus-circle', color: '#1877f2', action: `Leads.showAddForm()` },
     { name: 'Add Contact', icon: 'fa-user-plus', color: '#10b981', action: `Contacts.showAddForm()` },
-    { name: 'New Campaign', icon: 'fa-rocket', color: '#f59e0b', action: `Campaigns.currentTab='bulk';Campaigns.showBulkCreate();Campaigns.render()` },
-    { name: 'Open Pipeline', icon: 'fa-tasks', color: '#8b5cf6', action: `Kanban.render()` },
   ],
   'leads': [
     { name: 'All Leads', icon: 'fa-list', color: '#1877f2', action: `Leads.currentFilter='all';Leads.render()` },
     { name: 'New Leads', icon: 'fa-star', color: '#6366f1', action: `Leads.currentFilter='new';Leads.render()` },
-    { name: 'Pipeline View', icon: 'fa-tasks', color: '#10b981', action: `Kanban.render()` },
-    { name: 'Add Lead', icon: 'fa-plus-circle', color: '#f59e0b', action: `Leads.showAddForm()` },
   ],
 };
 
@@ -232,7 +206,6 @@ function renderGlobalHeader(currentSection) {
   `;
   
   document.body.insertAdjacentHTML('afterbegin', h);
-
   document.addEventListener('click', function(){ document.getElementById('moreDd')?.classList.remove('show'); });
 
   const subItems = sectionSubMenus[currentSection];
@@ -277,6 +250,7 @@ function loadSection(section) {
     case 'plan': Plan.render(); break;
     case 'tickets': Tickets.render(); break;
     case 'appointments': Appointments.render(); break;
+    case 'profile': Profile.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
