@@ -1,13 +1,4 @@
 window.__renderPlatformGuides = function(Knowledge, contentArea, db, firebase) {
-  contentArea.innerHTML = `
-    <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>
-    <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">← Back to Hub</button>
-    <h5 style="font-weight:700;">Platform Mastery</h5>
-    <p class="text-muted small mb-3">Complete user guides for all CRM features. Click any to view.</p>
-    <div class="row g-3" id="pg"></div>
-    <div id="gd" style="display:none;background:#fff;border-radius:14px;padding:24px;margin-top:16px;border:1px solid #e5e7eb;"></div>
-  `;
-
   var guides = [
     {t:'Templates',d:'WhatsApp message templates: create, sync, submit, send.',f:'js/knowledge/guides/templates.js',icon:'fa-layer-group',c:'#4f46e5'},
     {t:'Campaigns',d:'Bulk & Drip campaigns with targeting.',f:'js/knowledge/guides/campaigns.js',icon:'fa-rocket',c:'#f59e0b'},
@@ -19,7 +10,14 @@ window.__renderPlatformGuides = function(Knowledge, contentArea, db, firebase) {
     {t:'Social',d:'Multi-platform posting.',f:'js/knowledge/guides/social.js',icon:'fa-globe',c:'#1877f2'}
   ];
 
-  document.getElementById('pg').innerHTML = guides.map(function(g) {
-    return '<div class="col-md-6"><div class="kh-card" onclick="var d=document.getElementById(\'gd\');d.style.display=\'block\';d.innerHTML=\'<p class=text-center py-3>Loading...</p>\';d.scrollIntoView({behavior:\'smooth\'});fetch(\''+g.f+'\').then(function(r){return r.text()}).then(function(c){var fn=new Function(c);d.innerHTML=fn();}).catch(function(e){d.innerHTML=\'<p class=text-danger>Error: \'+e.message+\'</p>\';});" style="display:flex;gap:12px;cursor:pointer;"><div style="width:40px;height:40px;border-radius:8px;background:'+g.c+'15;color:'+g.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas '+g.icon+'"></i></div><div><h6 style="font-weight:600;">'+g.t+'</h6><p style="font-size:11px;color:#6b7280;">'+g.d+'</p></div></div></div>';
-  }).join('');
-};
+  var h = '<style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>';
+  h += '<button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection=\'home\';Knowledge.render();">← Back to Hub</button>';
+  h += '<h5 style="font-weight:700;">Platform Mastery</h5><p class="text-muted small mb-3">Complete user guides for all CRM features.</p><div class="row g-3">';
+
+  guides.forEach(function(g) {
+    h += '<div class="col-md-6"><div class="kh-card" onclick="var d=document.getElementById(\'gd\');d.style.display=\'block\';d.innerHTML=\'Loading...\';d.scrollIntoView({behavior:\'smooth\'});fetch(\''+g.f+'\').then(function(r){return r.text()}).then(function(c){d.innerHTML=(new Function(c))();});" style="display:flex;gap:12px;cursor:pointer;"><div style="width:40px;height:40px;border-radius:8px;background:'+g.c+'15;color:'+g.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas '+g.icon+'"></i></div><div><h6 style="font-weight:600;">'+g.t+'</h6><p style="font-size:11px;color:#6b7280;">'+g.d+'</p></div></div></div>';
+  });
+
+  h += '</div><div id="gd" style="display:none;background:#fff;border-radius:14px;padding:24px;margin-top:16px;border:1px solid #e5e7eb;"></div>';
+  contentArea.innerHTML = h;
+}; 
