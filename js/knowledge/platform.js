@@ -359,7 +359,6 @@
       <div id="pmDetail" style="display:none;" class="pm-detail"></div>
     `;
   }
-
-  renderList();
-  window._renderPlatformList = renderList;
+renderList();
+})();
 })
