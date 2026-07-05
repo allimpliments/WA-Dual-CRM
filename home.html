@@ -301,7 +301,7 @@ async function doLogin(){
   if(!email||!password)return alert('Enter email & password!');
   try{
     await firebase.auth().signInWithEmailAndPassword(email,password);
-    window.location.href='/crm.html';
+    window.location.href='/WA-Dual-CRM/'';
   }catch(e){alert(e.message);}
 }
 
