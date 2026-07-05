@@ -361,4 +361,5 @@
   }
 
   renderList();
+  window._renderPlatformList = renderList;
 })
