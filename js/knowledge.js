@@ -9,7 +9,7 @@ const Knowledge = {
     switch(this.currentSection) {
       case 'home': this.renderHome(); break;
       case 'playbooks': this.renderPlaybooks(); break;
-      case 'platform': this.renderPlatformPage(); break;
+      case 'platform': this.renderPlatform(); break;
       case 'industry': this.renderIndustry(); break;
       case 'courses': this.renderCourses(); break;
       case 'tools': this.renderTools(); break;
@@ -23,22 +23,32 @@ const Knowledge = {
   },
 
   // ==================== PLATFORM MASTERY — LOADS FROM EXTERNAL FILE ====================
-  renderPlatformPage() {
-    contentArea.innerHTML = '<p class="text-center py-5">Loading guides...</p>';
-    
-    // Direct script tag se load
-    const script = document.createElement('script');
-    script.src = 'js/knowledge/platform.js';
-    document.body.appendChild(script);
-    
-    // Wait for script to load then execute
-    script.onload = function() {
-      // platform.js already executed via IIFE
-    };
-    
-    script.onerror = function() {
-      contentArea.innerHTML = '<div class="card-widget text-center py-5"><h5>Error</h5></div>';
-    };
+  renderPlatform() {
+    // Platform Mastery ka poora code yahan aayega
+    contentArea.innerHTML = `
+      <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>
+      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">← Back to Hub</button>
+      <h5 style="font-weight:700;">Platform Mastery</h5>
+      <p class="text-muted small mb-3">User guides & documentation for all modules.</p>
+      <div class="row g-3">
+        ${[
+          {t:'Templates Guide',d:'Message templates: create, sync, submit, send.',s:5,icon:'fa-layer-group',c:'#4f46e5',content:'<h4>Templates Guide</h4><p>WhatsApp Message Templates pre-approved message formats hain. <strong>Use:</strong> Header → Templates. <strong>Sync:</strong> Templates → Sync from Meta. <strong>Create:</strong> Templates → Create button. <strong>Submit:</strong> Template Builder → Submit to Meta. <strong>Send:</strong> Template pe click → Send via WhatsApp.</p>'},
+          {t:'Campaigns Guide',d:'Bulk & Drip campaigns with targeting.',s:5,icon:'fa-rocket',c:'#f59e0b',content:'<h4>Campaigns Guide</h4><p><strong>Bulk:</strong> Campaigns → Bulk → New. <strong>Drip:</strong> Campaigns → Drip → New Sequence. Steps: Name, Group, Message, Schedule, Start.</p>'},
+          {t:'Chats Guide',d:'Live chat: WhatsApp, FB, IG unified inbox.',s:5,icon:'fa-comments',c:'#25D366',content:'<h4>Chats Guide</h4><p><strong>Send:</strong> Chats → WhatsApp tab → Phone + Message. <strong>AI Test:</strong> Chats → Test AI Reply. <strong>Social:</strong> FB/IG tabs → Open Meta Inbox.</p>'},
+          {t:'Contacts Guide',d:'Contact management, groups, import/export.',s:5,icon:'fa-users',c:'#1877f2',content:'<h4>Contacts Guide</h4><p><strong>Add:</strong> Contacts → Add Contact. <strong>Import:</strong> Download sample CSV → Import. <strong>Groups:</strong> Manage Groups → Create → Add Members.</p>'},
+          {t:'Leads Guide',d:'Lead capture, pipeline, auto-assign.',s:5,icon:'fa-funnel-dollar',c:'#4f46e5',content:'<h4>Leads Guide</h4><p><strong>Add:</strong> Leads → Add Lead. <strong>Pipeline:</strong> Pipeline View → Drag-drop. <strong>Auto:</strong> WhatsApp/Form/Campaign → Auto lead.</p>'},
+          {t:'Kanban Guide',d:'Visual pipeline with 7 stages.',s:5,icon:'fa-tasks',c:'#6366f1',content:'<h4>Kanban Guide</h4><p><strong>Stages:</strong> New→Contacted→Qualified→Proposal→Negotiation→Won→Lost. <strong>Card:</strong> Click→Edit details. <strong>Quick Add:</strong> Any column → + Quick Add.</p>'},
+          {t:'Flows Guide',d:'Meta templates + visual builder.',s:5,icon:'fa-sitemap',c:'#8b5cf6',content:'<h4>Flows Guide</h4><p><strong>Meta:</strong> Templates tab→Browse→Copy→Activate. <strong>Builder:</strong> Builder tab→Drag nodes→Connect→Save. <strong>Free:</strong> Visual Builder unlimited.</p>'},
+          {t:'Social Guide',d:'Multi-platform social media posting.',s:5,icon:'fa-globe',c:'#1877f2',content:'<h4>Social Guide</h4><p><strong>Connect:</strong> Social→Select platform→Login. <strong>Post:</strong> Create Post→Media+Caption→Publish. <strong>Types:</strong> Post/Story/Reel/Carousel.</p>'}
+        ].map(g => `
+          <div class="col-md-6"><div class="kh-card" onclick="document.getElementById('guideDetail').innerHTML=g.content;document.getElementById('guideDetail').style.display='block';document.getElementById('guideDetail').scrollIntoView({behavior:'smooth'});" style="display:flex;gap:12px;cursor:pointer;">
+            <div style="width:40px;height:40px;border-radius:8px;background:${g.c}15;color:${g.c};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${g.icon}"></i></div>
+            <div><h6 style="font-weight:600;">${g.t}</h6><p style="font-size:11px;color:#6b7280;">${g.d}</p><small class="text-muted">${g.s} sections</small></div>
+          </div></div>
+        `).join('')}
+      </div>
+      <div id="guideDetail" style="display:none;background:#fff;border-radius:14px;padding:24px;margin-top:16px;border:1px solid #e5e7eb;"></div>
+    `;
   },
   
   // ==================== HOME ====================
