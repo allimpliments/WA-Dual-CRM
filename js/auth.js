@@ -153,7 +153,7 @@ if (formId) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       alert('Registration successful! Redirecting to CRM...');
-      window.location.href = '/index.html';
+      window.location.href = '/WA-Dual-CRM/';
     } catch (err) { alert(err.message); }
   });
 
