@@ -11,12 +11,9 @@
     :root{--gold:#c8a84e;--gold-light:#e8d48b;--black:#0d0d0d;--dark:#1a1a1a;--card:#1e1e1e;--border:#2a2a2a;--text:#b0b0b0;--white:#f5f5f5;}
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--black);color:var(--white);overflow-x:hidden;scroll-behavior:smooth;}
-    
-    /* Header */
     .header{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(13,13,13,0.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(200,168,78,0.15);transition:0.3s;padding:14px 0;}
     .header.scrolled{border-bottom-color:rgba(200,168,78,0.4);box-shadow:0 4px 30px rgba(0,0,0,0.5);}
-    .header .logo{font-weight:800;font-size:18px;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:10px;letter-spacing:-0.5px;}
-    .header .logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--black);}
+    .header .logo{font-weight:800;font-size:18px;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:10px;}
     .header .logo span{color:var(--gold);}
     .nav-link{color:var(--text);font-weight:500;padding:8px 14px;text-decoration:none;font-size:13px;transition:0.2s;border-radius:8px;cursor:pointer;}
     .nav-link:hover{color:var(--white);background:rgba(255,255,255,0.05);}
@@ -25,76 +22,38 @@
     .btn-login:hover{background:var(--gold);color:var(--black);}
     .btn-signup{background:var(--gold);color:var(--black);}
     .btn-signup:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,168,78,0.3);}
-    
-    /* Hero */
     .hero{padding:160px 20px 80px;text-align:center;position:relative;overflow:hidden;}
-    .hero::before{content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(200,168,78,0.08),transparent);border-radius:50%;animation:float 8s ease-in-out infinite;}
-    .hero::after{content:'';position:absolute;bottom:-80px;left:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(200,168,78,0.05),transparent);border-radius:50%;animation:float 10s ease-in-out infinite reverse;}
-    @keyframes float{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,-30px);}}
     .hero h1{font-size:clamp(32px,6vw,56px);font-weight:800;line-height:1.1;max-width:800px;margin:0 auto 16px;background:linear-gradient(135deg,var(--white),var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;}
     .hero p{font-size:17px;color:var(--text);max-width:650px;margin:0 auto 28px;line-height:1.7;position:relative;z-index:1;}
-    .hero-badge{display:inline-block;padding:6px 18px;background:rgba(200,168,78,0.1);border:1px solid rgba(200,168,78,0.3);border-radius:20px;font-size:12px;color:var(--gold);margin-bottom:20px;position:relative;z-index:1;}
-    
-    /* Section */
-    .section{padding:80px 20px;max-width:1200px;margin:0 auto;position:relative;}
+    .hero-badge{display:inline-block;padding:6px 18px;background:rgba(200,168,78,0.1);border:1px solid rgba(200,168,78,0.3);border-radius:20px;font-size:12px;color:var(--gold);margin-bottom:20px;}
+    .section{padding:80px 20px;max-width:1200px;margin:0 auto;}
     .section-title{font-weight:800;font-size:clamp(24px,4vw,34px);text-align:center;margin-bottom:12px;color:var(--white);}
     .section-subtitle{text-align:center;color:var(--text);font-size:15px;max-width:600px;margin:0 auto 48px;}
     .gold-text{color:var(--gold);}
-    
-    /* Cards */
     .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;}
     .feature-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:0.3s;position:relative;overflow:hidden;}
     .feature-card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,0.4),0 0 0 1px rgba(200,168,78,0.2);border-color:rgba(200,168,78,0.4);}
-    .feature-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:0.3s;}
-    .feature-card:hover::after{opacity:1;}
-    .feature-card .icon-wrap{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px;}
     .feature-card h4{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--white);}
     .feature-card p{font-size:12px;color:var(--text);line-height:1.6;margin:0;}
-    
-    /* Plans */
     .plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;}
     .plan-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;text-align:center;transition:0.3s;position:relative;}
-    .plan-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,0.3);}
-    .plan-card.featured{border-color:var(--gold);box-shadow:0 0 40px rgba(200,168,78,0.1);}
-    .plan-card.featured::before{content:'Most Popular';position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--black);padding:5px 18px;border-radius:16px;font-size:11px;font-weight:700;}
+    .plan-card.featured{border-color:var(--gold);}
     .plan-price{font-size:42px;font-weight:800;color:var(--gold);margin:12px 0;}
     .plan-feature{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;text-align:left;color:var(--text);}
-    .plan-feature i{color:var(--gold);font-size:11px;}
-    
-    /* Contact Form */
+    .plan-feature i{color:var(--gold);}
     .contact-form{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;max-width:600px;margin:0 auto;}
-    .contact-form input,.contact-form textarea,.contact-form select{width:100%;padding:12px 16px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:14px;margin-bottom:12px;transition:0.2s;}
-    .contact-form input:focus,.contact-form textarea:focus{border-color:var(--gold);outline:none;box-shadow:0 0 0 3px rgba(200,168,78,0.1);}
-    
-    /* WhatsApp Float */
+    .contact-form input,.contact-form textarea,.contact-form select{width:100%;padding:12px 16px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:14px;margin-bottom:12px;}
     .wa-float{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(37,211,102,0.3);transition:0.3s;text-decoration:none;}
-    .wa-float:hover{transform:scale(1.1);box-shadow:0 12px 32px rgba(37,211,102,0.5);}
-    .wa-float .pulse{position:absolute;width:100%;height:100%;border-radius:50%;background:#25D366;animation:waPulse 2s infinite;z-index:-1;}
-    @keyframes waPulse{0%{transform:scale(1);opacity:0.6;}100%{transform:scale(1.8);opacity:0;}}
-    
-    /* Footer */
     .footer{background:var(--dark);border-top:1px solid var(--border);padding:50px 20px 30px;}
     .footer a{color:var(--text);text-decoration:none;font-size:13px;}
     .footer a:hover{color:var(--gold);}
-    
-    /* Buttons */
     .btn-gold{background:var(--gold);color:var(--black);padding:12px 28px;border-radius:24px;font-weight:700;border:none;cursor:pointer;transition:0.3s;font-size:14px;}
-    .btn-gold:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,168,78,0.3);}
     .btn-outline-gold{background:transparent;border:1.5px solid var(--gold);color:var(--gold);padding:12px 28px;border-radius:24px;font-weight:600;cursor:pointer;transition:0.3s;font-size:14px;}
-    .btn-outline-gold:hover{background:var(--gold);color:var(--black);}
-    
-    /* Section Divider */
     .divider{width:60px;height:3px;background:var(--gold);margin:16px auto 32px;border-radius:2px;opacity:0.6;}
-    
-    @media(max-width:768px){
-      .header .nav-link{display:none;}
-      .hero{padding:120px 16px 60px;}
-    }
+    @media(max-width:768px){.header .nav-link{display:none;}.hero{padding:120px 16px 60px;}}
   </style>
 </head>
 <body>
-
-<!-- Header -->
 <header class="header" id="header">
   <div class="container d-flex justify-content-between align-items-center">
     <a href="#" class="logo">
@@ -104,230 +63,101 @@
     <div class="d-flex align-items-center gap-1">
       <a class="nav-link" onclick="scrollToSection('home')">Home</a>
       <a class="nav-link" onclick="scrollToSection('features')">Features</a>
-      <a class="nav-link" onclick="scrollToSection('benefits')">Benefits</a>
-      <a class="nav-link" onclick="scrollToSection('blog')">Blog</a>
-      <a class="nav-link" onclick="scrollToSection('pricing')">Price</a>
+      <a class="nav-link" onclick="scrollToSection('pricing')">Pricing</a>
       <a class="nav-link" onclick="scrollToSection('how')">How It Works</a>
+      <a class="nav-link" onclick="scrollToSection('contact')">Contact</a>
       <button class="nav-btn btn-login ms-2" onclick="showAuth('login')">Log In</button>
       <button class="nav-btn btn-signup ms-1" onclick="showAuth('register')">Sign Up</button>
     </div>
   </div>
 </header>
-
-<!-- Hero -->
 <section class="hero" id="home">
   <div class="hero-badge"><i class="fas fa-check-circle me-1"></i> Meta Verified Tech Partner</div>
-  <h1>WhatsApp CRM That<br>Actually Grows Business</h1>
+  <h1>WhatsApp CRM That Actually Grows Business</h1>
   <p>All-in-one platform with AI chatbot, campaign automation, lead management, and 45+ powerful features. Built by marketers with 15+ years of experience.</p>
   <button class="btn-gold" onclick="showAuth('register')">Start Free Trial <i class="fas fa-arrow-right ms-1"></i></button>
-  <button class="btn-outline-gold ms-2" onclick="scrollToSection('features')">Explore Features</button>
-  <div class="d-flex justify-content-center gap-5 mt-5 flex-wrap">
-    <div class="text-center"><div style="font-size:28px;font-weight:800;color:var(--gold);">45+</div><small style="color:var(--text);">Features</small></div>
-    <div class="text-center"><div style="font-size:28px;font-weight:800;color:var(--gold);">30+</div><small style="color:var(--text);">Integrations</small></div>
-    <div class="text-center"><div style="font-size:28px;font-weight:800;color:var(--gold);">10K+</div><small style="color:var(--text);">Businesses</small></div>
-    <div class="text-center"><div style="font-size:28px;font-weight:800;color:var(--gold);">15+</div><small style="color:var(--text);">Years Experience</small></div>
-  </div>
 </section>
-
-<!-- Features -->
 <section class="section" id="features">
-  <h2 class="section-title">Everything You Need.<br><span class="gold-text">All In One Place.</span></h2>
-  <p class="section-subtitle">45+ powerful features across 15 modules. No need for multiple tools.</p>
+  <h2 class="section-title">45+ Powerful Features</h2>
+  <p class="section-subtitle">Everything you need in one platform</p>
   <div class="divider"></div>
   <div class="card-grid">
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(37,211,102,0.15);color:#25D366;"><i class="fab fa-whatsapp"></i></div><h4>Live Chat — All Platforms</h4><p>WhatsApp, Facebook, Instagram, LinkedIn, YouTube — unified inbox with real-time messaging.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(200,168,78,0.15);color:var(--gold);"><i class="fas fa-robot"></i></div><h4>AI Chatbot — Free Forever</h4><p>Auto-reply with Groq AI. Keyword triggers, multi-step flows, human handoff. No per-message cost.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(99,102,241,0.15);color:#818cf8;"><i class="fas fa-rocket"></i></div><h4>Campaigns — Bulk & Drip</h4><p>Send thousands of messages. Schedule drip sequences. Personalize with variables. Track every metric.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(16,185,129,0.15);color:#34d399;"><i class="fas fa-funnel-dollar"></i></div><h4>Lead Management</h4><p>Capture leads from 10+ sources. Kanban pipeline. Lead scoring. Auto-assign to team members.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(245,158,11,0.15);color:#fbbf24;"><i class="fas fa-calendar-check"></i></div><h4>Appointment System</h4><p>Book, reschedule, cancel. Google Meet integration. WhatsApp reminders. Telecalling built-in.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(236,72,153,0.15);color:#f472b6;"><i class="fas fa-chart-bar"></i></div><h4>Analytics & Reports</h4><p>Real-time dashboards. Campaign ROI. Team performance. Exportable reports.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><i class="fas fa-globe"></i></div><h4>Social Media Posting</h4><p>Facebook, Instagram, LinkedIn, YouTube, TikTok. Schedule, draft, publish from one place.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(168,85,247,0.15);color:#a78bfa;"><i class="fas fa-store"></i></div><h4>E‑commerce Hub</h4><p>Shopify, WooCommerce, Wix, Dukaan. Order sync, cart recovery, WhatsApp notifications.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(200,168,78,0.15);color:var(--gold);"><i class="fas fa-tasks"></i></div><h4>Kanban Pipeline</h4><p>Drag-drop deal management. 7 stages. Notes, follow-ups, assignments, value tracking.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(6,182,212,0.15);color:#22d3ee;"><i class="fas fa-wpforms"></i></div><h4>Form Builder</h4><p>10 field types, drag-drop builder. Public links. Auto-create leads on submit.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(200,168,78,0.15);color:var(--gold);"><i class="fas fa-brain"></i></div><h4>Knowledge Engine</h4><p>50+ playbooks, courses, ROI calculator, industry benchmarks, blog, webinars.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(239,68,68,0.15);color:#f87171;"><i class="fas fa-ticket-alt"></i></div><h4>Support Tickets</h4><p>Full helpdesk. Priority, assignment, SLA tracking, internal notes, customer replies.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(200,168,78,0.15);color:var(--gold);"><i class="fas fa-plug"></i></div><h4>30+ Integrations</h4><p>Zapier, Calendly, Zoho, Razorpay, Stripe, HubSpot, Slack, OpenAI, Google Sheets & more.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(99,102,241,0.15);color:#818cf8;"><i class="fas fa-user-tie"></i></div><h4>Team Management</h4><p>Agents, clients, role-based access, permissions, assignment, performance tracking.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(16,185,129,0.15);color:#34d399;"><i class="fas fa-shield-alt"></i></div><h4>Enterprise Security</h4><p>Firebase Auth, Firestore rules, Cloudflare Worker, encrypted data, GDPR ready.</p></div>
+    <div class="feature-card"><h4><i class="fab fa-whatsapp text-success me-2"></i>Live Chat — All Platforms</h4><p>WhatsApp, Facebook, Instagram, LinkedIn, YouTube — unified inbox.</p></div>
+    <div class="feature-card"><h4><i class="fas fa-robot text-warning me-2"></i>AI Chatbot — Free</h4><p>Groq AI powered. Keyword triggers, flows, human handoff. No cost.</p></div>
+    <div class="feature-card"><h4><i class="fas fa-rocket text-info me-2"></i>Campaigns — Bulk & Drip</h4><p>Thousands of messages. Drip sequences. Personalization. Analytics.</p></div>
+    <div class="feature-card"><h4><i class="fas fa-funnel-dollar text-primary me-2"></i>Lead Management</h4><p>10+ sources. Kanban pipeline. Lead scoring. Auto-assign.</p></div>
+    <div class="feature-card"><h4><i class="fas fa-calendar-check text-danger me-2"></i>Appointments</h4><p>Booking, Google Meet, WhatsApp reminders, telecalling.</p></div>
+    <div class="feature-card"><h4><i class="fas fa-chart-bar text-purple me-2"></i>Analytics & Reports</h4><p>Real-time dashboards. ROI tracking. Exportable.</p></div>
   </div>
 </section>
-
-<!-- Benefits -->
-<section class="section" id="benefits">
-  <h2 class="section-title">Why Businesses <span class="gold-text">Choose Us</span></h2>
-  <p class="section-subtitle">Not just a CRM — a complete business growth ecosystem</p>
-  <div class="divider"></div>
-  <div class="card-grid">
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(200,168,78,0.15);color:var(--gold);font-size:22px;">⚡</div><h4>2-Minute Setup</h4><p>Connect WhatsApp, import contacts, and send your first campaign in under 2 minutes.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(16,185,129,0.15);color:#34d399;font-size:22px;">💰</div><h4>Free AI Chatbot</h4><p>Built-in Groq AI. No OpenAI costs. No per-message charges. Forever free tier.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(99,102,241,0.15);color:#818cf8;font-size:22px;">🔒</div><h4>Data Isolation</h4><p>Each client gets separate data. Agency mode. White-label ready.</p></div>
-    <div class="feature-card"><div class="icon-wrap" style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:22px;">🌍</div><h4>Worldwide Support</h4><p>Multi-language AI. 24/7 WhatsApp support. 15+ years of marketing expertise behind you.</p></div>
-  </div>
-</section>
-
-<!-- How It Works -->
 <section class="section" id="how">
-  <h2 class="section-title">How It <span class="gold-text">Works</span></h2>
-  <p class="section-subtitle">Get started in 3 simple steps</p>
+  <h2 class="section-title">How It Works</h2>
   <div class="divider"></div>
   <div class="card-grid" style="grid-template-columns:repeat(3,1fr);">
-    <div class="feature-card text-center"><div class="icon-wrap mx-auto" style="background:rgba(200,168,78,0.15);color:var(--gold);font-size:28px;">1</div><h4>Connect WhatsApp</h4><p>Link your WhatsApp Business number in under 2 minutes.</p></div>
-    <div class="feature-card text-center"><div class="icon-wrap mx-auto" style="background:rgba(200,168,78,0.15);color:var(--gold);font-size:28px;">2</div><h4>Configure Automations</h4><p>Set up chatbot, campaigns, and lead capture — all from one dashboard.</p></div>
-    <div class="feature-card text-center"><div class="icon-wrap mx-auto" style="background:rgba(200,168,78,0.15);color:var(--gold);font-size:28px;">3</div><h4>Start Growing</h4><p>Watch leads convert, campaigns deliver, and revenue grow — on autopilot.</p></div>
+    <div class="feature-card text-center"><h3 style="color:var(--gold);">1</h3><h4>Connect WhatsApp</h4><p>Link your number in 2 minutes.</p></div>
+    <div class="feature-card text-center"><h3 style="color:var(--gold);">2</h3><h4>Configure</h4><p>Set up chatbot & campaigns.</p></div>
+    <div class="feature-card text-center"><h3 style="color:var(--gold);">3</h3><h4>Grow</h4><p>Watch leads convert on autopilot.</p></div>
   </div>
 </section>
-
-<!-- Blog Preview -->
-<section class="section" id="blog">
-  <h2 class="section-title">Latest <span class="gold-text">Insights</span></h2>
-  <p class="section-subtitle">Strategic content from 15+ years of digital marketing experience</p>
-  <div class="divider"></div>
-  <div class="card-grid">
-    <div class="feature-card"><h4>WhatsApp Business Revolution 2026</h4><p>Why every business needs WhatsApp CRM. Industry trends and predictions.</p><small style="color:var(--gold);">Read Article →</small></div>
-    <div class="feature-card"><h4>Lead Generation That Actually Works</h4><p>Multi-channel strategies that drive qualified leads at scale.</p><small style="color:var(--gold);">Read Article →</small></div>
-    <div class="feature-card"><h4>AI Automation Without Losing Human Touch</h4><p>How to balance chatbots with genuine human connection.</p><small style="color:var(--gold);">Read Article →</small></div>
-  </div>
-</section>
-
-<!-- Pricing -->
 <section class="section" id="pricing">
-  <h2 class="section-title">Simple <span class="gold-text">Pricing</span></h2>
-  <p class="section-subtitle">Start free. Upgrade when you grow.</p>
+  <h2 class="section-title">Simple Pricing</h2>
   <div class="divider"></div>
   <div class="plan-grid">
-    <div class="plan-card"><h5 style="color:var(--white);">Starter</h5><div class="plan-price">₹0</div><p style="color:var(--text);">forever free</p><hr style="border-color:var(--border);"><div class="plan-feature"><i class="fas fa-check-circle"></i>100 contacts</div><div class="plan-feature"><i class="fas fa-check-circle"></i>WhatsApp messaging</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Basic chatbot</div><div class="plan-feature"><i class="fas fa-check-circle"></i>5 campaigns/month</div><button class="btn-outline-gold w-100 mt-3" onclick="showAuth('register')">Start Free</button></div>
-    <div class="plan-card featured"><h5 style="color:var(--white);">Professional</h5><div class="plan-price">₹2,499</div><p style="color:var(--text);">per month</p><hr style="border-color:var(--border);"><div class="plan-feature"><i class="fas fa-check-circle"></i>Everything in Starter</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Unlimited contacts</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Free AI chatbot</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Unlimited campaigns</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Drip sequences</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Lead scoring & pipeline</div><button class="btn-gold w-100 mt-3" onclick="showAuth('register')">Start Free Trial</button></div>
-    <div class="plan-card"><h5 style="color:var(--white);">Enterprise</h5><div class="plan-price">₹9,999</div><p style="color:var(--text);">per month</p><hr style="border-color:var(--border);"><div class="plan-feature"><i class="fas fa-check-circle"></i>Everything in Pro</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Dedicated manager</div><div class="plan-feature"><i class="fas fa-check-circle"></i>White-label</div><div class="plan-feature"><i class="fas fa-check-circle"></i>API access</div><div class="plan-feature"><i class="fas fa-check-circle"></i>SLA guarantee</div><button class="btn-outline-gold w-100 mt-3" onclick="showAuth('register')">Contact Sales</button></div>
+    <div class="plan-card"><h5>Starter</h5><div class="plan-price">₹0</div><div class="plan-feature"><i class="fas fa-check-circle"></i>100 contacts</div><div class="plan-feature"><i class="fas fa-check-circle"></i>WhatsApp messaging</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Basic chatbot</div><button class="btn-outline-gold w-100 mt-3" onclick="showAuth('register')">Start Free</button></div>
+    <div class="plan-card featured"><h5>Professional</h5><div class="plan-price">₹2,499</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Everything in Starter</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Unlimited contacts</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Free AI chatbot</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Unlimited campaigns</div><button class="btn-gold w-100 mt-3" onclick="showAuth('register')">Start Trial</button></div>
+    <div class="plan-card"><h5>Enterprise</h5><div class="plan-price">₹9,999</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Everything in Pro</div><div class="plan-feature"><i class="fas fa-check-circle"></i>White-label</div><div class="plan-feature"><i class="fas fa-check-circle"></i>API access</div><button class="btn-outline-gold w-100 mt-3" onclick="showAuth('register')">Contact Sales</button></div>
   </div>
 </section>
-
-<!-- Contact -->
 <section class="section" id="contact">
-  <h2 class="section-title">Get In <span class="gold-text">Touch</span></h2>
-  <p class="section-subtitle">Have questions? We'll get back within 2 minutes on WhatsApp.</p>
+  <h2 class="section-title">Get In Touch</h2>
   <div class="divider"></div>
   <div class="contact-form">
     <input type="text" id="contactName" placeholder="Your Name">
     <input type="email" id="contactEmail" placeholder="Email Address">
     <input type="text" id="contactPhone" placeholder="Phone Number">
-    <select id="contactInterest"><option>Interested In...</option><option>WhatsApp CRM</option><option>AI Chatbot</option><option>White-Label</option><option>Enterprise Plan</option><option>Other</option></select>
     <textarea id="contactMessage" rows="3" placeholder="Tell us about your requirements..."></textarea>
-    <button class="btn-gold w-100" onclick="submitContact()">Send Message <i class="fas fa-paper-plane ms-1"></i></button>
+    <button class="btn-gold w-100" onclick="submitContact()">Send Message</button>
     <p id="contactResult" class="text-center mt-2 small"></p>
   </div>
 </section>
-
-<!-- Footer -->
 <footer class="footer">
   <div class="container">
     <div class="row">
-      <div class="col-md-4 mb-4">
-        <h5 style="color:var(--white);"><i class="fab fa-whatsapp me-1" style="color:#25D366;"></i> 11 Avatar Digital Hub</h5>
-        <p class="small" style="color:var(--text);">Meta Verified Tech Partner. All-in-one WhatsApp CRM platform. Built with 15+ years of marketing expertise.</p>
-      </div>
-      <div class="col-md-2 mb-3">
-        <strong style="color:var(--white);">Product</strong><br>
-        <a href="#" onclick="scrollToSection('features')">Features</a><br>
-        <a href="#" onclick="scrollToSection('pricing')">Pricing</a><br>
-        <a href="#" onclick="scrollToSection('how')">How It Works</a>
-      </div>
-      <div class="col-md-2 mb-3">
-        <strong style="color:var(--white);">Company</strong><br>
-        <a href="legal/terms.html">Terms of Service</a><br>
-        <a href="legal/privacy.html">Privacy Policy</a><br>
-        <a href="legal/disclaimer.html">Disclaimer</a>
-      </div>
-      <div class="col-md-2 mb-3">
-        <strong style="color:var(--white);">Contact</strong><br>
-        <a href="mailto:support@11avatardigitalhub.cloud">Email Us</a><br>
-        <a href="https://wa.me/918959592006">WhatsApp</a><br>
-        <a href="tel:918959592006">Call: 8959592006</a>
-      </div>
+      <div class="col-md-4 mb-3"><h5 style="color:var(--white);">11 Avatar Digital Hub</h5><p class="small" style="color:var(--text);">Meta Verified Tech Partner.</p></div>
+      <div class="col-md-2 mb-3"><strong style="color:var(--white);">Legal</strong><br><a href="legal/terms.html">Terms</a><br><a href="legal/privacy.html">Privacy</a><br><a href="legal/disclaimer.html">Disclaimer</a></div>
+      <div class="col-md-2 mb-3"><strong style="color:var(--white);">Contact</strong><br><a href="mailto:support@11avatardigitalhub.cloud">Email</a><br><a href="tel:918959592006">Call</a></div>
     </div>
-    <hr style="border-color:var(--border);">
-    <p class="small text-center mb-0" style="color:var(--text);">© 2026 11 Avatar Digital Hub. All rights reserved. Meta Verified Tech Partner.</p>
+    <hr style="border-color:var(--border);"><p class="small text-center mb-0" style="color:var(--text);">© 2026 11 Avatar Digital Hub.</p>
   </div>
 </footer>
-
-<!-- WhatsApp Float -->
-<a href="https://wa.me/917489771499" target="_blank" class="wa-float" title="Chat on WhatsApp">
-  <i class="fab fa-whatsapp"></i>
-  <div class="pulse"></div>
-</a>
-
-<!-- Auth Modal -->
+<a href="https://wa.me/917489771499" target="_blank" class="wa-float"><i class="fab fa-whatsapp"></i></a>
 <div id="authModal"></div>
-
 <script>
-// Smooth Scroll
 function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
-
-// Header scroll effect
 window.addEventListener('scroll',()=>{document.getElementById('header').classList.toggle('scrolled',window.scrollY>50);});
-
-// Auth Modal
 function showAuth(type){
-  const isLogin = type==='login';
-  document.getElementById('authModal').innerHTML=`
-    <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:400px;max-width:90vw;" onclick="event.stopPropagation()">
-        <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" onclick="document.getElementById('authModal').innerHTML=''"></button>
-        <h4 class="text-center mb-3" style="color:var(--white);">${isLogin?'Welcome Back':'Start Free Trial'}</h4>
-        ${!isLogin?'<input type="text" id="regName" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Full Name">':''}
-        <input type="email" id="authEmail" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Email">
-        <input type="password" id="authPassword" class="form-control mb-3" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Password">
-        <button class="btn-gold w-100" onclick="${isLogin?'doLogin()':'doRegister()'}">${isLogin?'Login':'Create Free Account'}</button>
-        <p class="text-center mt-2 small" style="color:var(--text);">${isLogin?"Don't have account?":"Already have account?"} <a href="#" style="color:var(--gold);" onclick="showAuth('${isLogin?'register':'login'}')">${isLogin?'Sign Up':'Login'}</a></p>
-      </div>
-    </div>`;
+  const isLogin=type==='login';
+  document.getElementById('authModal').innerHTML='<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()"><div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:400px;max-width:90vw;" onclick="event.stopPropagation()"><button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" onclick="document.getElementById(\'authModal\').innerHTML=\'\'"></button><h4 class="text-center mb-3" style="color:var(--white);">'+(isLogin?'Welcome Back':'Start Free Trial')+'</h4>'+(isLogin?'':'<input type="text" id="regName" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Full Name">')+'<input type="email" id="authEmail" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Email"><input type="password" id="authPassword" class="form-control mb-3" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Password"><button class="btn-gold w-100" onclick="'+(isLogin?'doLogin()':'doRegister()')+'">'+(isLogin?'Login':'Create Free Account')+'</button><p class="text-center mt-2 small" style="color:var(--text);">'+(isLogin?"Don't have account?":"Already have account?")+' <a href="#" style="color:var(--gold);" onclick="showAuth(\''+(isLogin?'register':'login')+'\')">'+(isLogin?'Sign Up':'Login')+'</a></p></div></div>';
 }
-
 async function doRegister(){
-  const name=document.getElementById('regName')?.value?.trim();
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  if(!name||!email||password.length<6)return alert('Fill all fields correctly!');
-  try{
-    const cred=await firebase.auth().createUserWithEmailAndPassword(email,password);
-    await firebase.firestore().collection('users').doc(cred.user.uid).set({name,email,role:'client',plan:'free',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    window.location.href='/WA-Dual-CRM/';
-  }catch(e){alert(e.message);}
+  const n=document.getElementById('regName')?.value?.trim(),e=document.getElementById('authEmail').value.trim(),p=document.getElementById('authPassword').value;
+  if(!n||!e||p.length<6)return alert('Fill all fields!');
+  try{const c=await firebase.auth().createUserWithEmailAndPassword(e,p);await firebase.firestore().collection('users').doc(c.user.uid).set({name:n,email:e,role:'client',plan:'free',createdAt:firebase.firestore.FieldValue.serverTimestamp()});window.location.href='/WA-Dual-CRM/';}catch(err){alert(err.message);}
 }
-
 async function doLogin(){
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  if(!email||!password)return alert('Enter email & password!');
-  try{
-    await firebase.auth().signInWithEmailAndPassword(email,password);
-    window.location.href='/WA-Dual-CRM/'';
-  }catch(e){alert(e.message);}
+  const e=document.getElementById('authEmail').value.trim(),p=document.getElementById('authPassword').value;
+  if(!e||!p)return alert('Enter email & password!');
+  try{await firebase.auth().signInWithEmailAndPassword(e,p);window.location.href='/WA-Dual-CRM/';}catch(err){alert(err.message);}
 }
-
-// Contact Form
 async function submitContact(){
-  const name=document.getElementById('contactName')?.value?.trim();
-  const email=document.getElementById('contactEmail')?.value?.trim();
-  const phone=document.getElementById('contactPhone')?.value?.trim();
-  const interest=document.getElementById('contactInterest')?.value;
-  const message=document.getElementById('contactMessage')?.value?.trim();
-  if(!name||!email||!message)return alert('Fill required fields!');
-  try{
-    await firebase.firestore().collection('contact_inquiries').add({name,email,phone,interest,message,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    document.getElementById('contactResult').innerHTML='<span style="color:#34d399;">Thank you! We will contact you shortly.</span>';
-  }catch(e){
-    document.getElementById('contactResult').innerHTML='<span style="color:#f87171;">Error. Please try WhatsApp instead.</span>';
-  }
+  const n=document.getElementById('contactName')?.value?.trim(),e=document.getElementById('contactEmail')?.value?.trim(),p=document.getElementById('contactPhone')?.value?.trim(),m=document.getElementById('contactMessage')?.value?.trim();
+  if(!n||!e||!m)return alert('Fill required fields!');
+  try{await firebase.firestore().collection('contact_inquiries').add({name:n,email:e,phone:p,message:m,createdAt:firebase.firestore.FieldValue.serverTimestamp()});document.getElementById('contactResult').innerHTML='<span style="color:#34d399;">Thank you!</span>';}catch(err){document.getElementById('contactResult').innerHTML='<span style="color:#f87171;">Error.</span>';}
 }
 </script>
-
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<script>
-const firebaseConfig={apiKey:"AIzaSyBZDaHJSt-4AV6EJYG76p8kcsIHf6LOxdU",authDomain:"avatar-wa-dual-crm.firebaseapp.com",projectId:"avatar-wa-dual-crm",storageBucket:"avatar-wa-dual-crm.firebasestorage.app",messagingSenderId:"946959261009",appId:"1:946959261009:web:db7ce59b52e454caf8c770"};
-firebase.initializeApp(firebaseConfig);
-</script>
+<script>const firebaseConfig={apiKey:"AIzaSyBZDaHJSt-4AV6EJYG76p8kcsIHf6LOxdU",authDomain:"avatar-wa-dual-crm.firebaseapp.com",projectId:"avatar-wa-dual-crm",storageBucket:"avatar-wa-dual-crm.firebasestorage.app",messagingSenderId:"946959261009",appId:"1:946959261009:web:db7ce59b52e454caf8c770"};firebase.initializeApp(firebaseConfig);</script>
 </body>
 </html>
