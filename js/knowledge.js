@@ -9,7 +9,7 @@ const Knowledge = {
     switch(this.currentSection) {
       case 'home': this.renderHome(); break;
       case 'playbooks': this.renderPlaybooks(); break;
-      case 'platform': this.renderPlatform(); break;
+      case 'platform': this.renderPlatformPage(); break;
       case 'industry': this.renderIndustry(); break;
       case 'courses': this.renderCourses(); break;
       case 'tools': this.renderTools(); break;
@@ -20,6 +20,21 @@ const Knowledge = {
       case 'webinars': this.renderWebinars(); break;
       case 'templates': this.renderTemplates(); break;
     }
+  },
+
+  // ==================== PLATFORM MASTERY — LOADS FROM EXTERNAL FILE ====================
+  renderPlatformPage() {
+    contentArea.innerHTML = '<p class="text-center py-5">Loading guides...</p>';
+    
+    fetch('js/knowledge/platform.js')
+      .then(r => r.text())
+      .then(code => {
+        const fn = new Function('Knowledge', 'contentArea', 'db', 'firebase', code);
+        fn(Knowledge, contentArea, db, firebase);
+      })
+      .catch(e => {
+        contentArea.innerHTML = `<div class="card-widget text-center py-5"><h5>Error Loading Guides</h5><p class="text-muted">${e.message}</p></div>`;
+      });
   },
 
   // ==================== HOME ====================
@@ -53,7 +68,7 @@ const Knowledge = {
       <div class="row g-3">
         ${[
           {k:'playbooks',i:'fa-chart-line',t:'Business Growth Playbooks',d:'WhatsApp Marketing, Lead Gen, Sales Automation, Retention, Scaling.',c:'#4f46e5',bg:'#e0e7ff',b:'Core'},
-          {k:'platform',i:'fa-cogs',t:'Platform Mastery',d:'11 Avatar CRM, WhatsApp API, Chatbots, Campaigns optimization.',c:'#059669',bg:'#d1fae5',b:'Core'},
+          {k:'platform',i:'fa-cogs',t:'Platform Mastery',d:'11 Avatar CRM Guides, WhatsApp API, Chatbots, Campaigns, Templates, Chats & more.',c:'#059669',bg:'#d1fae5',b:'Core'},
           {k:'industry',i:'fa-building',t:'Industry Solutions',d:'Real Estate, Healthcare, Education, E-commerce, Finance.',c:'#d97706',bg:'#fef3c7',b:'Popular'},
           {k:'courses',i:'fa-graduation-cap',t:'Courses & Certifications',d:'Free foundation to premium mastery. Certified Expert path.',c:'#7c3aed',bg:'#f3e8ff',b:'Premium'},
           {k:'tools',i:'fa-toolbox',t:'Free Tools & Resources',d:'ROI Calculator, Templates, Checklists, Benchmarks.',c:'#db2777',bg:'#fce7f3',b:'Free'},
@@ -88,39 +103,16 @@ const Knowledge = {
       <p class="text-muted small mb-3">Strategic frameworks for every stage of business growth.</p>
       <div class="row g-3">
         ${[
-          {t:'WhatsApp Marketing Mastery',d:'Complete framework from setup to scaling. Templates, automation flows, campaign strategies.',l:'Beginner',tm:'35 min'},
-          {t:'Lead Generation Blueprint',d:'Multi-channel capture system. Widgets, landing pages, social integration, ad campaigns, form optimization.',l:'Intermediate',tm:'45 min'},
-          {t:'Sales Automation Architecture',d:'Intelligent flows, chatbots, drip sequences, lead scoring triggers, CRM integration.',l:'Advanced',tm:'60 min'},
-          {t:'Customer Retention Systems',d:'Loyalty programs, re-engagement campaigns, NPS surveys, churn prediction strategies.',l:'Intermediate',tm:'30 min'},
-          {t:'Scaling 0 to 1000 Customers',d:'Infrastructure, team structure, tool stack, hiring framework, maintaining quality at scale.',l:'Advanced',tm:'75 min'}
+          {t:'WhatsApp Marketing Mastery',d:'Complete framework from setup to scaling.',l:'Beginner',tm:'35 min'},
+          {t:'Lead Generation Blueprint',d:'Multi-channel capture system.',l:'Intermediate',tm:'45 min'},
+          {t:'Sales Automation Architecture',d:'Intelligent flows, chatbots, drip sequences.',l:'Advanced',tm:'60 min'},
+          {t:'Customer Retention Systems',d:'Loyalty programs, re-engagement campaigns.',l:'Intermediate',tm:'30 min'},
+          {t:'Scaling 0 to 1000 Customers',d:'Infrastructure, team structure, tool stack.',l:'Advanced',tm:'75 min'}
         ].map(p => `
           <div class="col-md-6 col-lg-4"><div class="kh-card" onclick="Knowledge.showEmailPopup()">
             <span class="badge bg-${p.l==='Beginner'?'success':p.l==='Intermediate'?'warning':'danger'} mb-2">${p.l}</span>
             <h6 style="font-weight:600;">${p.t}</h6><p style="font-size:12px;color:#6b7280;">${p.d}</p>
             <small class="text-muted"><i class="far fa-clock me-1"></i>${p.tm}</small>
-          </div></div>
-        `).join('')}
-      </div>
-    `;
-  },
-
-  // ==================== PLATFORM ====================
-  renderPlatform() {
-    contentArea.innerHTML = `
-      <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>
-      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
-      <h5 style="font-weight:700;">Platform Mastery</h5>
-      <p class="text-muted small mb-3">Technical guides for mastering the 11 Avatar CRM ecosystem.</p>
-      <div class="row g-3">
-        ${[
-          {t:'11 Avatar CRM Complete Guide',d:'End-to-end walkthrough of every module. Dashboard analytics, lead pipeline, campaign orchestration.',s:12,icon:'fa-cube',c:'#4f46e5'},
-          {t:'WhatsApp Business API Setup',d:'Meta verification, phone registration, webhook configuration, template submission, production checklist.',s:8,icon:'fa-plug',c:'#059669'},
-          {t:'Chatbot Architecture & Best Practices',d:'Intent mapping, fallback strategies, multi-turn dialogue, performance optimization.',s:10,icon:'fa-brain',c:'#d97706'},
-          {t:'Campaign Optimization Guide',d:'A/B testing, audience segmentation, send time optimization, personalization techniques.',s:6,icon:'fa-chart-bar',c:'#db2777'}
-        ].map(g => `
-          <div class="col-md-6"><div class="kh-card" onclick="Knowledge.showEmailPopup()" style="display:flex;gap:12px;">
-            <div style="width:40px;height:40px;border-radius:8px;background:${g.c}15;color:${g.c};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${g.icon}"></i></div>
-            <div><h6 style="font-weight:600;">${g.t}</h6><p style="font-size:11px;color:#6b7280;">${g.d}</p><small class="text-muted">${g.s} sections</small></div>
           </div></div>
         `).join('')}
       </div>
@@ -133,18 +125,18 @@ const Knowledge = {
       <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>
       <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
       <h5 style="font-weight:700;">Industry Solutions</h5>
-      <p class="text-muted small mb-3">Tailored WhatsApp communication strategies for specific industries.</p>
+      <p class="text-muted small mb-3">Tailored WhatsApp strategies for specific industries.</p>
       <div class="row g-3">
         ${[
-          {n:'Real Estate',i:'fa-home',s:'40% more qualified leads',d:'Virtual property tours, instant inquiry responses, automated site visit scheduling.',c:'#4f46e5'},
-          {n:'Healthcare',i:'fa-hospital',s:'65% reduction in no-shows',d:'Automated appointment reminders, prescription notifications, teleconsultation.',c:'#059669'},
-          {n:'Education',i:'fa-graduation-cap',s:'3x student engagement rate',d:'Admission inquiries, fee reminders, exam notifications, parent communication.',c:'#d97706'},
-          {n:'E-commerce',i:'fa-shopping-cart',s:'25% abandoned cart recovery',d:'Order confirmations, shipping updates, product recommendations, reviews.',c:'#db2777'},
-          {n:'Financial Services',i:'fa-landmark',s:'50% faster loan processing',d:'Document collection, status tracking, payment reminders, KYC verification.',c:'#7c3aed'}
+          {n:'Real Estate',i:'fa-home',s:'40% more qualified leads',d:'Virtual property tours, instant inquiry responses.',c:'#4f46e5'},
+          {n:'Healthcare',i:'fa-hospital',s:'65% reduction in no-shows',d:'Automated appointment reminders, prescriptions.',c:'#059669'},
+          {n:'Education',i:'fa-graduation-cap',s:'3x student engagement rate',d:'Admission inquiries, fee reminders, exam notifications.',c:'#d97706'},
+          {n:'E-commerce',i:'fa-shopping-cart',s:'25% abandoned cart recovery',d:'Order confirmations, shipping updates, reviews.',c:'#db2777'},
+          {n:'Financial Services',i:'fa-landmark',s:'50% faster loan processing',d:'Document collection, status tracking, KYC.',c:'#7c3aed'}
         ].map(ind => `
           <div class="col-md-6 col-lg-4"><div class="kh-card" onclick="Knowledge.showEmailPopup()">
             <div style="width:40px;height:40px;border-radius:8px;background:${ind.c}15;color:${ind.c};display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><i class="fas ${ind.i}"></i></div>
-            <h6 style="font-weight:600;">${ind.n}</h6><p style="color:${ind.c};font-weight:600;font-size:13px;">${ind.s}</p><p style="font-size:11px;color:#6b7280;">${ind.d}</p>
+            <h6 style="font-weight:600;">${ind.n}</h6><p style="color:${ind.c};font-weight:600;">${ind.s}</p><p style="font-size:11px;color:#6b7280;">${ind.d}</p>
           </div></div>
         `).join('')}
       </div>
@@ -160,9 +152,9 @@ const Knowledge = {
       <p class="text-muted small mb-3">Structured learning paths from foundation to mastery.</p>
       <div class="row g-3">
         ${[
-          {t:'WhatsApp Marketing Foundation',l:'Free',m:8,d:'4 hours',desc:'Core concepts: WhatsApp ecosystem, profile optimization, broadcasts, templates, compliance.',c:'#059669',i:'fa-seedling'},
-          {t:'Advanced WhatsApp Automation',l:'₹4,999',m:16,d:'12 hours',desc:'Chatbot architecture, API integration, webhook handling, custom flows, analytics.',c:'#d97706',i:'fa-cogs'},
-          {t:'Certified WhatsApp Expert',l:'₹49,999',m:24,d:'6 weeks',desc:'Live cohort. 1:1 mentorship. Real projects. Official certification and partner network access.',c:'#7c3aed',i:'fa-award'}
+          {t:'WhatsApp Marketing Foundation',l:'Free',m:8,d:'4 hours',desc:'Core concepts: WhatsApp ecosystem, profile optimization, broadcasts.',c:'#059669',i:'fa-seedling'},
+          {t:'Advanced WhatsApp Automation',l:'₹4,999',m:16,d:'12 hours',desc:'Chatbot architecture, API integration, webhook handling.',c:'#d97706',i:'fa-cogs'},
+          {t:'Certified WhatsApp Expert',l:'₹49,999',m:24,d:'6 weeks',desc:'Live cohort. 1:1 mentorship. Real projects.',c:'#7c3aed',i:'fa-award'}
         ].map(c => `
           <div class="col-md-4"><div class="kh-card" onclick="Knowledge.showEmailPopup()">
             <div><span class="badge bg-${c.l==='Free'?'success':'warning'} mb-2">${c.l}</span>
@@ -185,12 +177,12 @@ const Knowledge = {
       <p class="text-muted small mb-3">Practical tools to optimize your WhatsApp marketing operations.</p>
       <div class="row g-3">
         ${[
-          {t:'WhatsApp ROI Calculator',d:'Project revenue impact based on your lead volume, conversion rate, and deal value.',i:'fa-calculator',c:'#059669',a:"Knowledge.currentSection='roi';Knowledge.render();"},
-          {t:'Message Template Library',d:'50+ professionally crafted message templates across industries and use cases.',i:'fa-copy',c:'#4f46e5',a:"Knowledge.showEmailPopup()"},
-          {t:'Campaign Launch Checklist',d:'Comprehensive pre-launch checklist. Never miss a critical step in your campaign.',i:'fa-clipboard-check',c:'#d97706',a:"Knowledge.showEmailPopup()"},
-          {t:'Industry Benchmarks 2026',d:'Real performance data: open rates, response times, conversion benchmarks.',i:'fa-chart-simple',c:'#db2777',a:"Knowledge.showEmailPopup()"},
-          {t:'Response Time Calculator',d:'Measure and optimize your team response time. Set targets and track improvements.',i:'fa-stopwatch',c:'#7c3aed',a:"Knowledge.showEmailPopup()"},
-          {t:'Campaign Budget Planner',d:'Calculate cost per message and projected ROI for your WhatsApp marketing.',i:'fa-coins',c:'#0369a1',a:"Knowledge.showEmailPopup()"}
+          {t:'WhatsApp ROI Calculator',d:'Project revenue impact based on your metrics.',i:'fa-calculator',c:'#059669',a:"Knowledge.currentSection='roi';Knowledge.render();"},
+          {t:'Message Template Library',d:'50+ professionally crafted message templates.',i:'fa-copy',c:'#4f46e5',a:"Knowledge.showEmailPopup()"},
+          {t:'Campaign Launch Checklist',d:'Comprehensive pre-launch checklist.',i:'fa-clipboard-check',c:'#d97706',a:"Knowledge.showEmailPopup()"},
+          {t:'Industry Benchmarks 2026',d:'Real performance data: open rates, conversions.',i:'fa-chart-simple',c:'#db2777',a:"Knowledge.showEmailPopup()"},
+          {t:'Response Time Calculator',d:'Measure and optimize team response time.',i:'fa-stopwatch',c:'#7c3aed',a:"Knowledge.showEmailPopup()"},
+          {t:'Campaign Budget Planner',d:'Calculate cost per message and projected ROI.',i:'fa-coins',c:'#0369a1',a:"Knowledge.showEmailPopup()"}
         ].map(t => `
           <div class="col-md-6 col-lg-4"><div class="kh-card" onclick="${t.a}">
             <div style="width:36px;height:36px;border-radius:8px;background:${t.c}15;color:${t.c};display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><i class="fas ${t.i}"></i></div>
@@ -206,11 +198,11 @@ const Knowledge = {
     contentArea.innerHTML = `
       <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
       <h5 style="font-weight:700;">Expert Community</h5>
-      <p class="text-muted small mb-3">Connect with peers, learn from experts, and share your transformation journey.</p>
+      <p class="text-muted small mb-3">Connect with peers, learn from experts.</p>
       <div class="row g-3">
-        <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#e0e7ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-comments"></i></div><h6 style="font-weight:600;">Q&A Forum</h6><p style="font-size:11px;color:#6b7280;">Ask questions, share knowledge, get expert answers.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Join Discussion</button></div></div>
-        <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-video"></i></div><h6 style="font-weight:600;">Live Webinars</h6><p style="font-size:11px;color:#6b7280;">Weekly sessions on WhatsApp strategy and case studies.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Register Next</button></div></div>
-        <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-trophy"></i></div><h6 style="font-weight:600;">Transformation Stories</h6><p style="font-size:11px;color:#6b7280;">Real businesses, real metrics, real growth journeys.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Read Stories</button></div></div>
+        <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#e0e7ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-comments"></i></div><h6>Q&A Forum</h6><p style="font-size:11px;color:#6b7280;">Ask questions, share knowledge.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Join</button></div></div>
+        <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-video"></i></div><h6>Live Webinars</h6><p style="font-size:11px;color:#6b7280;">Weekly sessions.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Register</button></div></div>
+        <div class="col-md-4"><div class="card-widget text-center py-4"><div style="width:44px;height:44px;border-radius:10px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;"><i class="fas fa-trophy"></i></div><h6>Stories</h6><p style="font-size:11px;color:#6b7280;">Real results.</p><button class="btn btn-outline-primary btn-sm" onclick="Knowledge.showEmailPopup()">Read</button></div></div>
       </div>
     `;
   },
@@ -218,15 +210,14 @@ const Knowledge = {
   // ==================== HEALTH SCORE ====================
   renderHealthScore() {
     contentArea.innerHTML = `
-      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
+      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button>
       <h5 style="font-weight:700;">Business Health Diagnostic</h5>
-      <p class="text-muted small mb-3">Comprehensive assessment across four critical business pillars.</p>
       <div class="card-widget" style="max-width:500px;margin:0 auto;">
-        <div class="mb-2"><label class="form-label small fw-bold">Industry</label><select id="hsIndustry" class="form-select form-select-sm"><option>Real Estate</option><option>Healthcare</option><option>Education</option><option>E-commerce</option><option>Financial Services</option></select></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Industry</label><select id="hsIndustry" class="form-select form-select-sm"><option>Real Estate</option><option>Healthcare</option><option>Education</option><option>E-commerce</option><option>Finance</option></select></div>
         <div class="mb-2"><label class="form-label small fw-bold">Monthly Leads</label><input type="number" id="hsLeads" class="form-control form-control-sm" placeholder="200"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Conversion Rate (%)</label><input type="number" id="hsConv" class="form-control form-control-sm" placeholder="5"></div>
         <div class="mb-2"><label class="form-label small fw-bold">WhatsApp Setup</label><select id="hsWA" class="form-select form-select-sm"><option value="none">Not using</option><option value="basic">Basic</option><option value="advanced">Advanced</option></select></div>
-        <button class="btn btn-primary w-100" onclick="var l=parseInt(document.getElementById('hsLeads').value)||0,c=parseFloat(document.getElementById('hsConv').value)||0,w=document.getElementById('hsWA').value,s=25;if(l>500)s+=20;else if(l>100)s+=10;if(c>10)s+=20;else if(c>5)s+=10;if(w==='advanced')s+=25;else if(w==='basic')s+=10;s=Math.min(s,100);var g=s>=80?'Excellent':s>=60?'Good':s>=40?'Developing':'Early Stage';document.getElementById('hsResult').innerHTML='<div class=«mt-3 p-3 text-center rounded» style=«background:#f0fdf4;»><h3>'+s+'/100</h3><p><strong>'+g+'</strong></p><button class=«btn btn-primary btn-sm» onclick=«Knowledge.showEmailPopup()»>Get Full Report</button></div>';">Generate Report</button>
+        <button class="btn btn-primary w-100" onclick="var l=parseInt(document.getElementById('hsLeads').value)||0,c=parseFloat(document.getElementById('hsConv').value)||0,w=document.getElementById('hsWA').value,s=25;if(l>500)s+=20;else if(l>100)s+=10;if(c>10)s+=20;else if(c>5)s+=10;if(w==='advanced')s+=25;else if(w==='basic')s+=10;s=Math.min(s,100);var g=s>=80?'Excellent':s>=60?'Good':s>=40?'Developing':'Early Stage';document.getElementById('hsResult').innerHTML='<div class=\"mt-3 p-3 text-center rounded\" style=\"background:#f0fdf4;\"><h3>'+s+'/100</h3><p><strong>'+g+'</strong></p><button class=\"btn btn-primary btn-sm\" onclick=\"Knowledge.showEmailPopup()\">Get Full Report</button></div>';">Generate Report</button>
         <div id="hsResult"></div>
       </div>
     `;
@@ -235,15 +226,14 @@ const Knowledge = {
   // ==================== ROI CALCULATOR ====================
   renderROI() {
     contentArea.innerHTML = `
-      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
+      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button>
       <h5 style="font-weight:700;">WhatsApp ROI Calculator</h5>
-      <p class="text-muted small mb-3">Data-driven revenue projection based on your actual business metrics.</p>
       <div class="card-widget" style="max-width:500px;margin:0 auto;">
         <div class="mb-2"><label class="form-label small fw-bold">Monthly Leads</label><input type="number" id="roiLeads" class="form-control form-control-sm" placeholder="500"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Deal Value (₹)</label><input type="number" id="roiValue" class="form-control form-control-sm" placeholder="10000"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Conversion Rate (%)</label><input type="number" id="roiConv" class="form-control form-control-sm" placeholder="5"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Expected Uplift (%)</label><input type="number" id="roiUplift" class="form-control form-control-sm" value="35"></div>
-        <button class="btn btn-primary w-100" onclick="var l=parseInt(document.getElementById('roiLeads').value)||0,v=parseInt(document.getElementById('roiValue').value)||0,c=parseFloat(document.getElementById('roiConv').value)||0,u=parseFloat(document.getElementById('roiUplift').value)||35,cur=Math.round(l*(c/100)*v),nc=c*(1+u/100),nxt=Math.round(l*(nc/100)*v),up=nxt-cur;document.getElementById('roiResult').innerHTML='<div class=«mt-3 p-3 text-center» style=«background:#f0fdf4;border-radius:12px;»><div class=«row»><div class=«col-6»><small>Current</small><h5>₹'+cur.toLocaleString()+'</h5></div><div class=«col-6»><small>With WhatsApp</small><h5 style=«color:#059669;»>₹'+nxt.toLocaleString()+'</h5></div></div><h4 style=«color:#d97706;»>+₹'+up.toLocaleString()+'/mo</h4><button class=«btn btn-primary btn-sm» onclick=«Knowledge.showEmailPopup()»>Get Implementation Plan</button></div>';">Calculate ROI</button>
+        <button class="btn btn-primary w-100" onclick="var l=parseInt(document.getElementById('roiLeads').value)||0,v=parseInt(document.getElementById('roiValue').value)||0,c=parseFloat(document.getElementById('roiConv').value)||0,u=parseFloat(document.getElementById('roiUplift').value)||35,cur=Math.round(l*(c/100)*v),nc=c*(1+u/100),nxt=Math.round(l*(nc/100)*v),up=nxt-cur;document.getElementById('roiResult').innerHTML='<div class=\"mt-3 p-3 text-center\" style=\"background:#f0fdf4;border-radius:12px;\"><div class=\"row\"><div class=\"col-6\"><small>Current</small><h5>₹'+cur.toLocaleString()+'</h5></div><div class=\"col-6\"><small>With WhatsApp</small><h5 style=\"color:#059669;\">₹'+nxt.toLocaleString()+'</h5></div></div><h4 style=\"color:#d97706;\">+₹'+up.toLocaleString()+'/mo</h4><button class=\"btn btn-primary btn-sm\" onclick=\"Knowledge.showEmailPopup()\">Get Plan</button></div>';">Calculate ROI</button>
         <div id="roiResult"></div>
       </div>
     `;
@@ -252,24 +242,11 @@ const Knowledge = {
   // ==================== BLOG ====================
   renderBlog() {
     contentArea.innerHTML = `
-      <style>.blog-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;transition:0.25s;}.blog-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}.blog-img{height:100px;display:flex;align-items:center;justify-content:center;font-size:30px;}.blog-body{padding:14px;}</style>
-      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
+      <style>.blog-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;transition:0.25s;}.blog-card:hover{border-color:#3b82f6;}.blog-img{height:100px;display:flex;align-items:center;justify-content:center;font-size:30px;}.blog-body{padding:14px;}</style>
+      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button>
       <h5 style="font-weight:700;">Strategic Blog</h5>
-      <p class="text-muted small mb-3">Deep dives into WhatsApp strategy, marketing, and industry trends.</p>
       <div class="row g-3">
-        ${[
-          {t:'WhatsApp Business Revolution 2026',c:'Industry Trends',a:'11 Avatar Team',d:'8 min',i:'fa-newspaper',co:'#4f46e5'},
-          {t:'Lead Generation That Actually Works',c:'Lead Gen',a:'Marketing Team',d:'12 min',i:'fa-magnet',co:'#059669'},
-          {t:'Automation Without Losing Human Touch',c:'Automation',a:'Product Team',d:'10 min',i:'fa-robot',co:'#d97706'},
-          {t:'Real Estate Firm Doubled Conversions',c:'Case Study',a:'Success Team',d:'6 min',i:'fa-building',co:'#db2777'},
-          {t:'Broadcast vs Group vs Community Guide',c:'Strategy',a:'Strategy Team',d:'7 min',i:'fa-bullhorn',co:'#7c3aed'},
-          {t:'Marketing Metrics That Actually Matter',c:'Analytics',a:'Analytics Team',d:'9 min',i:'fa-chart-line',co:'#0369a1'}
-        ].map(a => `
-          <div class="col-md-6 col-lg-4"><div class="blog-card" onclick="Knowledge.showEmailPopup()">
-            <div class="blog-img" style="background:${a.co}10;color:${a.co};"><i class="fas ${a.i}"></i></div>
-            <div class="blog-body"><span class="badge bg-light text-dark mb-1">${a.c}</span><h6 style="font-weight:600;">${a.t}</h6><div class="d-flex justify-content-between small text-muted"><span>${a.a}</span><span>${a.d}</span></div></div>
-          </div></div>
-        `).join('')}
+        ${[{t:'WhatsApp Business Revolution 2026',c:'Industry Trends',a:'11 Avatar Team',d:'8 min',i:'fa-newspaper',co:'#4f46e5'},{t:'Lead Generation That Works',c:'Lead Gen',a:'Marketing Team',d:'12 min',i:'fa-magnet',co:'#059669'},{t:'Automation Without Losing Human Touch',c:'Automation',a:'Product Team',d:'10 min',i:'fa-robot',co:'#d97706'},{t:'Real Estate Firm Doubled Conversions',c:'Case Study',a:'Success Team',d:'6 min',i:'fa-building',co:'#db2777'},{t:'Broadcast vs Group vs Community',c:'Strategy',a:'Strategy Team',d:'7 min',i:'fa-bullhorn',co:'#7c3aed'},{t:'Marketing Metrics That Matter',c:'Analytics',a:'Analytics Team',d:'9 min',i:'fa-chart-line',co:'#0369a1'}].map(a=>`<div class="col-md-6 col-lg-4"><div class="blog-card" onclick="Knowledge.showEmailPopup()"><div class="blog-img" style="background:${a.co}10;color:${a.co};"><i class="fas ${a.i}"></i></div><div class="blog-body"><span class="badge bg-light text-dark mb-1">${a.c}</span><h6 style="font-weight:600;">${a.t}</h6><div class="d-flex justify-content-between small text-muted"><span>${a.a}</span><span>${a.d}</span></div></div></div></div>`).join('')}
       </div>
     `;
   },
@@ -277,46 +254,24 @@ const Knowledge = {
   // ==================== WEBINARS ====================
   renderWebinars() {
     contentArea.innerHTML = `
-      <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>
-      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
+      <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;}</style>
+      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button>
       <h5 style="font-weight:700;">Expert Webinars</h5>
-      <p class="text-muted small mb-3">Live sessions and recorded content from industry practitioners.</p>
       <h6 class="mb-2"><i class="fas fa-calendar-alt text-primary me-1"></i>Upcoming</h6>
-      <div class="row g-3 mb-4">
-        <div class="col-md-6"><div class="kh-card" onclick="Knowledge.showEmailPopup()"><div class="d-flex gap-3"><div style="width:40px;height:40px;border-radius:8px;background:#4f46e515;color:#4f46e5;display:flex;align-items:center;justify-content:center;"><i class="fas fa-video"></i></div><div><h6 style="font-weight:600;">WhatsApp Marketing Masterclass</h6><small class="text-muted">July 15 · 4:00 PM · 90 min</small><br><span class="badge bg-success mt-1">Limited Seats</span></div></div></div></div>
-        <div class="col-md-6"><div class="kh-card" onclick="Knowledge.showEmailPopup()"><div class="d-flex gap-3"><div style="width:40px;height:40px;border-radius:8px;background:#05966915;color:#059669;display:flex;align-items:center;justify-content:center;"><i class="fas fa-laptop-code"></i></div><div><h6 style="font-weight:600;">Lead Generation Workshop</h6><small class="text-muted">July 22 · 3:00 PM · 60 min</small><br><span class="badge bg-info mt-1">Open</span></div></div></div></div>
-      </div>
-      <h6 class="mb-2"><i class="fas fa-play text-success me-1"></i>Recorded</h6>
-      ${[{t:'Getting Started with WhatsApp API',v:'1.2K',d:'45 min'},{t:'Advanced Chatbot Design Patterns',v:'890',d:'55 min'},{t:'Campaign Analytics Deep Dive',v:'650',d:'40 min'},{t:'Customer Retention Strategies',v:'720',d:'50 min'}].map(r => `
-        <div class="kh-card mb-2" onclick="Knowledge.showEmailPopup()" style="display:flex;align-items:center;gap:12px;padding:12px;"><i class="fas fa-play-circle text-muted"></i><div class="flex-grow-1"><strong style="font-size:13px;">${r.t}</strong><br><small class="text-muted">${r.d} · ${r.v} views</small></div><i class="fas fa-chevron-right text-muted"></i></div>
-      `).join('')}
+      <div class="row g-3 mb-4"><div class="col-md-6"><div class="kh-card" onclick="Knowledge.showEmailPopup()"><div class="d-flex gap-3"><div style="width:40px;height:40px;border-radius:8px;background:#4f46e515;color:#4f46e5;display:flex;align-items:center;justify-content:center;"><i class="fas fa-video"></i></div><div><h6>WhatsApp Marketing Masterclass</h6><small>July 15 · 4:00 PM · 90 min</small></div></div></div></div><div class="col-md-6"><div class="kh-card" onclick="Knowledge.showEmailPopup()"><div class="d-flex gap-3"><div style="width:40px;height:40px;border-radius:8px;background:#05966915;color:#059669;display:flex;align-items:center;justify-content:center;"><i class="fas fa-laptop-code"></i></div><div><h6>Lead Generation Workshop</h6><small>July 22 · 3:00 PM · 60 min</small></div></div></div></div></div>
+      <h6><i class="fas fa-play text-success me-1"></i>Recorded</h6>
+      ${[{t:'Getting Started with WhatsApp API',v:'1.2K',d:'45 min'},{t:'Advanced Chatbot Design',v:'890',d:'55 min'},{t:'Campaign Analytics Deep Dive',v:'650',d:'40 min'},{t:'Customer Retention Strategies',v:'720',d:'50 min'}].map(r=>`<div class="kh-card mb-2" onclick="Knowledge.showEmailPopup()" style="display:flex;align-items:center;gap:12px;padding:12px;"><i class="fas fa-play-circle text-muted"></i><div class="flex-grow-1"><strong>${r.t}</strong><br><small>${r.d} · ${r.v} views</small></div></div>`).join('')}
     `;
   },
 
   // ==================== TEMPLATES ====================
   renderTemplates() {
     contentArea.innerHTML = `
-      <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>
-      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();"><i class="fas fa-arrow-left me-1"></i> Back to Hub</button>
+      <style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;}</style>
+      <button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection='home';Knowledge.render();">Back to Hub</button>
       <h5 style="font-weight:700;">Templates Library</h5>
-      <p class="text-muted small mb-3">Ready-to-use downloadable resources for campaigns and operations.</p>
       <div class="row g-3">
-        ${[
-          {t:'WhatsApp Message Template Pack',d:'25+ templates: welcome, follow-up, promotion, feedback.',cat:'Messaging',fmt:'PDF',i:'fa-message',c:'#4f46e5'},
-          {t:'Campaign Planning Worksheet',d:'Segments, sequences, timeline, performance tracking.',cat:'Planning',fmt:'Sheets',i:'fa-calendar-check',c:'#059669'},
-          {t:'Lead Qualification Scorecard',d:'Criteria, weights, auto-calculating quality scores.',cat:'Sales',fmt:'PDF+Sheets',i:'fa-clipboard-list',c:'#d97706'},
-          {t:'WhatsApp Compliance Checklist',d:'15-point pre-send compliance verification list.',cat:'Compliance',fmt:'PDF',i:'fa-shield-alt',c:'#db2777'},
-          {t:'Customer Communication Calendar',d:'12-month planner with seasonal campaign slots.',cat:'Planning',fmt:'Sheets',i:'fa-table',c:'#7c3aed'},
-          {t:'ROI Tracking Dashboard',d:'Auto-calculating revenue attribution spreadsheet.',cat:'Analytics',fmt:'Sheets',i:'fa-chart-simple',c:'#0369a1'},
-          {t:'Onboarding Flow Blueprint',d:'10-step welcome sequence with milestones.',cat:'Success',fmt:'PDF',i:'fa-diagram-project',c:'#0891b2'},
-          {t:'A/B Testing Framework',d:'Hypothesis, variants, significance calculator.',cat:'Optimization',fmt:'Sheets',i:'fa-flask',c:'#be185d'}
-        ].map(t => `
-          <div class="col-md-6 col-lg-4"><div class="kh-card" onclick="Knowledge.showEmailPopup()">
-            <div style="width:36px;height:36px;border-radius:8px;background:${t.c}15;color:${t.c};display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><i class="fas ${t.i}"></i></div>
-            <h6 style="font-weight:600;">${t.t}</h6><p style="font-size:11px;color:#6b7280;">${t.d}</p>
-            <div class="d-flex gap-2 mt-2"><span class="badge bg-light text-dark">${t.cat}</span><span class="badge bg-light text-dark">${t.fmt}</span></div>
-          </div></div>
-        `).join('')}
+        ${[{t:'WhatsApp Message Template Pack',d:'25+ templates: welcome, follow-up, promotion.',cat:'Messaging',fmt:'PDF',i:'fa-message',c:'#4f46e5'},{t:'Campaign Planning Worksheet',d:'Segments, sequences, timeline.',cat:'Planning',fmt:'Sheets',i:'fa-calendar-check',c:'#059669'},{t:'Lead Qualification Scorecard',d:'Criteria, weights, auto-calculating.',cat:'Sales',fmt:'PDF+Sheets',i:'fa-clipboard-list',c:'#d97706'},{t:'Compliance Checklist',d:'15-point pre-send verification.',cat:'Compliance',fmt:'PDF',i:'fa-shield-alt',c:'#db2777'},{t:'Communication Calendar',d:'12-month planner.',cat:'Planning',fmt:'Sheets',i:'fa-table',c:'#7c3aed'},{t:'ROI Tracking Dashboard',d:'Auto-calculating spreadsheet.',cat:'Analytics',fmt:'Sheets',i:'fa-chart-simple',c:'#0369a1'}].map(t=>`<div class="col-md-6 col-lg-4"><div class="kh-card" onclick="Knowledge.showEmailPopup()"><div style="width:36px;height:36px;border-radius:8px;background:${t.c}15;color:${t.c};display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><i class="fas ${t.i}"></i></div><h6>${t.t}</h6><p style="font-size:11px;color:#6b7280;">${t.d}</p><div class="d-flex gap-2 mt-2"><span class="badge bg-light text-dark">${t.cat}</span><span class="badge bg-light text-dark">${t.fmt}</span></div></div></div>`).join('')}
       </div>
     `;
   },
