@@ -276,6 +276,7 @@ function loadSection(section) {
     case 'reports': Reports.render(); break;
     case 'marketing': Marketing.render(); break;
     case 'plan': Plan.render(); break;
+    case 'tickets': Tickets.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
