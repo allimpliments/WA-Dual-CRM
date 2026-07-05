@@ -222,9 +222,7 @@ if (formId) {
         userData = { name: user.email, email: user.email, role: 'admin' };
       }
       window.currentUser = { uid: user.uid, ...userData };
-      loginScreen.style.display = 'none';
-      appMain.style.display = 'block';
-      initApp(userData.role);
+      window.location.href = '/crm.html';
       const roleBadge = document.getElementById('userRoleBadge');
       if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
     } else {
