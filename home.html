@@ -291,7 +291,7 @@ async function doRegister(){
   try{
     const cred=await firebase.auth().createUserWithEmailAndPassword(email,password);
     await firebase.firestore().collection('users').doc(cred.user.uid).set({name,email,role:'client',plan:'free',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    window.location.href='/crm.html';
+    window.location.href='/WA-Dual-CRM/';
   }catch(e){alert(e.message);}
 }
 
