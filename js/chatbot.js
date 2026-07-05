@@ -38,10 +38,12 @@ const Chatbot = {
             <div class="row g-2">
               <div class="col-md-3">
                 <label class="form-label small fw-bold">AI Provider</label>
-                <select id="aiProvider" class="form-select form-select-sm">
-                  <option value="gemini" ${(aiSettings.provider||'gemini')==='gemini'?'selected':''}>Google Gemini (Free)</option>
-                  <option value="groq" ${aiSettings.provider==='groq'?'selected':''}>Groq Llama (Free)</option>
-                  <option value="openai" ${aiSettings.provider==='openai'?'selected':''}>OpenAI (Paid)</option>
+                <select id="aiModel" class="form-select form-select-sm">
+                <option value="gemini-1.5-flash" ${aiSettings.model==='gemini-1.5-flash'?'selected':''}>Gemini 1.5 Flash (Free)</option>
+                <option value="gemini-1.5-pro" ${aiSettings.model==='gemini-1.5-pro'?'selected':''}>Gemini 1.5 Pro (Free)</option>
+                <option value="gemini-pro" ${aiSettings.model==='gemini-pro'?'selected':''}>Gemini Pro (Free)</option>
+                <option value="llama-3.3-70b" ${aiSettings.model==='llama-3.3-70b'?'selected':''}>Llama 3.3 (Groq)</option>
+                <option value="gpt-4o-mini" ${aiSettings.model==='gpt-4o-mini'?'selected':''}>GPT-4o Mini (Paid)</option>
                 </select>
               </div>
               <div class="col-md-6">
@@ -62,10 +64,11 @@ const Chatbot = {
               <div class="col-md-6">
                 <label class="form-label small fw-bold">Model</label>
                 <select id="aiModel" class="form-select form-select-sm">
-                  <option value="gemini-1.5-flash" ${aiSettings.model==='gemini-1.5-flash'?'selected':''}>Gemini 1.5 Flash (Fastest)</option>
-                  <option value="gemini-2.0-flash" ${aiSettings.model==='gemini-2.0-flash'?'selected':''}>Gemini 2.0 Flash (Latest)</option>
-                  <option value="llama-3.3-70b" ${aiSettings.model==='llama-3.3-70b'?'selected':''}>Llama 3.3 70B (Groq)</option>
-                  <option value="gpt-4o-mini" ${aiSettings.model==='gpt-4o-mini'?'selected':''}>GPT-4o Mini</option>
+                <option value="gemini-1.5-flash" ${aiSettings.model==='gemini-1.5-flash'?'selected':''}>Gemini 1.5 Flash (Free)</option>
+                <option value="gemini-1.5-pro" ${aiSettings.model==='gemini-1.5-pro'?'selected':''}>Gemini 1.5 Pro (Free)</option>
+                <option value="gemini-pro" ${aiSettings.model==='gemini-pro'?'selected':''}>Gemini Pro (Free)</option>
+                <option value="llama-3.3-70b" ${aiSettings.model==='llama-3.3-70b'?'selected':''}>Llama 3.3 (Groq)</option>
+                <option value="gpt-4o-mini" ${aiSettings.model==='gpt-4o-mini'?'selected':''}>GPT-4o Mini (Paid)</option>
                 </select>
               </div>
               <div class="col-12">
