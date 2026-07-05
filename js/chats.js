@@ -1,4 +1,4 @@
-// js/chats.js — Unified Live Chat with AI Auto-Reply (All Platforms)
+// js/chats.js — Unified Live Chat (WhatsApp Live + Meta Inbox + Coming Soon)
 const Chats = {
   contactCache: {},
   currentChatTab: 'whatsapp',
@@ -27,23 +27,27 @@ const Chats = {
     contentArea.style.background = 'var(--bg-primary, #f0f2f5)';
 
     const tabs = [
-      { key: 'whatsapp', name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366' },
-      { key: 'facebook', name: 'FB Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF' },
-      { key: 'instagram', name: 'Instagram', icon: 'fa-instagram', color: '#E4405F' },
-      { key: 'linkedin', name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2' },
-      { key: 'youtube', name: 'YouTube', icon: 'fa-youtube', color: '#FF0000' },
+      { key: 'whatsapp', name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366', status: 'live' },
+      { key: 'facebook', name: 'FB Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF', status: 'meta' },
+      { key: 'instagram', name: 'Instagram', icon: 'fa-instagram', color: '#E4405F', status: 'meta' },
+      { key: 'linkedin', name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2', status: 'coming' },
+      { key: 'youtube', name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', status: 'coming' },
     ];
 
     let html = `
       <style>
         .chat-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
-        .chat-tab{padding:8px 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid #e5e7eb;background:#fff;transition:0.2s;display:flex;align-items:center;gap:6px;}
+        .chat-tab{padding:8px 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid #e5e7eb;background:#fff;transition:0.2s;display:flex;align-items:center;gap:6px;position:relative;}
         .chat-tab:hover,.chat-tab.active{color:#fff;}
         .chat-tab.whatsapp:hover,.chat-tab.whatsapp.active{background:#25D366;border-color:#25D366;}
         .chat-tab.facebook:hover,.chat-tab.facebook.active{background:#00B2FF;border-color:#00B2FF;}
         .chat-tab.instagram:hover,.chat-tab.instagram.active{background:#E4405F;border-color:#E4405F;}
         .chat-tab.linkedin:hover,.chat-tab.linkedin.active{background:#0A66C2;border-color:#0A66C2;}
         .chat-tab.youtube:hover,.chat-tab.youtube.active{background:#FF0000;border-color:#FF0000;}
+        .chat-status-badge{position:absolute;top:-6px;right:-6px;font-size:8px;padding:1px 5px;border-radius:8px;font-weight:600;}
+        .chat-status-badge.live{background:#10b981;color:#fff;}
+        .chat-status-badge.meta{background:#f59e0b;color:#fff;}
+        .chat-status-badge.coming{background:#6b7280;color:#fff;}
         .chat-send-box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;}
         .chat-msg{display:flex;gap:10px;padding:10px;border-bottom:1px solid #f0f0f0;transition:0.1s;}
         .chat-msg:hover{background:#f9fafb;}
@@ -58,12 +62,14 @@ const Chats = {
         .chat-badge.incoming{background:#e0e7ff;color:#4f46e5;}
         .chat-badge.outgoing{background:#d1fae5;color:#065f46;}
         .ai-badge{background:#fef3c7;color:#92400e;font-size:9px;padding:2px 6px;border-radius:4px;}
+        .meta-open-btn{padding:14px 32px;border-radius:12px;font-weight:600;border:none;cursor:pointer;color:#fff;font-size:15px;}
       </style>
 
       <div class="chat-tabs">
         ${tabs.map(t => `
           <div class="chat-tab ${t.key} ${this.currentChatTab===t.key?'active':''}" onclick="Chats.currentChatTab='${t.key}';Chats.render();">
             <i class="fab ${t.icon}"></i> ${t.name}
+            <span class="chat-status-badge ${t.status}">${t.status==='live'?'LIVE':t.status==='meta'?'META':'SOON'}</span>
           </div>
         `).join('')}
       </div>
@@ -71,17 +77,17 @@ const Chats = {
 
     if (this.currentChatTab === 'whatsapp') {
       html += await this.renderWhatsAppChat();
+    } else if (this.currentChatTab === 'facebook' || this.currentChatTab === 'instagram') {
+      html += this.renderMetaInbox(this.currentChatTab);
     } else {
-      html += await this.renderSocialChat(this.currentChatTab);
+      html += this.renderComingSoon(this.currentChatTab);
     }
 
     contentArea.innerHTML = html;
-
-    // Setup realtime listener
     this.setupRealtime(this.currentChatTab);
   },
 
-  // ==================== WHATSAPP CHAT ====================
+  // ==================== WHATSAPP (LIVE) ====================
   async renderWhatsAppChat() {
     let messages = [];
     try {
@@ -104,10 +110,15 @@ const Chats = {
             <div id="chatResult" class="mt-2"></div>
           </div>
           <div class="chat-send-box mt-3">
-            <h6><i class="fas fa-robot text-warning me-1"></i>AI Auto-Reply</h6>
-            <p class="small text-muted">Bot automatically replies to incoming messages via Groq AI.</p>
-            <button class="btn btn-outline-warning btn-sm w-100" onclick="Chats.testAutoReply()"><i class="fas fa-flask me-1"></i> Test AI Reply</button>
+            <h6><i class="fas fa-robot text-warning me-1"></i>AI Auto-Reply (Groq)</h6>
+            <p class="small text-muted">Bot auto-replies via Groq AI + Meta Keywords.</p>
+            <button class="btn btn-outline-warning btn-sm w-100" onclick="Chats.testAutoReply()"><i class="fas fa-flask me-1"></i> Test AI</button>
             <div id="aiTestResult" class="mt-2"></div>
+          </div>
+          <div class="chat-send-box mt-3">
+            <h6><i class="fas fa-magic text-info me-1"></i>Meta Automations</h6>
+            <p class="small text-muted">Free auto-replies for FB + IG + WA.</p>
+            <button class="btn btn-outline-info btn-sm w-100" onclick="window.open('https://business.facebook.com/latest/inbox/automated_responses','_blank')"><i class="fas fa-external-link-alt me-1"></i> Open Meta Automations</button>
           </div>
         </div>
         <div class="col-md-8">
@@ -137,55 +148,78 @@ const Chats = {
     `;
   },
 
-  // ==================== SOCIAL CHAT (FB, IG, LI, YT) ====================
-  async renderSocialChat(platform) {
+  // ==================== META INBOX (FB + IG) ====================
+  renderMetaInbox(platform) {
     const config = {
-      facebook: { name: 'Facebook Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF', collection: 'socialMessages' },
-      instagram: { name: 'Instagram Direct', icon: 'fa-instagram', color: '#E4405F', collection: 'socialMessages' },
-      linkedin: { name: 'LinkedIn Messages', icon: 'fa-linkedin', color: '#0A66C2', collection: 'socialMessages' },
-      youtube: { name: 'YouTube Comments', icon: 'fa-youtube', color: '#FF0000', collection: 'socialMessages' },
+      facebook: { name: 'Facebook Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF', url: 'https://business.facebook.com/latest/inbox' },
+      instagram: { name: 'Instagram Direct', icon: 'fa-instagram', color: '#E4405F', url: 'https://business.facebook.com/latest/inbox/instagram_direct' },
     };
 
     const cfg = config[platform];
-    let messages = [];
-    try {
-      const snap = await db.collection(cfg.collection).where('platform','==',platform).orderBy('createdAt','desc').limit(50).get();
-      messages = snap.docs.map(d=>({id:d.id,...d.data()}));
-    } catch(e) {}
 
     return `
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="chat-send-box">
-            <h6><i class="fab ${cfg.icon} me-1" style="color:${cfg.color};"></i>Send ${cfg.name} Message</h6>
-            <input type="text" id="socialTo" class="form-control form-control-sm mb-2" placeholder="Recipient ID / Name">
-            <textarea id="socialMessage" class="form-control form-control-sm mb-2" rows="3" placeholder="Type message..."></textarea>
-            <button class="btn btn-sm w-100" style="background:${cfg.color};color:#fff;" onclick="Chats.sendSocial('${platform}')"><i class="fas fa-paper-plane me-1"></i> Send</button>
-            <div id="socialResult" class="mt-2"></div>
-          </div>
-        </div>
-        <div class="col-md-8">
-          <div class="card-widget">
-            <h6>${cfg.name} Messages</h6>
-            <div style="max-height:500px;overflow-y:auto;">
-              ${messages.length === 0 ? '<p class="text-muted text-center py-4">No messages yet</p>' : messages.map(m => `
-                <div class="chat-msg ${m.type||'incoming'}">
-                  <div class="chat-msg-avatar">${(m.from||'?')[0].toUpperCase()}</div>
-                  <div class="chat-msg-body">
-                    <div class="d-flex justify-content-between">
-                      <span class="chat-msg-name">${m.from||'User'}</span>
-                      <span class="chat-badge ${m.type||'incoming'}">${m.type}</span>
-                    </div>
-                    <div class="chat-msg-text">${m.body||'(no text)'}</div>
-                    <div class="chat-msg-time">${m.createdAt?.toDate?.().toLocaleString()||''}</div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
+      <div class="text-center" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 200px);">
+        <i class="fab ${cfg.icon} fa-4x mb-3" style="color:${cfg.color};"></i>
+        <h5>${cfg.name}</h5>
+        <p class="text-muted small mb-2">Manage ${cfg.name} via Meta Business Inbox</p>
+        <p class="text-muted small mb-4">Free auto-replies available via Meta Automations</p>
+        <button class="meta-open-btn" style="background:${cfg.color};" onclick="Chats.openPopup('${platform}')">
+          <i class="fas fa-external-link-alt me-2"></i> Open ${cfg.name}
+        </button>
+        <button class="btn btn-outline-info btn-sm mt-3" onclick="window.open('https://business.facebook.com/latest/inbox/automated_responses','_blank')">
+          <i class="fas fa-magic me-1"></i> Setup Meta Auto-Replies (Free)
+        </button>
+        <div class="mt-4 p-3 rounded" style="background:#f0fdf4;max-width:400px;">
+          <span class="badge bg-warning mb-2">🔜 Coming Soon</span>
+          <p class="small text-muted mb-0">Real-time AI chat for ${cfg.name} is coming! Currently you can manage messages via Meta Inbox with free automations.</p>
         </div>
       </div>
     `;
+  },
+
+  // ==================== COMING SOON (LinkedIn + YouTube) ====================
+  renderComingSoon(platform) {
+    const config = {
+      linkedin: { name: 'LinkedIn Messages', icon: 'fa-linkedin', color: '#0A66C2', url: 'https://www.linkedin.com/messaging' },
+      youtube: { name: 'YouTube Comments', icon: 'fa-youtube', color: '#FF0000', url: 'https://studio.youtube.com/comments' },
+    };
+
+    const cfg = config[platform];
+
+    return `
+      <div class="text-center" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 200px);">
+        <i class="fab ${cfg.icon} fa-4x mb-3" style="opacity:0.3;"></i>
+        <h5>${cfg.name}</h5>
+        <p class="text-muted small mb-4">Real-time AI chat coming soon for ${cfg.name}.</p>
+        <button class="btn btn-outline-primary btn-sm mb-2" onclick="Chats.openPopup('${platform}')">
+          <i class="fas fa-external-link-alt me-1"></i> Open ${cfg.name} Website
+        </button>
+        <div class="mt-4 p-3 rounded" style="background:#fef3c7;max-width:400px;">
+          <span class="badge bg-warning mb-2">🔜 Coming Soon</span>
+          <p class="small text-muted mb-0">We're working on bringing AI-powered live chat for ${cfg.name}. Stay tuned!</p>
+        </div>
+      </div>
+    `;
+  },
+
+  // ==================== POPUP WINDOW ====================
+  openPopup(platform) {
+    const config = {
+      facebook: { url: 'https://business.facebook.com/latest/inbox', name: 'Facebook Inbox' },
+      instagram: { url: 'https://business.facebook.com/latest/inbox/instagram_direct', name: 'Instagram Direct' },
+      linkedin: { url: 'https://www.linkedin.com/messaging', name: 'LinkedIn Messages' },
+      youtube: { url: 'https://studio.youtube.com/comments', name: 'YouTube Comments' },
+    };
+
+    const cfg = config[platform];
+    const width = 430;
+    const height = 850;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    window.open(cfg.url, 'socialPopup_' + platform, 
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,status=no,location=yes`
+    );
   },
 
   // ==================== SEND MESSAGES ====================
@@ -206,31 +240,18 @@ const Chats = {
         headers: { 'Authorization': `Bearer ${cfg.accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: msg } })
       });
-      const d = await res.json();
       if (res.ok) {
         await db.collection('messages').add({ to: phone, from: cfg.phoneNumberId, body: msg, type: 'outgoing', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
         document.getElementById('chatResult').innerHTML = '<span class="text-success">✅ Sent!</span>';
         this.render();
       } else {
+        const d = await res.json();
         document.getElementById('chatResult').innerHTML = `<span class="text-danger">❌ ${d.error?.message||'Failed'}</span>`;
       }
     } catch(e) { document.getElementById('chatResult').innerHTML = `<span class="text-danger">❌ ${e.message}</span>`; }
   },
 
-  async sendSocial(platform) {
-    const to = document.getElementById('socialTo')?.value?.trim();
-    const msg = document.getElementById('socialMessage')?.value?.trim();
-    if (!msg) return alert('Type a message!');
-
-    await db.collection('socialMessages').add({
-      platform, from: 'You', to: to || 'User', body: msg, type: 'outgoing',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    document.getElementById('socialResult').innerHTML = '<span class="text-success">✅ Sent!</span>';
-    setTimeout(() => this.render(), 500);
-  },
-
-  // ==================== AI AUTO-REPLY TEST ====================
+  // ==================== AI TEST ====================
   async testAutoReply() {
     const msg = prompt('Enter test incoming message:');
     if (!msg) return;
@@ -250,11 +271,7 @@ const Chats = {
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${ai.apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: ai.model || 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: msg }],
-            max_tokens: 150
-          })
+          body: JSON.stringify({ model: ai.model || 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: msg }], max_tokens: 150 })
         });
         const d = await r.json();
         reply = d.choices?.[0]?.message?.content || d.error?.message || 'No response';
@@ -270,9 +287,8 @@ const Chats = {
     }
   },
 
-  // ==================== REALTIME LISTENER ====================
+  // ==================== REALTIME ====================
   setupRealtime(platform) {
-    // Cleanup old listeners
     Object.values(this.realtimeListeners).forEach(fn => fn());
     this.realtimeListeners = {};
 
@@ -306,37 +322,5 @@ const Chats = {
       const text = r.querySelector('.message-body')?.textContent?.toLowerCase() || '';
       r.style.display = text.includes(s) ? '' : 'none';
     });
-  },
-
-  async refreshFromMeta() {
-    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
-    if (!cfg?.accessToken) return alert('Not configured!');
-    let added = 0;
-    try {
-      const cr = await fetch('https://graph.facebook.com/v22.0/342856675576986/conversations?limit=10', { headers: { 'Authorization': `Bearer ${cfg.accessToken}` } });
-      const cd = await cr.json();
-      if (cd.data) {
-        for (const c of cd.data) {
-          const mr = await fetch(`https://graph.facebook.com/v22.0/${c.id}/messages?limit=20`, { headers: { 'Authorization': `Bearer ${cfg.accessToken}` } });
-          const md = await mr.json();
-          if (md.data) {
-            for (const m of md.data) {
-              const ex = await db.collection('messages').where('waMessageId', '==', m.id).get();
-              if (ex.empty) {
-                await db.collection('messages').add({
-                  from: m.from, to: m.to, body: m.text?.body || '(media)',
-                  type: m.from === cfg.phoneNumberId ? 'outgoing' : 'incoming',
-                  waMessageId: m.id,
-                  createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                added++;
-              }
-            }
-          }
-        }
-      }
-      alert(`✅ ${added} new messages synced!`);
-      this.render();
-    } catch(e) { alert('Error: ' + e.message); }
   }
 };
