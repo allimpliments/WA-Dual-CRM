@@ -88,30 +88,30 @@ function buildSidebar(role) {
 
 const headerMain = [
   { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
+  { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
+  { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
   { name: 'Chats', icon: 'fa-comments', section: 'chats' },
   { name: 'Contacts', icon: 'fa-users', section: 'contacts' },
   { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
   { name: 'Kanban', icon: 'fa-tasks', section: 'kanban' },
-  { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
-  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments' },
   { name: 'Flows', icon: 'fa-sitemap', section: 'flows' },
+  { name: 'Social', icon: 'fa-globe', section: 'social' },
   { name: 'Marketing', icon: 'fa-ad', section: 'marketing' },
   { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce' },
-  { name: 'Social', icon: 'fa-globe', section: 'social' },
-  { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
-  { name: 'Templates', icon: 'fa-layer-group', section: 'templates' },
+  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments' },
+  { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge' },
 ];
 
 const headerMore = [
   { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot' },
-  { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+  { name: 'Forms', icon: 'fa-wpforms', section: 'forms' },
   { name: 'Integrations', icon: 'fa-plug', section: 'integrations' },
   { name: 'Agents', icon: 'fa-user-tie', section: 'agents' },
   { name: 'Clients', icon: 'fa-building', section: 'clients' },
-  { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets' },
-  { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge' },
   { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics' },
   { name: 'Reports', icon: 'fa-file-alt', section: 'reports' },
+  { name: 'Setup', icon: 'fa-cog', section: 'setup' },
+  { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets' },
 ];
 
 const sectionSubMenus = {
