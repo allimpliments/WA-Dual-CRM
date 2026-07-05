@@ -47,11 +47,13 @@ const navSections = [
     { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics', roles: ['admin'] },
     { name: 'Reports', icon: 'fa-file-alt', section: 'reports', roles: ['admin'] }
   ]},
+  { title: 'Services', items: [
+    { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments', roles: ['admin','team'] }
+  ]},
   { title: 'Account', items: [
     { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client'] },
     { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin','team','client'] }
   ]}
-  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments', roles: ['admin','team'] }
 ];
 
 function buildSidebar(role) {
@@ -79,7 +81,6 @@ function buildSidebar(role) {
   });
 }
 
-// ========== HEADER ITEMS ==========
 const headerMain = [
   { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard' },
   { name: 'Chats', icon: 'fa-comments', section: 'chats' },
@@ -108,7 +109,6 @@ const headerMore = [
   { name: 'Plan', icon: 'fa-wallet', section: 'plan' },
 ];
 
-// ========== ALL SUB MENUS (CUSTOMIZED PER SECTION) ==========
 const sectionSubMenus = {
   'social': [
     { name: 'Facebook', icon: 'fa-facebook', color: '#1877f2', action: `Social.switchTab('facebook')` },
@@ -183,7 +183,6 @@ const sectionSubMenus = {
   ],
 };
 
-// ========== GLOBAL HEADER RENDER ==========
 function renderGlobalHeader(currentSection) {
   document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
@@ -235,7 +234,6 @@ function renderGlobalHeader(currentSection) {
 
   document.addEventListener('click', function(){ document.getElementById('moreDd')?.classList.remove('show'); });
 
-  // Render bottom sub-menu if exists
   const subItems = sectionSubMenus[currentSection];
   if (subItems && subItems.length > 0) {
     const sub = `<div class="global-bottom-menu">${subItems.map(s => `<div class="bottom-tab" onclick="${s.action}"><i class="fab ${s.icon}" style="color:${s.color};font-size:15px;"></i> ${s.name}</div>`).join('')}</div>`;
@@ -243,7 +241,6 @@ function renderGlobalHeader(currentSection) {
   }
 }
 
-// ========== LOAD SECTION ==========
 function loadSection(section) {
   contentArea.innerHTML = '';
   document.body.classList.add('sidebar-hidden');
@@ -271,7 +268,7 @@ function loadSection(section) {
     case 'agents': Agents.render(); break;
     case 'clients': Clients.render(); break;
     case 'kanban': Kanban.render(); break;
-    case 'knowledge': Knowledge.render(); break;   // ✅ ADD THIS
+    case 'knowledge': Knowledge.render(); break;
     case 'social': Social.render(); break;
     case 'analytics': Analytics.render(); break;
     case 'reports': Reports.render(); break;
