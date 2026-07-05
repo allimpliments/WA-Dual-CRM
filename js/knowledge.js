@@ -26,17 +26,19 @@ const Knowledge = {
   renderPlatformPage() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading guides...</p>';
     
+    // Direct script tag se load
     const script = document.createElement('script');
     script.src = 'js/knowledge/platform.js';
-    script.onload = () => {
-      if (typeof window._renderPlatformList === 'function') {
-        window._renderPlatformList(Knowledge, contentArea, db, firebase);
-      }
+    document.body.appendChild(script);
+    
+    // Wait for script to load then execute
+    script.onload = function() {
+      // platform.js already executed via IIFE
     };
-    script.onerror = () => {
-      contentArea.innerHTML = '<div class="card-widget text-center py-5"><h5>Error Loading Guides</h5></div>';
+    
+    script.onerror = function() {
+      contentArea.innerHTML = '<div class="card-widget text-center py-5"><h5>Error</h5></div>';
     };
-    document.head.appendChild(script);
   },
   
   // ==================== HOME ====================
