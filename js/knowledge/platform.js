@@ -1,4 +1,4 @@
-// js/knowledge/platform.js — Platform Mastery with All Module Guides
+// js/knowledge/platform.js — Platform Mastery...
 (function(Knowledge, contentArea, db, firebase) {
   
   const guides = [
