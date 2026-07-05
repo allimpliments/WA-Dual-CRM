@@ -51,6 +51,7 @@ const navSections = [
     { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client'] },
     { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin','team','client'] }
   ]}
+  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments', roles: ['admin','team'] }
 ];
 
 function buildSidebar(role) {
@@ -277,6 +278,7 @@ function loadSection(section) {
     case 'marketing': Marketing.render(); break;
     case 'plan': Plan.render(); break;
     case 'tickets': Tickets.render(); break;
+    case 'appointments': Appointments.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
