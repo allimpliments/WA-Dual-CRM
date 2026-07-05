@@ -1,4 +1,4 @@
-// auth.js – fixed: public form + login, with LeadCapture integration
+// auth.js — Multi-User Auth with Home Page Redirect
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -74,16 +74,12 @@ if (formId) {
 
       document.getElementById('publicFormForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-
-        // ====== VALIDATION ======
         const fields = form.fields || [];
         let isValid = true;
         document.querySelectorAll('#publicFormForm .error').forEach(el => el.classList.remove('error'));
-
         fields.forEach((f, i) => {
           if (!f.required) return;
           let value = '';
-
           if (f.type === 'radio') {
             const selected = document.querySelector(`input[name="field_${i}"]:checked`);
             value = selected ? selected.value : '';
@@ -94,7 +90,6 @@ if (formId) {
             const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
             if (inputs[i]) value = inputs[i].value.trim();
           }
-
           if (!value) {
             isValid = false;
             const fieldContainer = document.querySelector(`#publicFormForm .field:nth-of-type(${i+1})`);
@@ -104,13 +99,10 @@ if (formId) {
             }
           }
         });
-
         if (!isValid) {
           document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Please fill all required fields.</span>';
           return;
         }
-
-        // ====== COLLECT DATA ======
         const formData = {};
         fields.forEach((f, i) => {
           if (f.type === 'radio') {
@@ -124,34 +116,15 @@ if (formId) {
             if (inputs[i]) formData[f.label] = inputs[i].value;
           }
         });
-
         try {
-          // 1. Save submission
-          await db.collection('formSubmissions').add({
-            formId: formId,
-            data: formData,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-          // 2. Increment submission count
-          await db.collection('forms').doc(formId).update({
-            submissionCount: firebase.firestore.FieldValue.increment(1)
-          });
-
-          // 3. Use LeadCapture for centralized lead & contact creation
+          await db.collection('formSubmissions').add({ formId: formId, data: formData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          await db.collection('forms').doc(formId).update({ submissionCount: firebase.firestore.FieldValue.increment(1) });
           await LeadCapture.fromForm(formData, formId);
-
           document.getElementById('publicFormMsg').innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
           document.getElementById('publicFormForm').reset();
-        } catch (err) {
-          console.error(err);
-          document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Error submitting form. Please try again.</span>';
-        }
+        } catch (err) { console.error(err); document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Error submitting form. Please try again.</span>'; }
       });
-    } catch (e) {
-      console.error(e);
-      document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Error loading form.</p>';
-    }
+    } catch (e) { console.error(e); document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Error loading form.</p>'; }
   })();
 } else {
   // ========== NORMAL AUTH FLOW ==========
@@ -169,7 +142,6 @@ if (formId) {
   });
 
   document.getElementById('registerBtn').addEventListener('click', async () => {
-    console.log('Register clicked');
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
@@ -177,27 +149,21 @@ if (formId) {
     try {
       const userCred = await auth.createUserWithEmailAndPassword(email, password);
       await db.collection('users').doc(userCred.user.uid).set({
-        name, email, role: 'client',
+        name, email, role: 'client', plan: 'free',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      alert('Registration successful! You can now login.');
-      registerFormDiv.style.display = 'none';
-      loginFormDiv.style.display = 'block';
-    } catch (err) {
-      alert(err.message);
-    }
+      alert('Registration successful! Redirecting to CRM...');
+      window.location.href = '/index.html';
+    } catch (err) { alert(err.message); }
   });
 
   document.getElementById('loginBtn').addEventListener('click', async () => {
-    console.log('Login clicked');
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     if (!email || !password) return alert('Please enter email and password.');
     try {
       await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   });
 
   auth.onAuthStateChanged(async (user) => {
@@ -211,24 +177,30 @@ if (formId) {
         } else {
           userData = { name: user.email, email: user.email, role: 'admin' };
           await db.collection('users').doc(user.uid).set({
-            name: user.email,
-            email: user.email,
-            role: 'admin',
+            name: user.email, email: user.email, role: 'admin',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
       } catch (err) {
-        console.error('Error fetching user data:', err);
         userData = { name: user.email, email: user.email, role: 'admin' };
       }
       window.currentUser = { uid: user.uid, ...userData };
-      window.location.href = '/crm.html';
-      const roleBadge = document.getElementById('userRoleBadge');
-      if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
+      
+      // ✅ CRM ke andar hai to show app, nahi to redirect
+      if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
+        loginScreen.style.display = 'none';
+        appMain.style.display = 'block';
+        initApp(userData.role);
+        const roleBadge = document.getElementById('userRoleBadge');
+        if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
+      }
     } else {
       window.currentUser = null;
-      loginScreen.style.display = 'flex';
-      appMain.style.display = 'none';
+      // Landing page pe hai to login screen mat dikhao
+      if (document.getElementById('loginScreen')) {
+        loginScreen.style.display = 'flex';
+        appMain.style.display = 'none';
+      }
     }
   });
 }
