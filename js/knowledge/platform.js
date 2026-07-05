@@ -20,4 +20,4 @@ window.__renderPlatformGuides = function(Knowledge, contentArea, db, firebase) {
 
   h += '</div><div id="gd" style="display:none;background:#fff;border-radius:14px;padding:24px;margin-top:16px;border:1px solid #e5e7eb;"></div>';
   contentArea.innerHTML = h;
-};
+}; 
