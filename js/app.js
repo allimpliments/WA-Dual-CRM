@@ -112,7 +112,6 @@ const headerMore = [
   { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge' },
   { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics' },
   { name: 'Reports', icon: 'fa-file-alt', section: 'reports' },
-  { name: 'Profile', icon: 'fa-user-circle', section: 'profile' },
 ];
 
 const sectionSubMenus = {
@@ -172,35 +171,53 @@ function renderGlobalHeader(currentSection) {
     `<a href="#" onclick="loadSection('${s.section}')" class="di ${currentSection===s.section?'active':''}"><i class="fas ${s.icon} me-2"></i>${s.name}</a>`
   ).join('');
 
+  const userName = window.currentUser?.name || 'Profile';
+  const userInitial = (userName||'A')[0].toUpperCase();
+
   const h = `
     <style>
-      .global-top-header{position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.1);padding:0 16px;height:56px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
-      .hb{font-weight:800;font-size:16px;color:#fff;margin-right:16px;cursor:pointer;white-space:nowrap;text-decoration:none;display:flex;align-items:center;gap:8px;}
-      .hb i{font-size:20px;color:#25D366;}
-      .hn{display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none;}
+      .global-top-header{position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.1);padding:0 12px;height:56px;display:flex;align-items:center;gap:4px;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+      .hb{font-weight:800;font-size:15px;color:#fff;margin-right:10px;cursor:pointer;white-space:nowrap;text-decoration:none;display:flex;align-items:center;gap:6px;}
+      .hb i{font-size:18px;color:#25D366;}
+      .hn{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;}
       .hn::-webkit-scrollbar{display:none;}
-      .hl{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;font-size:14px;font-weight:500;color:#cbd5e1;text-decoration:none;white-space:nowrap;transition:all 0.2s;position:relative;}
+      .hl{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;font-size:13px;font-weight:500;color:#cbd5e1;text-decoration:none;white-space:nowrap;transition:all 0.2s;}
       .hl:hover{background:rgba(255,255,255,0.1);color:#fff;}
-      .hl.active{background:rgba(24,119,242,0.25);color:#60a5fa;font-weight:600;box-shadow:0 0 20px rgba(24,119,242,0.4),inset 0 0 8px rgba(24,119,242,0.2);border:1px solid rgba(24,119,242,0.4);}
-      .hl i{font-size:15px;}
-      .hmb{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:14px;font-weight:500;color:#cbd5e1;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);white-space:nowrap;transition:0.2s;}
-      .hmb:hover{background:rgba(255,255,255,0.1);border-color:rgba(24,119,242,0.5);color:#fff;}
-      .md{position:absolute;top:54px;right:8px;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,0.5);min-width:240px;max-height:60vh;overflow-y:auto;z-index:10000;display:none;padding:8px;}
+      .hl.active{background:rgba(24,119,242,0.25);color:#60a5fa;font-weight:600;box-shadow:0 0 16px rgba(24,119,242,0.3),inset 0 0 6px rgba(24,119,242,0.15);border:1px solid rgba(24,119,242,0.3);}
+      .hl i{font-size:13px;}
+      .header-right{display:flex;align-items:center;gap:6px;margin-left:6px;}
+      .header-profile{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;cursor:pointer;color:#cbd5e1;font-size:12px;font-weight:500;transition:0.2s;text-decoration:none;border:1px solid rgba(255,255,255,0.15);white-space:nowrap;}
+      .header-profile:hover{background:rgba(255,255,255,0.08);color:#fff;}
+      .header-profile .av{width:26px;height:26px;border-radius:50%;background:#f59e0b;color:#000;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;}
+      .header-logout{padding:5px 10px;border-radius:20px;cursor:pointer;color:#f87171;font-size:12px;font-weight:500;transition:0.2s;border:1px solid rgba(248,113,113,0.3);background:transparent;white-space:nowrap;}
+      .header-logout:hover{background:rgba(248,113,113,0.15);}
+      .hmb{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:500;color:#cbd5e1;cursor:pointer;border:1px solid rgba(255,255,255,0.15);background:transparent;white-space:nowrap;transition:0.2s;}
+      .hmb:hover{background:rgba(255,255,255,0.08);color:#fff;}
+      .md{position:absolute;top:46px;right:0;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,0.5);min-width:220px;max-height:60vh;overflow-y:auto;z-index:10000;display:none;padding:6px;}
       .md.show{display:block;}
-      .di{display:flex;align-items:center;padding:10px 14px;border-radius:10px;font-size:14px;color:#cbd5e1;text-decoration:none;transition:0.15s;}
+      .di{display:flex;align-items:center;padding:9px 12px;border-radius:10px;font-size:13px;color:#cbd5e1;text-decoration:none;transition:0.15s;}
       .di:hover{background:rgba(255,255,255,0.08);color:#fff;}
       .di.active{background:rgba(24,119,242,0.2);color:#60a5fa;font-weight:600;}
       .global-bottom-menu{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-radius:30px;box-shadow:0 8px 32px rgba(0,0,0,0.4);padding:10px 18px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;border:1px solid rgba(255,255,255,0.1);}
       .bottom-tab{padding:8px 16px;border-radius:22px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;background:rgba(255,255,255,0.05);color:#cbd5e1;transition:all 0.2s;display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,0.1);}
       .bottom-tab:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(24,119,242,0.4);}
-      @media(max-width:768px){.global-top-header{padding:0 8px;height:48px;}.hb{font-size:13px;margin-right:8px;}.hl{padding:6px 10px;font-size:13px;}.hlt{display:none;}.hl i{font-size:18px;}.hmb{padding:6px 10px;font-size:13px;}.global-bottom-menu{bottom:8px;padding:8px 12px;gap:4px;}.bottom-tab{padding:6px 12px;font-size:11px;}}
+      @media(max-width:768px){.global-top-header{padding:0 6px;height:46px;}.hb{font-size:12px;margin-right:4px;}.hb .hlt{display:none;}.hl{padding:5px 7px;font-size:11px;}.hlt{display:none;}.hl i{font-size:15px;}.header-profile{padding:4px 7px;}.header-logout{padding:4px 7px;font-size:10px;}.hmb{padding:4px 7px;font-size:11px;}}
     </style>
     <div class="global-top-header">
-      <a class="hb" onclick="loadSection('dashboard')"><i class="fab fa-whatsapp"></i> 11 Avatar CRM</a>
+      <a class="hb" onclick="loadSection('dashboard')"><i class="fab fa-whatsapp"></i> <span class="hlt">11 Avatar CRM</span></a>
       <div class="hn">${mainLinks}</div>
-      <div style="position:relative;">
-        <button class="hmb" onclick="document.getElementById('moreDd').classList.toggle('show');event.stopPropagation();"><i class="fas fa-th-large"></i><span class="hlt">More</span> <i class="fas fa-chevron-down" style="font-size:10px;"></i></button>
-        <div class="md" id="moreDd" onclick="event.stopPropagation()">${moreLinks}</div>
+      <div class="header-right">
+        <div style="position:relative;">
+          <button class="hmb" onclick="document.getElementById('moreDd').classList.toggle('show');event.stopPropagation();"><i class="fas fa-th-large"></i> <span class="hlt">More</span></button>
+          <div class="md" id="moreDd" onclick="event.stopPropagation()">${moreLinks}</div>
+        </div>
+        <a class="header-profile" onclick="loadSection('profile')">
+          <div class="av">${userInitial}</div>
+          <span class="hlt">${userName.split(' ')[0]}</span>
+        </a>
+        <button class="header-logout" onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';">
+          <i class="fas fa-sign-out-alt"></i> <span class="hlt">Logout</span>
+        </button>
       </div>
     </div>
   `;
