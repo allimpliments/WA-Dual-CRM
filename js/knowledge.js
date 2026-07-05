@@ -92,9 +92,6 @@ const Knowledge = {
         contentArea.innerHTML = '<div class="card-widget text-center py-5"><h5>Error</h5><p>Guides function not found</p></div>';
       }
     };
-    script.onerror = function() {
-      contentArea.innerHTML = '<div class="card-widget text-center py-5"><h5>Error</h5><p>platform.js file not found</p></div>';
-    };
     document.body.appendChild(script);
   },
 
