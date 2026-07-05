@@ -88,6 +88,7 @@ const headerMain = [
   { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads' },
   { name: 'Kanban', icon: 'fa-tasks', section: 'kanban' },
   { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns' },
+  { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments' },  // ✅ ADD
   { name: 'Flows', icon: 'fa-sitemap', section: 'flows' },
   { name: 'Marketing', icon: 'fa-ad', section: 'marketing' },
   { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce' },
