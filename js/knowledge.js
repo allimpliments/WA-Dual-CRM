@@ -26,17 +26,19 @@ const Knowledge = {
   renderPlatformPage() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading guides...</p>';
     
-    fetch('js/knowledge/platform.js')
-      .then(r => r.text())
-      .then(code => {
-        const fn = new Function('Knowledge', 'contentArea', 'db', 'firebase', code);
-        fn(Knowledge, contentArea, db, firebase);
-      })
-      .catch(e => {
-        contentArea.innerHTML = `<div class="card-widget text-center py-5"><h5>Error Loading Guides</h5><p class="text-muted">${e.message}</p></div>`;
-      });
+    const script = document.createElement('script');
+    script.src = 'js/knowledge/platform.js';
+    script.onload = () => {
+      if (typeof window._renderPlatformList === 'function') {
+        window._renderPlatformList(Knowledge, contentArea, db, firebase);
+      }
+    };
+    script.onerror = () => {
+      contentArea.innerHTML = '<div class="card-widget text-center py-5"><h5>Error Loading Guides</h5></div>';
+    };
+    document.head.appendChild(script);
   },
-
+  
   // ==================== HOME ====================
   renderHome() {
     contentArea.innerHTML = `
