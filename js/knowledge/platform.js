@@ -1,6 +1,6 @@
 // js/knowledge/platform.js — Platform Mastery with All Module Guides
 (function(Knowledge, contentArea, db, firebase) {
-  
+
   const guides = [
     {
       title: '11 Avatar CRM — Complete System Guide',
