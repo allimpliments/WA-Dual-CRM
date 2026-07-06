@@ -60,12 +60,15 @@ const navSections = [
 function buildSidebar(role) {
   let html = '<div class="brand"><i class="fab fa-whatsapp text-success fs-3"></i> Panel</div>';
   navSections.forEach(group => {
-    html += `<div class="section-title">${group.title}</div>`;
+    let groupHasVisible = false;
+    let groupHtml = `<div class="section-title">${group.title}</div>`;
     group.items.forEach(item => {
-      if (item.roles.includes(role)) {
-        html += `<div class="nav-item"><a class="nav-link" data-section="${item.section||''}" data-action="${item.action||''}"><i class="fas ${item.icon}"></i> ${item.name}</a></div>`;
-      }
+      if (item.section && !Permissions.canAccess(item.section, 'read')) return;
+      if (!item.roles.includes(role)) return;
+      groupHasVisible = true;
+      groupHtml += `<div class="nav-item"><a class="nav-link" data-section="${item.section||''}" data-action="${item.action||''}"><i class="fas ${item.icon}"></i> ${item.name}</a></div>`;
     });
+    if (groupHasVisible) html += groupHtml;
   });
   sidebar.innerHTML = html;
   document.querySelectorAll('.sidebar .nav-link').forEach(link => {
@@ -160,14 +163,14 @@ const sectionSubMenus = {
 function renderGlobalHeader(currentSection) {
   document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-  const isMobile = window.innerWidth < 768;
-  const visibleMain = isMobile ? headerMain.slice(0, 6) : headerMain;
-
+  // Filter header links based on RBAC permissions
+  const visibleMain = headerMain.filter(s => Permissions.canAccess(s.section, 'read'));
   const mainLinks = visibleMain.map(s => 
     `<a href="#" onclick="loadSection('${s.section}')" class="hl ${currentSection===s.section?'active':''}"><i class="fas ${s.icon}"></i><span class="hlt">${s.name}</span></a>`
   ).join('');
 
-  const moreLinks = headerMore.map(s => 
+  const visibleMore = headerMore.filter(s => Permissions.canAccess(s.section, 'read'));
+  const moreLinks = visibleMore.map(s => 
     `<a href="#" onclick="loadSection('${s.section}')" class="di ${currentSection===s.section?'active':''}"><i class="fas ${s.icon} me-2"></i>${s.name}</a>`
   ).join('');
 
