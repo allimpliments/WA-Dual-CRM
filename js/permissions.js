@@ -49,4 +49,4 @@ window.Permissions = {
     if (perms.isPlatformRole && perms.level <= 1) return true;
     return perms.modules?.[module]?.[action] === true;
   }
-};
+}; 
