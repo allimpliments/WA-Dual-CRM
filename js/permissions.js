@@ -200,9 +200,24 @@ window.Permissions = {
     const user = window.currentUser;
     if (!user) return {};
 
-    // 1. Start with default role permissions
-    const role = DEFAULT_ROLES[user.role];
+    // 🔁 Old -> New role mapping (for backward compatibility)
+    const roleMapping = {
+      'admin': 'platform_owner',
+      'team': 'client_admin',
+      'client': 'executive'
+    };
+
+    let roleId = user.role;
+    if (!DEFAULT_ROLES[roleId] && roleMapping[roleId]) {
+      roleId = roleMapping[roleId];
+    }
+
+    // Fallback to platform_owner if nothing matches (safety)
+    const role = DEFAULT_ROLES[roleId] || DEFAULT_ROLES['platform_owner'];
     if (!role) return {};
+
+    // … baaki code (client plan intersection etc.) same rahega …
+    }
 
     // 2. If user belongs to a client, intersect with plan modules
     if (!role.isPlatformRole && user.clientId) {
