@@ -280,6 +280,5 @@ function loadSection(section) {
   // 🌐 Google Translate को नए कंटेंट के लिए रीफ़्रेश करो
   setTimeout(refreshGoogleTranslate, 600);
 }
-
 function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
 menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); }); 
