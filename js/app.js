@@ -277,6 +277,8 @@ function loadSection(section) {
     case 'admin': Admin.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
+  // 🌐 Google Translate को नए कंटेंट के लिए रीफ़्रेश करो
+  setTimeout(refreshGoogleTranslate, 600);
 }
 
 function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
