@@ -87,4 +87,4 @@
   <div style="background:#fef3c7;border-radius:8px;padding:14px;margin-top:20px;text-align:center;color:#92400e;font-size:13px;">
     🖼️ <strong>Coming Soon:</strong> Step‑by‑step screenshots & video tutorials
   </div>
-</div>
+</div> 
