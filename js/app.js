@@ -229,6 +229,17 @@ function renderGlobalHeader(currentSection) {
   `;
   
   document.body.insertAdjacentHTML('afterbegin', h);
+  // Google Translate को header के अंदर initialize करें
+  setTimeout(function() {
+    if (window.google && window.google.translate) {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'hi,bn,te,mr,ta,ur,gu,kn,ml,or,pa,as,mai,en',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  }, 600);
   document.addEventListener('click', function(){ document.getElementById('moreDd')?.classList.remove('show'); });
 
   const subItems = sectionSubMenus[currentSection];
@@ -236,6 +247,20 @@ function renderGlobalHeader(currentSection) {
     const sub = `<div class="global-bottom-menu">${subItems.map(s => `<div class="bottom-tab" onclick="${s.action}"><i class="fab ${s.icon}" style="color:${s.color};font-size:15px;"></i> ${s.name}</div>`).join('')}</div>`;
     document.body.insertAdjacentHTML('beforeend', sub);
   }
+}
+
+// 🌐 Google Translate को नए कंटेंट के लिए रीफ़्रेश करने वाला फ़ंक्शन
+function refreshGoogleTranslate() {
+  const combo = document.querySelector('.goog-te-combo');
+  if (!combo) return;
+  const lang = combo.value;
+  if (lang === 'en') return; // अंग्रेज़ी से कोई ट्रांसलेशन नहीं
+  combo.value = 'en';
+  combo.dispatchEvent(new Event('change'));
+  setTimeout(() => {
+    combo.value = lang;
+    combo.dispatchEvent(new Event('change'));
+  }, 300);
 }
 
 function loadSection(section) {
@@ -277,8 +302,9 @@ function loadSection(section) {
     case 'admin': Admin.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
-  // 🌐 Google Translate को नए कंटेंट के लिए रीफ़्रेश करो
+  // 🌐 हर सेक्शन लोड होने पर ट्रांसलेशन रीफ़्रेश करो
   setTimeout(refreshGoogleTranslate, 600);
 }
+
 function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
-menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); }); 
+menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); });
