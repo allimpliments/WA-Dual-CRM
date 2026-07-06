@@ -1,4 +1,4 @@
-  // auth.js — Multi-User Auth with Home Page Redirect
+// auth.js — Multi-User Auth with Home Page Redirect & Permissions
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -177,40 +177,40 @@ if (formId) {
         } else {
           userData = { name: user.email, email: user.email, role: 'admin' };
           await db.collection('users').doc(user.uid).set({
-            name: user.email, email: user.email, role: 'admin',
+            name: user.email,
+            email: user.email,
+            role: 'admin',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
       } catch (err) {
+        console.error('Error fetching user data:', err);
         userData = { name: user.email, email: user.email, role: 'admin' };
       }
+      
       window.currentUser = { uid: user.uid, ...userData };
-      // Add role and clientId
-      window.currentUser.role = userData.role || 'client';
+      window.currentUser.role = userData.role || 'admin';
       window.currentUser.clientId = userData.clientId || null;
 
-      // Load permissions
-      Permissions.getEffectivePermissions().then(perms => {
-      window.__currentPermissions = perms;
-      // Re-initialize the app so sidebar respects new permissions
-      if (window.initApp) initApp(userData.role);
-      });
-      
-      // ✅ CRM ke andar hai to show app, nahi to redirect
-      if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
-        loginScreen.style.display = 'none';
-        appMain.style.display = 'block';
-        initApp(userData.role);
-        const roleBadge = document.getElementById('userRoleBadge');
-        if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
+      // 🔐 Load permissions BEFORE initApp
+      try {
+        const perms = await Permissions.getEffectivePermissions();
+        window.__currentPermissions = perms;
+      } catch (e) {
+        console.error('Permissions load error:', e);
       }
+
+      // Show the app
+      loginScreen.style.display = 'none';
+      appMain.style.display = 'block';
+      initApp(userData.role);
+      const roleBadge = document.getElementById('userRoleBadge');
+      if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
     } else {
       window.currentUser = null;
-      // Landing page pe hai to login screen mat dikhao
-      if (document.getElementById('loginScreen')) {
-        loginScreen.style.display = 'flex';
-        appMain.style.display = 'none';
-      }
+      window.__currentPermissions = null;
+      loginScreen.style.display = 'flex';
+      appMain.style.display = 'none';
     }
   });
 }
