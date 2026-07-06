@@ -10,14 +10,33 @@ window.__renderPlatformGuides = function(Knowledge, contentArea, db, firebase) {
     {t:'Social',d:'Multi-platform posting.',f:'js/knowledge/guides/social.js',icon:'fa-globe',c:'#1877f2'}
   ];
 
-  var h = '<style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}</style>';
+  var h = '<style>.kh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer;transition:0.25s;}.kh-card:hover{border-color:#3b82f6;box-shadow:0 8px 20px rgba(0,0,0,0.05);}.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;}.modal-box{background:#fff;border-radius:16px;width:90%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;}.modal-close{position:sticky;top:0;float:right;background:none;border:none;font-size:24px;cursor:pointer;padding:8px;color:#6b7280;z-index:10;}.modal-close:hover{color:#1e293b;}</style>';
   h += '<button class="btn btn-outline-primary btn-sm mb-3" onclick="Knowledge.currentSection=\'home\';Knowledge.render();">← Back to Hub</button>';
-  h += '<h5 style="font-weight:700;">Platform Mastery</h5><p class="text-muted small mb-3">Complete user guides for all CRM features. Click any card to view.</p><div class="row g-3">';
+  h += '<h5 style="font-weight:700;">Platform Mastery</h5><p class="text-muted small mb-3">Click any guide to open an in‑depth tutorial.</p><div class="row g-3">';
 
   guides.forEach(function(g) {
-    h += '<div class="col-md-6"><div class="kh-card" onclick="var d=document.getElementById(\'gd\');d.style.display=\'block\';d.innerHTML=\'Loading...\';d.scrollIntoView({behavior:\'smooth\'});fetch(\''+g.f+'\').then(function(r){return r.text()}).then(function(c){d.innerHTML=c;});" style="display:flex;gap:12px;cursor:pointer;"><div style="width:40px;height:40px;border-radius:8px;background:'+g.c+'15;color:'+g.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas '+g.icon+'"></i></div><div><h6 style="font-weight:600;">'+g.t+'</h6><p style="font-size:11px;color:#6b7280;">'+g.d+'</p></div></div></div>';
+    h += '<div class="col-md-6 col-lg-4"><div class="kh-card" onclick="openGuideModal(\''+g.f+'\')" style="display:flex;gap:12px;cursor:pointer;"><div style="width:40px;height:40px;border-radius:8px;background:'+g.c+'15;color:'+g.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas '+g.icon+'"></i></div><div><h6 style="font-weight:600;">'+g.t+'</h6><p style="font-size:11px;color:#6b7280;">'+g.d+'</p></div></div></div>';
   });
 
-  h += '</div><div id="gd" style="display:none;background:#fff;border-radius:14px;padding:24px;margin-top:16px;border:1px solid #e5e7eb;"></div>';
+  h += '</div>';
   contentArea.innerHTML = h;
-}; 
+
+  // Modal logic
+  window.openGuideModal = function(file) {
+    // Remove existing modal if any
+    var old = document.getElementById('guideModal');
+    if(old) old.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'guideModal';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = '<div class="modal-box"><button class="modal-close" onclick="document.getElementById(\'guideModal\').remove()">&times;</button><div id="modalContent" style="padding:24px;">Loading…</div></div>';
+    overlay.addEventListener('click', function(e) { if(e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    fetch(file)
+      .then(function(r){ return r.text(); })
+      .then(function(html){ document.getElementById('modalContent').innerHTML = html; })
+      .catch(function(){ document.getElementById('modalContent').innerHTML = '<p class="text-danger">Failed to load guide.</p>'; });
+  };
+};
