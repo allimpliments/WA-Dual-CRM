@@ -123,37 +123,5 @@
   <script src="js/profile.js"></script>
   <script src="js/admin.js"></script>
 
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'en',
-      includedLanguages: 'hi,bn,te,mr,ta,ur,gu,kn,ml,or,pa,as,mai,en',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-      autoDisplay: false
-    }, 'google_translate_element');
-  }
-  </script>
-  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  <div id="google_translate_element" style="position:fixed;top:60px;right:10px;z-index:99999;cursor:move;"></div>
-<script>
-// Make the widget draggable
-(function() {
-  var el = document.getElementById('google_translate_element');
-  var isDown = false, offsetX, offsetY;
-  el.addEventListener('mousedown', function(e) {
-    isDown = true;
-    offsetX = e.clientX - el.offsetLeft;
-    offsetY = e.clientY - el.offsetTop;
-    el.style.cursor = 'grabbing';
-  });
-  window.addEventListener('mousemove', function(e) {
-    if (!isDown) return;
-    el.style.left = (e.clientX - offsetX) + 'px';
-    el.style.top = (e.clientY - offsetY) + 'px';
-  });
-  window.addEventListener('mouseup', function() { isDown = false; el.style.cursor = 'move'; });
-})();
-</script>
-  
 </body>
 </html> 
