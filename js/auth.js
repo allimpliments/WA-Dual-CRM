@@ -1,4 +1,4 @@
-// auth.js — Multi-User Auth with Home Page Redirect
+  // auth.js — Multi-User Auth with Home Page Redirect
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -185,6 +185,16 @@ if (formId) {
         userData = { name: user.email, email: user.email, role: 'admin' };
       }
       window.currentUser = { uid: user.uid, ...userData };
+      // Add role and clientId
+      window.currentUser.role = userData.role || 'client';
+      window.currentUser.clientId = userData.clientId || null;
+
+      // Load permissions
+      Permissions.getEffectivePermissions().then(perms => {
+      window.__currentPermissions = perms;
+      // Re-initialize the app so sidebar respects new permissions
+      if (window.initApp) initApp(userData.role);
+      });
       
       // ✅ CRM ke andar hai to show app, nahi to redirect
       if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
