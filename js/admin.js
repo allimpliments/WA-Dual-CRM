@@ -1,7 +1,8 @@
-// js/admin.js — Advanced Admin Panel (Neodove‑style Settings)
+// js/admin.js — Complete Advanced Admin Panel (All Tabs Fully Functional)
+
 const Admin = {
   currentTab: 'dashboard',
-  currentSettingsTab: 'profile', // sub‑tabs inside Settings
+  currentSettingsTab: 'profile',
 
   async render() {
     contentArea.style.paddingTop = '60px';
@@ -21,6 +22,7 @@ const Admin = {
     if (isPlatformAdmin) {
       tabs = [
         { key: 'dashboard', label: 'Dashboard' },
+        { key: 'clients', label: 'Clients' },
         { key: 'users', label: 'Users' },
         { key: 'roles', label: 'Roles & Permissions' },
         { key: 'plans', label: 'Plans' },
@@ -62,6 +64,7 @@ const Admin = {
     `;
 
     if (this.currentTab === 'dashboard') html += await this.renderDashboard();
+    else if (this.currentTab === 'clients') html += await this.renderClients();
     else if (this.currentTab === 'users') html += await this.renderUsers();
     else if (this.currentTab === 'roles') html += await this.renderRoles();
     else if (this.currentTab === 'plans') html += await this.renderPlans();
@@ -93,6 +96,103 @@ const Admin = {
       try { users = (await db.collection('users').where('clientId','==',clientId).get()).size; } catch(e) {}
       return `<div class="admin-card"><h5>Company Overview</h5><p>Team members: <strong>${users}</strong></p></div>`;
     }
+  },
+
+  // ==================== CLIENTS ====================
+  async renderClients() {
+    if (!Permissions.canAccess('admin','manage')) return '';
+    let clients = [];
+    try {
+      const snap = await db.collection('clients').orderBy('name').get();
+      clients = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    } catch(e) {}
+
+    let rows = clients.map(c => `
+      <tr>
+        <td><strong>${c.name||'Unnamed'}</strong></td>
+        <td>${c.planId||'Free'}</td>
+        <td>${(c.modules||[]).join(', ')||'All'}</td>
+        <td><span class="badge bg-${c.status==='active'?'success':'secondary'}">${c.status||'active'}</span></td>
+        <td>
+          <button class="btn btn-sm btn-outline-info" onclick="Admin.showClientForm('${c.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-sm btn-outline-danger" onclick="Admin.deleteClient('${c.id}')"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="admin-card">
+        <div class="d-flex justify-content-between mb-3">
+          <h5>Client Companies</h5>
+          <button class="btn btn-primary btn-sm" onclick="Admin.showClientForm()">+ Add Client</button>
+        </div>
+        <table class="table table-sm">
+          <thead><tr><th>Name</th><th>Plan</th><th>Modules</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${rows||'<tr><td colspan="5" class="text-muted text-center">No clients</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  showClientForm(editId = null) {
+    const loadForm = async () => {
+      let client = { name: '', planId: 'free', modules: [] };
+      if (editId) {
+        const doc = await db.collection('clients').doc(editId).get();
+        if (doc.exists) client = doc.data();
+      }
+
+      const allModules = Object.keys(DEFAULT_ROLES.platform_owner.modules);
+      let moduleChecks = allModules.map(mod => `
+        <div class="perm-module">
+          <label class="perm-check">
+            <input type="checkbox" value="${mod}" ${(client.modules||[]).includes(mod)?'checked':''}> ${mod}
+          </label>
+        </div>
+      `).join('');
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'clientModal';
+      modal.innerHTML = `
+        <div class="modal-box" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="document.getElementById('clientModal').remove()">&times;</button>
+          <h5>${editId?'Edit':'Add'} Client</h5>
+          <input id="cName" class="form-control form-control-sm mb-2" placeholder="Company Name" value="${client.name||''}">
+          <select id="cPlan" class="form-select form-select-sm mb-2">
+            <option value="free" ${client.planId==='free'?'selected':''}>Free</option>
+            <option value="professional" ${client.planId==='professional'?'selected':''}>Professional</option>
+            <option value="enterprise" ${client.planId==='enterprise'?'selected':''}>Enterprise</option>
+          </select>
+          <h6>Enabled Modules</h6>
+          <div class="perm-grid" style="max-height:300px;overflow-y:auto;">${moduleChecks}</div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="Admin.saveClient('${editId||''}')">Save</button>
+          <button class="btn btn-light btn-sm mt-3" onclick="document.getElementById('clientModal').remove()">Cancel</button>
+        </div>`;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    };
+    loadForm();
+  },
+
+  async saveClient(editId) {
+    const name = document.getElementById('cName')?.value?.trim();
+    if (!name) return alert('Company name required');
+    const planId = document.getElementById('cPlan')?.value;
+    const modules = Array.from(document.querySelectorAll('#clientModal input[type=checkbox]:checked')).map(cb => cb.value);
+    const data = { name, planId, modules, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    try {
+      if (editId) await db.collection('clients').doc(editId).update(data);
+      else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); data.status = 'active'; await db.collection('clients').add(data); }
+      document.getElementById('clientModal')?.remove();
+      this.render();
+    } catch(e) { alert(e.message); }
+  },
+
+  async deleteClient(id) {
+    if (!confirm('Delete this client?')) return;
+    await db.collection('clients').doc(id).delete();
+    this.render();
   },
 
   // ==================== USERS ====================
@@ -151,7 +251,6 @@ const Admin = {
         if (doc.exists) user = doc.data();
       }
 
-      // Fetch available roles (for dropdown)
       let roles = [];
       if (Permissions.canAccess('admin','manage')) {
         roles = Object.keys(DEFAULT_ROLES);
@@ -161,7 +260,6 @@ const Admin = {
         roles = snap.docs.map(d => d.id);
         if (roles.length === 0) roles = ['executive','manager','client_admin'];
       }
-
       const roleOptions = roles.map(r => `<option value="${r}" ${user.role===r?'selected':''}>${r}</option>`).join('');
 
       const modal = document.createElement('div');
@@ -217,18 +315,237 @@ const Admin = {
     this.render();
   },
 
-  // ==================== ROLES (same as before, but with improved modal) ====================
-  async renderRoles() { /* same as previous version, works */ 
-    // ... (keeping the earlier working roles code)
-    return `<div class="admin-card"><h5>Roles</h5><p>Role management is available in the previous version.</p></div>`;
+  // ==================== ROLES & PERMISSIONS ====================
+  async renderRoles() {
+    const isPlatform = Permissions.canAccess('admin','manage');
+    let roles = [];
+    try {
+      if (isPlatform) {
+        const snap = await db.collection('roles').get();
+        roles = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        if (roles.length === 0) roles = Object.entries(DEFAULT_ROLES).map(([id, r]) => ({id, ...r}));
+      } else {
+        const clientId = window.currentUser?.clientId;
+        if (clientId) {
+          const snap = await db.collection('clients').doc(clientId).collection('roles').get();
+          roles = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        }
+      }
+    } catch(e) {}
+
+    let cards = roles.map(role => `
+      <div class="perm-module">
+        <h6>${role.name} <span class="badge bg-${role.isPlatformRole?'primary':'info'}">L${role.level||'?'}</span></h6>
+        <div class="small">Modules: ${Object.keys(role.modules||{}).length}</div>
+        <button class="btn btn-sm btn-outline-info mt-2" onclick="Admin.showRoleForm('${role.id}', ${isPlatform})">Edit</button>
+        ${(!role.isPlatformRole || !DEFAULT_ROLES[role.id]) ? `<button class="btn btn-sm btn-outline-danger mt-2" onclick="Admin.deleteRole('${role.id}', ${isPlatform})">Delete</button>` : ''}
+      </div>
+    `).join('');
+
+    return `
+      <div class="admin-card">
+        <div class="d-flex justify-content-between mb-3">
+          <h5>Role Management</h5>
+          <button class="btn btn-primary btn-sm" onclick="Admin.showRoleForm(null, ${isPlatform})">+ Create Role</button>
+        </div>
+        <div class="perm-grid">${cards||'<p class="text-muted">No roles defined yet.</p>'}</div>
+      </div>
+    `;
   },
 
-  // ==================== PLANS (same) ====================
-  async renderPlans() { /* same as before, works */ 
-    return `<div class="admin-card"><h5>Plans</h5><p>Plan management is available in the previous version.</p></div>`;
+  showRoleForm(roleId = null, isPlatform = true) {
+    const loadForm = async () => {
+      let role = { name: '', level: 5, isPlatformRole: false, modules: {} };
+      if (roleId) {
+        let doc;
+        if (isPlatform) {
+          doc = await db.collection('roles').doc(roleId).get();
+        } else {
+          const clientId = window.currentUser?.clientId;
+          doc = await db.collection('clients').doc(clientId).collection('roles').doc(roleId).get();
+        }
+        if (doc && doc.exists) role = doc.data();
+      }
+
+      let visibleModules = [];
+      if (isPlatform) {
+        visibleModules = Object.keys(DEFAULT_ROLES.platform_owner.modules);
+      } else {
+        const clientId = window.currentUser?.clientId;
+        const clientDoc = await db.collection('clients').doc(clientId).get();
+        const clientData = clientDoc.data() || {};
+        visibleModules = clientData.modules || Object.keys(DEFAULT_ROLES.platform_owner.modules);
+      }
+
+      let moduleChecks = visibleModules.map(mod => `
+        <div class="perm-module">
+          <h6>${mod}</h6>
+          ${['create','read','update','delete'].map(action => `
+            <label class="perm-check">
+              <input type="checkbox" class="perm-checkbox" data-module="${mod}" data-action="${action}" 
+                ${role.modules?.[mod]?.[action] ? 'checked' : ''}> ${action}
+            </label>
+          `).join('')}
+        </div>
+      `).join('');
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'roleModal';
+      modal.innerHTML = `
+        <div class="modal-box" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="document.getElementById('roleModal').remove()">&times;</button>
+          <h5>${roleId?'Edit':'Create'} Role</h5>
+          <input id="rName" class="form-control form-control-sm mb-2" placeholder="Role Name" value="${role.name||''}">
+          <select id="rLevel" class="form-select form-select-sm mb-2">
+            <option value="2" ${role.level===2?'selected':''}>Client Owner</option>
+            <option value="3" ${role.level===3?'selected':''}>Admin</option>
+            <option value="4" ${role.level===4?'selected':''}>Manager</option>
+            <option value="5" ${role.level===5?'selected':''}>Executive</option>
+          </select>
+          <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="rPlatform" ${role.isPlatformRole?'checked':''}><label>Platform Role</label></div>
+          <h6>Module Permissions</h6>
+          <div class="perm-grid" style="max-height:300px;overflow-y:auto;">${moduleChecks}</div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="Admin.saveRole('${roleId||''}', ${isPlatform})">Save</button>
+          <button class="btn btn-light btn-sm mt-3" onclick="document.getElementById('roleModal').remove()">Cancel</button>
+        </div>`;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    };
+    loadForm();
   },
 
-  // ==================== SETTINGS (Neodove‑style) ====================
+  async saveRole(roleId, isPlatform) {
+    const name = document.getElementById('rName')?.value?.trim();
+    if (!name) return alert('Role name required');
+    const level = parseInt(document.getElementById('rLevel')?.value);
+    const isPlatformRole = document.getElementById('rPlatform')?.checked;
+    const modules = {};
+    document.querySelectorAll('#roleModal .perm-module').forEach(div => {
+      const modName = div.querySelector('h6').innerText;
+      modules[modName] = {};
+      div.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        modules[modName][cb.dataset.action] = cb.checked;
+      });
+    });
+    const data = { name, level, isPlatformRole, modules };
+    try {
+      if (isPlatform) {
+        await db.collection('roles').doc(roleId || name.toLowerCase().replace(/\s/g,'_')).set(data, {merge: true});
+      } else {
+        const clientId = window.currentUser?.clientId;
+        await db.collection('clients').doc(clientId).collection('roles').doc(roleId || name.toLowerCase().replace(/\s/g,'_')).set(data, {merge: true});
+      }
+      document.getElementById('roleModal')?.remove();
+      this.render();
+    } catch(e) { alert(e.message); }
+  },
+
+  async deleteRole(roleId, isPlatform) {
+    if (!confirm('Delete this role?')) return;
+    if (isPlatform) await db.collection('roles').doc(roleId).delete();
+    else {
+      const clientId = window.currentUser?.clientId;
+      await db.collection('clients').doc(clientId).collection('roles').doc(roleId).delete();
+    }
+    this.render();
+  },
+
+  // ==================== PLANS ====================
+  async renderPlans() {
+    if (!Permissions.canAccess('admin','manage')) return '';
+    let plans = [];
+    try {
+      const snap = await db.collection('plans').get();
+      plans = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    } catch(e) {}
+
+    let rows = plans.map(p => `
+      <tr>
+        <td>${p.name}</td>
+        <td>₹${p.price||0}</td>
+        <td>${(p.modules||[]).join(', ')}</td>
+        <td>${p.maxUsers||'-'}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-info" onclick="Admin.showPlanForm('${p.id}')">Edit</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="Admin.deletePlan('${p.id}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="admin-card">
+        <div class="d-flex justify-content-between mb-3">
+          <h5>Subscription Plans</h5>
+          <button class="btn btn-primary btn-sm" onclick="Admin.showPlanForm()">+ Create Plan</button>
+        </div>
+        <table class="table table-sm">
+          <thead><tr><th>Name</th><th>Price</th><th>Modules</th><th>Max Users</th><th>Actions</th></tr></thead>
+          <tbody>${rows||'<tr><td colspan="5" class="text-muted text-center">No plans</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  showPlanForm(editId = null) {
+    const loadForm = async () => {
+      let plan = { name: '', price: 0, modules: [], maxUsers: 10 };
+      if (editId) {
+        const doc = await db.collection('plans').doc(editId).get();
+        if (doc.exists) plan = doc.data();
+      }
+      const allModules = Object.keys(DEFAULT_ROLES.platform_owner.modules);
+      let moduleChecks = allModules.map(mod => `
+        <div class="perm-module">
+          <label class="perm-check">
+            <input type="checkbox" value="${mod}" ${(plan.modules||[]).includes(mod)?'checked':''}> ${mod}
+          </label>
+        </div>
+      `).join('');
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'planModal';
+      modal.innerHTML = `
+        <div class="modal-box" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="document.getElementById('planModal').remove()">&times;</button>
+          <h5>${editId?'Edit':'Create'} Plan</h5>
+          <input id="pName" class="form-control form-control-sm mb-2" placeholder="Plan Name" value="${plan.name||''}">
+          <input id="pPrice" type="number" class="form-control form-control-sm mb-2" placeholder="Price (₹)" value="${plan.price||0}">
+          <input id="pMaxUsers" type="number" class="form-control form-control-sm mb-2" placeholder="Max Users" value="${plan.maxUsers||10}">
+          <h6>Included Modules</h6>
+          <div class="perm-grid" style="max-height:300px;overflow-y:auto;">${moduleChecks}</div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="Admin.savePlan('${editId||''}')">Save</button>
+          <button class="btn btn-light btn-sm mt-3" onclick="document.getElementById('planModal').remove()">Cancel</button>
+        </div>`;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    };
+    loadForm();
+  },
+
+  async savePlan(editId) {
+    const name = document.getElementById('pName')?.value?.trim();
+    if (!name) return alert('Plan name required');
+    const price = parseInt(document.getElementById('pPrice')?.value) || 0;
+    const maxUsers = parseInt(document.getElementById('pMaxUsers')?.value) || 10;
+    const modules = Array.from(document.querySelectorAll('#planModal input[type=checkbox]:checked')).map(cb => cb.value);
+    const data = { name, price, maxUsers, modules };
+    try {
+      if (editId) await db.collection('plans').doc(editId).update(data);
+      else await db.collection('plans').add(data);
+      document.getElementById('planModal')?.remove();
+      this.render();
+    } catch(e) { alert(e.message); }
+  },
+
+  async deletePlan(id) {
+    if (!confirm('Delete plan?')) return;
+    await db.collection('plans').doc(id).delete();
+    this.render();
+  },
+
+  // ==================== SETTINGS ====================
   async renderSettings() {
     const subTabs = [
       { key:'profile', label:'Company Profile' },
@@ -391,12 +708,101 @@ const Admin = {
     this.renderSettingsContent();
   },
 
+  // ==================== NOTIFICATIONS ====================
   settingsNotifications() {
-    return `<div class="admin-card"><h5>Notification Preferences</h5><p>Configure push and in-app notifications (Coming soon).</p></div>`;
+    (async () => {
+      const doc = await db.collection('settings').doc('notification_preferences').get();
+      const prefs = doc.exists ? doc.data() : {};
+      
+      const events = [
+        { id: 'lead_creation', label: 'Lead Creation' },
+        { id: 'lead_assignment', label: 'Lead Assignment' },
+        { id: 'follow_up_reminder', label: 'Follow‑up Reminder' },
+        { id: 'missed_call', label: 'Missed Call Alert' },
+        { id: 'whatsapp_msg', label: 'WhatsApp Message Received' },
+        { id: 'task_assigned', label: 'Task Assigned' }
+      ];
+      
+      const channels = ['push','in_app','email','whatsapp'];
+      const roles = ['admin','manager','executive'];
+
+      let html = `<div class="admin-card"><h5>Notification Preferences</h5>
+        <table class="table table-sm">
+          <thead><tr><th>Event</th><th>Recipient</th>${channels.map(c=>`<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr></thead>
+          <tbody>`;
+
+      events.forEach(ev => {
+        roles.forEach(role => {
+          html += `<tr><td>${ev.label}</td><td>${role}</td>`;
+          channels.forEach(ch => {
+            const key = `${ev.id}_${role}_${ch}`;
+            const checked = prefs[key] ? 'checked' : '';
+            html += `<td><input type="checkbox" class="notif-check" data-key="${key}" ${checked}></td>`;
+          });
+          html += `</tr>`;
+        });
+      });
+
+      html += `</tbody></table>
+        <button class="btn btn-primary btn-sm mt-3" onclick="Admin.saveNotificationPrefs()">Save</button>
+      </div>`;
+
+      document.getElementById('settingsContent').innerHTML = html;
+    })();
+
+    return '<div class="admin-card"><p>Loading...</p></div>';
   },
 
+  saveNotificationPrefs() {
+    const prefs = {};
+    document.querySelectorAll('.notif-check').forEach(cb => {
+      prefs[cb.dataset.key] = cb.checked;
+    });
+    db.collection('settings').doc('notification_preferences').set(prefs, {merge:true})
+      .then(() => alert('Notification preferences saved!'));
+  },
+
+  // ==================== AUTOMATIC REPORTS ====================
   settingsReports() {
-    return `<div class="admin-card"><h5>Automatic Reports</h5><p>Schedule daily/weekly/monthly reports (Coming soon).</p></div>`;
+    (async () => {
+      const doc = await db.collection('settings').doc('automatic_reports').get();
+      const data = doc.exists ? doc.data() : { frequency:'weekly', email:true, whatsapp:false };
+
+      const html = `
+        <div class="admin-card">
+          <h5>Automatic Reports</h5>
+          <div class="mb-3">
+            <label class="form-label">Frequency</label>
+            <select id="reportFrequency" class="form-select form-select-sm">
+              <option value="daily" ${data.frequency==='daily'?'selected':''}>Daily</option>
+              <option value="weekly" ${data.frequency==='weekly'?'selected':''}>Weekly</option>
+              <option value="monthly" ${data.frequency==='monthly'?'selected':''}>Monthly</option>
+            </select>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="reportEmail" ${data.email?'checked':''}>
+            <label class="form-check-label">Send via Email</label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="reportWhatsapp" ${data.whatsapp?'checked':''}>
+            <label class="form-check-label">Send via WhatsApp</label>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="Admin.saveReportSettings()">Save</button>
+        </div>`;
+      document.getElementById('settingsContent').innerHTML = html;
+    })();
+
+    return '<div class="admin-card"><p>Loading...</p></div>';
+  },
+
+  saveReportSettings() {
+    const data = {
+      frequency: document.getElementById('reportFrequency').value,
+      email: document.getElementById('reportEmail').checked,
+      whatsapp: document.getElementById('reportWhatsapp').checked
+    };
+    db.collection('settings').doc('automatic_reports').set(data, {merge:true})
+      .then(() => alert('Report settings saved!'));
   },
 
   // ==================== SUBSCRIPTION (Client) ====================
