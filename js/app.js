@@ -115,7 +115,8 @@ const headerMore = [
   { name: 'Reports', icon: 'fa-file-alt', section: 'reports' },
   { name: 'Setup', icon: 'fa-cog', section: 'setup' },
   { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets' },
-];
+  { name: 'Admin', icon: 'fa-shield-alt', section: 'admin' },
+  ];
 
 const sectionSubMenus = {
   'social': [
@@ -271,6 +272,7 @@ function loadSection(section) {
     case 'tickets': Tickets.render(); break;
     case 'appointments': Appointments.render(); break;
     case 'profile': Profile.render(); break;
+    case 'admin': Admin.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
 }
