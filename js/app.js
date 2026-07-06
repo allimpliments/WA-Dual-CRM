@@ -247,6 +247,27 @@ function loadSection(section) {
 
   renderGlobalHeader(section);
 
+  <select id="langSelector" class="form-select form-select-sm" 
+  style="width:auto; background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.3);" 
+  onchange="I18n.setLanguage(this.value)">
+  <option value="en">English (US)</option>
+  <option value="en-uk">English (UK)</option>
+  <option value="hinglish">Hinglish</option>
+  <option value="hi">हिन्दी</option>
+  <option value="bn">বাংলা</option>
+  <option value="te">తెలుగు</option>
+  <option value="mr">मराठी</option>
+  <option value="ta">தமிழ்</option>
+  <option value="ur">اردو</option>
+  <option value="gu">ગુજરાતી</option>
+  <option value="kn">ಕನ್ನಡ</option>
+  <option value="ml">മലയാളം</option>
+  <option value="or">ଓଡ଼ିଆ</option>
+  <option value="pa">ਪੰਜਾਬੀ</option>
+  <option value="as">অসমীয়া</option>
+  <option value="mai">मैथिली</option>
+  </select>
+
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
     case 'leads': Leads.render(); break;
