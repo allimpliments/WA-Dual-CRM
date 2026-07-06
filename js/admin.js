@@ -468,4 +468,4 @@ const Admin = {
   async renderSubscription() {
     return `<div class="admin-card"><h5>Current Plan</h5><p>Your company is on the <strong>${window.currentUser?.plan||'Free'}</strong> plan.</p></div>`;
   }
-};
+}; 
