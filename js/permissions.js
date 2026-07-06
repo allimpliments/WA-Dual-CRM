@@ -1,9 +1,7 @@
-// js/permissions.js — Role‑Based Access Control Engine (Complete)
+// js/permissions.js — Role‑Based Access Control Engine (Working)
 
 const DEFAULT_ROLES = {
-  // ========================
   // 1. PLATFORM OWNER
-  // ========================
   platform_owner: {
     name: 'Platform Owner',
     level: 0,
@@ -38,9 +36,7 @@ const DEFAULT_ROLES = {
     special: ['billing','server','domain','smtp','api_keys','backup','logs','white_label']
   },
 
-  // ========================
   // 2. PLATFORM SUPER ADMIN
-  // ========================
   platform_super_admin: {
     name: 'Platform Super Admin',
     level: 1,
@@ -57,7 +53,7 @@ const DEFAULT_ROLES = {
       setup: { read: true, write: true },
       integrations: { read: true, write: true },
       agents: { create: true, read: true, update: true, delete: true },
-      clients: { read: true, update: true },             // can't delete
+      clients: { read: true, update: true },
       kanban: { create: true, read: true, update: true, delete: true },
       social: { read: true, post: true },
       marketing: { read: true },
@@ -75,16 +71,12 @@ const DEFAULT_ROLES = {
     special: []
   },
 
-  // ========================
   // 3. CLIENT COMPANY OWNER
-  // ========================
   client_owner: {
     name: 'Client Company Owner',
     level: 2,
     isPlatformRole: false,
     modules: {
-      // Inherits all modules allowed by the plan.
-      // Actual permissions are intersected with the client's plan modules at runtime.
       dashboard: { read: true },
       leads: { create: true, read: true, update: true, delete: true, export: true },
       contacts: { create: true, read: true, update: true, delete: true, import: true, export: true },
@@ -108,15 +100,13 @@ const DEFAULT_ROLES = {
       reports: { read: true, export: true },
       plan: { read: true, upgrade: true },
       knowledge: { read: true, manage: true },
-      admin: { read: true },                // can manage own company roles/users
+      admin: { read: true },
       profile: { read: true, update: true }
     },
     special: ['manage_company_roles']
   },
 
-  // ========================
   // 4. CLIENT ADMIN
-  // ========================
   client_admin: {
     name: 'Company Admin',
     level: 3,
@@ -149,9 +139,7 @@ const DEFAULT_ROLES = {
     special: ['manage_department_roles']
   },
 
-  // ========================
   // 5. MANAGER
-  // ========================
   manager: {
     name: 'Manager',
     level: 4,
@@ -171,9 +159,7 @@ const DEFAULT_ROLES = {
     special: []
   },
 
-  // ========================
   // 6. EXECUTIVE
-  // ========================
   executive: {
     name: 'Executive',
     level: 5,
@@ -190,74 +176,66 @@ const DEFAULT_ROLES = {
   }
 };
 
-// ========================
-// PERMISSION UTILITIES
-// ========================
-window.Permissions = {
+// Old to new role mapping (backward compatibility)
+const ROLE_MAP = {
+  'admin': 'platform_owner',
+  'team': 'client_admin',
+  'client': 'executive'
+};
 
-  // Get effective permissions for current user
+window.Permissions = {
   async getEffectivePermissions() {
     const user = window.currentUser;
-    if (!user) return {};
+    // If no user, return a safe minimal permission set
+    if (!user) return DEFAULT_ROLES.platform_owner;
 
-    // 🔁 Old -> New role mapping (for backward compatibility)
-    const roleMapping = {
-      'admin': 'platform_owner',
-      'team': 'client_admin',
-      'client': 'executive'
-    };
-
+    // Resolve role ID (old → new)
     let roleId = user.role;
-    if (!DEFAULT_ROLES[roleId] && roleMapping[roleId]) {
-      roleId = roleMapping[roleId];
+    if (!DEFAULT_ROLES[roleId]) {
+      roleId = ROLE_MAP[roleId] || 'platform_owner';
     }
 
-    // Fallback to platform_owner if nothing matches (safety)
-    const role = DEFAULT_ROLES[roleId] || DEFAULT_ROLES['platform_owner'];
-    if (!role) return {};
+    // Get the role definition (clone it to avoid modifying the original)
+    const role = JSON.parse(JSON.stringify(DEFAULT_ROLES[roleId] || DEFAULT_ROLES.platform_owner));
 
-    // … baaki code (client plan intersection etc.) same rahega …
-    }
-
-    // 2. If user belongs to a client, intersect with plan modules
+    // If client user, intersect with plan modules
     if (!role.isPlatformRole && user.clientId) {
       try {
         const clientDoc = await db.collection('clients').doc(user.clientId).get();
         const clientData = clientDoc.data() || {};
         const planModules = clientData.modules || [];
 
-        // If plan has no modules defined, allow all (for backward compatibility)
         if (planModules.length > 0) {
           const allowedModules = {};
-          Object.keys(role.modules || {}).forEach(mod => {
+          Object.keys(role.modules).forEach(mod => {
             if (planModules.includes(mod)) {
               allowedModules[mod] = role.modules[mod];
             }
           });
           role.modules = allowedModules;
         }
-      } catch(e) { console.warn('Could not fetch client plan:', e); }
+      } catch (e) {
+        console.warn('Could not fetch client plan, using full role permissions.', e);
+      }
     }
 
-    // 3. User-level permission overrides (if any)
+    // Apply user-level overrides (if any)
     if (user.permissions) {
-      role.modules = { ...role.modules, ...user.permissions };
+      Object.assign(role.modules, user.permissions);
     }
 
     return role;
   },
 
-  // Quick access check
   canAccess(module, action = 'read') {
     const perms = window.__currentPermissions;
-    
-    // If permissions haven't been loaded yet, default to allow (prevents blank screen)
+    // If permissions are still loading, allow everything (prevents blank header)
     if (!perms) return true;
 
-    // Platform roles with level 0 or 1 have full access
+    // Platform Owner and Super Admin have full access
     if (perms.isPlatformRole && (perms.level === 0 || perms.level === 1)) return true;
 
-    // Check module permissions
+    // Check specific module permission
     const modPerms = perms.modules?.[module];
     if (!modPerms) return false;
 
