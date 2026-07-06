@@ -204,12 +204,15 @@ function renderGlobalHeader(currentSection) {
       .global-bottom-menu{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-radius:30px;box-shadow:0 8px 32px rgba(0,0,0,0.4);padding:10px 18px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;border:1px solid rgba(255,255,255,0.1);}
       .bottom-tab{padding:8px 16px;border-radius:22px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;background:rgba(255,255,255,0.05);color:#cbd5e1;transition:all 0.2s;display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,0.1);}
       .bottom-tab:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(24,119,242,0.4);}
+      #google_translate_element .goog-te-gadget { font-size:11px; line-height:1.2; }
+      #google_translate_element .goog-te-combo { padding:2px 4px; font-size:11px; height:auto; margin:0; }
       @media(max-width:768px){.global-top-header{padding:0 6px;height:46px;}.hb{font-size:12px;margin-right:4px;}.hb .hlt{display:none;}.hl{padding:5px 7px;font-size:11px;}.hlt{display:none;}.hl i{font-size:15px;}.header-profile{padding:4px 7px;}.header-logout{padding:4px 7px;font-size:10px;}.hmb{padding:4px 7px;font-size:11px;}}
     </style>
     <div class="global-top-header">
       <a class="hb" onclick="loadSection('dashboard')"><i class="fab fa-whatsapp"></i> <span class="hlt">11 Avatar CRM</span></a>
       <div class="hn">${mainLinks}</div>
       <div class="header-right">
+        <div id="google_translate_element" style="display:inline-block;vertical-align:middle;margin-right:8px;"></div>
         <div style="position:relative;">
           <button class="hmb" onclick="document.getElementById('moreDd').classList.toggle('show');event.stopPropagation();"><i class="fas fa-th-large"></i> <span class="hlt">More</span></button>
           <div class="md" id="moreDd" onclick="event.stopPropagation()">${moreLinks}</div>
@@ -277,4 +280,4 @@ function loadSection(section) {
 }
 
 function initApp(role) { buildSidebar(role); loadSection('dashboard'); }
-menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); });
+menuToggle.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); }); 
