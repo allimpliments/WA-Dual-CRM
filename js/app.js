@@ -116,7 +116,7 @@ const headerMore = [
   { name: 'Setup', icon: 'fa-cog', section: 'setup' },
   { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets' },
   { name: 'Admin', icon: 'fa-shield-alt', section: 'admin' },
-  ];
+];
 
 const sectionSubMenus = {
   'social': [
@@ -164,15 +164,14 @@ const sectionSubMenus = {
 function renderGlobalHeader(currentSection) {
   document.querySelectorAll('.global-top-header, .global-bottom-menu').forEach(el => el.remove());
 
-  // Filter header links based on RBAC permissions
   const visibleMain = headerMain.filter(s => Permissions.canAccess(s.section, 'read'));
   const mainLinks = visibleMain.map(s => 
-    `<a href="#" onclick="loadSection('${s.section}')" class="hl ${currentSection===s.section?'active':''}"><i class="fas ${s.icon}"></i><span class="hlt">${s.name}</span></a>`
+    `<a href="#" onclick="loadSection('${s.section}')" class="hl ${currentSection===s.section?'active':''}"><i class="fas ${s.icon}"></i><span class="hlt">${I18n.t(s.section)}</span></a>`
   ).join('');
 
   const visibleMore = headerMore.filter(s => Permissions.canAccess(s.section, 'read'));
   const moreLinks = visibleMore.map(s => 
-    `<a href="#" onclick="loadSection('${s.section}')" class="di ${currentSection===s.section?'active':''}"><i class="fas ${s.icon} me-2"></i>${s.name}</a>`
+    `<a href="#" onclick="loadSection('${s.section}')" class="di ${currentSection===s.section?'active':''}"><i class="fas ${s.icon} me-2"></i>${I18n.t(s.section)}</a>`
   ).join('');
 
   const userName = window.currentUser?.name || 'Profile';
@@ -211,8 +210,28 @@ function renderGlobalHeader(currentSection) {
       <a class="hb" onclick="loadSection('dashboard')"><i class="fab fa-whatsapp"></i> <span class="hlt">11 Avatar CRM</span></a>
       <div class="hn">${mainLinks}</div>
       <div class="header-right">
+        <select id="langSelector" class="form-select form-select-sm" 
+          style="width:auto; background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.3); margin-right:8px;" 
+          onchange="I18n.setLanguage(this.value)">
+          <option value="en">English (US)</option>
+          <option value="en-uk">English (UK)</option>
+          <option value="hinglish">Hinglish</option>
+          <option value="hi">हिन्दी</option>
+          <option value="bn">বাংলা</option>
+          <option value="te">తెలుగు</option>
+          <option value="mr">मराठी</option>
+          <option value="ta">தமிழ்</option>
+          <option value="ur">اردو</option>
+          <option value="gu">ગુજરાતી</option>
+          <option value="kn">ಕನ್ನಡ</option>
+          <option value="ml">മലയാളം</option>
+          <option value="or">ଓଡ଼ିଆ</option>
+          <option value="pa">ਪੰਜਾਬੀ</option>
+          <option value="as">অসমীয়া</option>
+          <option value="mai">मैथिली</option>
+        </select>
         <div style="position:relative;">
-          <button class="hmb" onclick="document.getElementById('moreDd').classList.toggle('show');event.stopPropagation();"><i class="fas fa-th-large"></i> <span class="hlt">More</span></button>
+          <button class="hmb" onclick="document.getElementById('moreDd').classList.toggle('show');event.stopPropagation();"><i class="fas fa-th-large"></i> <span class="hlt">${I18n.t('more')}</span></button>
           <div class="md" id="moreDd" onclick="event.stopPropagation()">${moreLinks}</div>
         </div>
         <a class="header-profile" onclick="loadSection('profile')">
@@ -220,7 +239,7 @@ function renderGlobalHeader(currentSection) {
           <span class="hlt">${userName.split(' ')[0]}</span>
         </a>
         <button class="header-logout" onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';">
-          <i class="fas fa-sign-out-alt"></i> <span class="hlt">Logout</span>
+          <i class="fas fa-sign-out-alt"></i> <span class="hlt">${I18n.t('logout')}</span>
         </button>
       </div>
     </div>
@@ -246,27 +265,6 @@ function loadSection(section) {
   if (contentArea) contentArea.style.paddingTop = '0px';
 
   renderGlobalHeader(section);
-
-  <select id="langSelector" class="form-select form-select-sm" 
-  style="width:auto; background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.3);" 
-  onchange="I18n.setLanguage(this.value)">
-  <option value="en">English (US)</option>
-  <option value="en-uk">English (UK)</option>
-  <option value="hinglish">Hinglish</option>
-  <option value="hi">हिन्दी</option>
-  <option value="bn">বাংলা</option>
-  <option value="te">తెలుగు</option>
-  <option value="mr">मराठी</option>
-  <option value="ta">தமிழ்</option>
-  <option value="ur">اردو</option>
-  <option value="gu">ગુજરાતી</option>
-  <option value="kn">ಕನ್ನಡ</option>
-  <option value="ml">മലയാളം</option>
-  <option value="or">ଓଡ଼ିଆ</option>
-  <option value="pa">ਪੰਜਾਬੀ</option>
-  <option value="as">অসমীয়া</option>
-  <option value="mai">मैथिली</option>
-  </select>
 
   switch (section) {
     case 'dashboard': Dashboard.render(); break;
