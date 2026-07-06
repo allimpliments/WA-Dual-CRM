@@ -191,7 +191,7 @@ if (formId) {
       window.currentUser = { uid: user.uid, ...userData };
       window.currentUser.role = userData.role || 'admin';
       window.currentUser.clientId = userData.clientId || null;
-
+      
       // 🔐 Load permissions BEFORE initApp
       try {
         const perms = await Permissions.getEffectivePermissions();
@@ -199,6 +199,9 @@ if (formId) {
       } catch (e) {
         console.error('Permissions load error:', e);
       }
+
+      // 🌐 Load user language preference AFTER user data is ready
+      I18n.init();
 
       // Show the app
       loginScreen.style.display = 'none';
