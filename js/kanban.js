@@ -1,4 +1,4 @@
-// js/kanban.js — Trello-Style Advanced Kanban with Detail Panel
+// js/kanban.js — Trello-Style Advanced Kanban with clientId isolation
 const Kanban = {
   stages: [
     { id: 'new', name: 'New Lead', color: '#6366f1', icon: 'fa-star' },
@@ -17,7 +17,7 @@ const Kanban = {
   filterAssignee: null,
   filterDateFrom: null,
   filterDateTo: null,
-  selectedCard: null, // { id, type, data }
+  selectedCard: null,
 
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading Pipeline...</p>';
@@ -122,7 +122,6 @@ const Kanban = {
     `;
     contentArea.innerHTML = html;
 
-    // Detail panel open karo agar selectedCard hai
     if (this.selectedCard) {
       setTimeout(() => this.openDetailPanel(this.selectedCard), 100);
     }
@@ -157,7 +156,7 @@ const Kanban = {
     `;
   },
 
-  // ========== DRAG & DROP (FIXED) ==========
+  // ========== DRAG & DROP ==========
   drag(e) {
     const card = e.target.closest('.pipe-card');
     if (!card) return;
@@ -194,31 +193,29 @@ const Kanban = {
       const collection = this.draggedType === 'lead' ? 'leads' : 'contacts';
       await db.collection(collection).doc(this.draggedId).update({ status: stage });
 
-      // Agar Lead ka status change ho, toh corresponding Contact bhi update karo
       if (this.draggedType === 'lead') {
         const lead = this.leads.find(l => l.id === this.draggedId);
         if (lead && (lead.phone || lead.email)) {
-          const contactSnap = await db.collection('contacts')
+          let cQuery = db.collection('contacts');
+          if (shouldFilterByClient()) cQuery = cQuery.where('clientId', '==', window.currentUser.clientId);
+          const contactSnap = await cQuery
             .where('mobile', '==', lead.phone || '')
             .where('email', '==', lead.email || '')
             .get();
-          contactSnap.forEach(async doc => {
-            await doc.ref.update({ status: stage });
-          });
+          contactSnap.forEach(async doc => { await doc.ref.update({ status: stage }); });
         }
       }
 
-      // Agar Contact ka status change ho, toh corresponding Lead bhi update karo
       if (this.draggedType === 'contact') {
         const contact = this.contacts.find(c => c.id === this.draggedId);
         if (contact && (contact.mobile || contact.email)) {
-          const leadSnap = await db.collection('leads')
+          let lQuery = db.collection('leads');
+          if (shouldFilterByClient()) lQuery = lQuery.where('clientId', '==', window.currentUser.clientId);
+          const leadSnap = await lQuery
             .where('phone', '==', contact.mobile || '')
             .where('email', '==', contact.email || '')
             .get();
-          leadSnap.forEach(async doc => {
-            await doc.ref.update({ status: stage });
-          });
+          leadSnap.forEach(async doc => { await doc.ref.update({ status: stage }); });
         }
       }
 
@@ -257,8 +254,6 @@ const Kanban = {
             <button class="btn btn-sm btn-outline-secondary" onclick="Kanban.closeDetailPanel()">✕</button>
           </div>
         </div>
-
-        <!-- Status & Priority -->
         <div class="row g-2 mb-3">
           <div class="col-6">
             <label class="form-label small fw-bold">Status</label>
@@ -275,14 +270,10 @@ const Kanban = {
             </select>
           </div>
         </div>
-
-        <!-- Contact Info -->
         <div class="mb-3">
           <label class="form-label small fw-bold">Phone / Email</label>
           <input type="text" class="form-control form-control-sm mb-1" value="${detail}" readonly>
         </div>
-
-        <!-- Assignee -->
         <div class="mb-3">
           <label class="form-label small fw-bold">Assigned To</label>
           <select id="detailAssignee" class="form-select form-select-sm" onchange="Kanban.updateField('${card.type}','${card.id}','assignedTo',this.value)">
@@ -290,47 +281,34 @@ const Kanban = {
             ${this.users.map(u => `<option value="${u.id}" ${data.assignedTo===u.id?'selected':''}>${u.name||u.email}</option>`).join('')}
           </select>
         </div>
-
-        <!-- Follow-up Date -->
         <div class="mb-3">
           <label class="form-label small fw-bold">📅 Follow-up Date</label>
           <input type="date" id="detailFollowup" class="form-control form-control-sm" value="${data.followupDate || ''}" onchange="Kanban.updateField('${card.type}','${card.id}','followupDate',this.value)">
         </div>
-
-        <!-- Notes -->
         <div class="mb-3">
           <label class="form-label small fw-bold">📝 Notes</label>
           <textarea id="detailNotes" class="form-control form-control-sm" rows="4" placeholder="Add notes...">${data.notes || ''}</textarea>
           <button class="btn btn-outline-primary btn-sm mt-1" onclick="Kanban.saveNotes('${card.type}','${card.id}')">Save Notes</button>
         </div>
-
-        <!-- URL / Sheet -->
         <div class="mb-3">
           <label class="form-label small fw-bold">🔗 URL / Google Sheet Link</label>
           <input type="url" id="detailUrl" class="form-control form-control-sm" value="${data.url || ''}" onchange="Kanban.updateField('${card.type}','${card.id}','url',this.value)">
         </div>
-
-        <!-- Value -->
         ${card.type === 'lead' ? `
         <div class="mb-3">
           <label class="form-label small fw-bold">💰 Deal Value (₹)</label>
           <input type="number" id="detailValue" class="form-control form-control-sm" value="${data.value || ''}" onchange="Kanban.updateField('${card.type}','${card.id}','value',this.value)">
         </div>` : ''}
-
-        <!-- Source -->
         <div class="mb-3">
           <label class="form-label small fw-bold">Source</label>
           <input type="text" class="form-control form-control-sm" value="${data.source || 'Manual'}" readonly>
         </div>
-
-        <!-- Created -->
         <div class="mb-3">
           <label class="form-label small fw-bold">Created</label>
           <p class="small text-muted">${data.createdAt?.toDate().toLocaleString() || '-'}</p>
         </div>
       </div>
     `;
-
     document.getElementById('detailPanel').innerHTML = html;
   },
 
@@ -338,7 +316,6 @@ const Kanban = {
     const collection = type === 'lead' ? 'leads' : 'contacts';
     await db.collection(collection).doc(id).update({ [field]: value });
 
-    // Sync status to other collection
     if (field === 'status') {
       const doc = await db.collection(collection).doc(id).get();
       const data = doc.data();
@@ -346,7 +323,9 @@ const Kanban = {
       const email = data.email || '';
       if (phone || email) {
         const otherCollection = type === 'lead' ? 'contacts' : 'leads';
-        const snap = await db.collection(otherCollection)
+        let query = db.collection(otherCollection);
+        if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+        const snap = await query
           .where(type==='lead'?'mobile':'phone', '==', phone)
           .where('email', '==', email)
           .get();
@@ -363,7 +342,6 @@ const Kanban = {
     this.render();
   },
 
-  // ========== DELETE CARD ==========
   async deleteCard(type, id) {
     if (!confirm('Delete permanently?')) return;
     const collection = type === 'lead' ? 'leads' : 'contacts';
@@ -372,12 +350,10 @@ const Kanban = {
     this.render();
   },
 
-  // ========== QUICK ADD (FIXED) ==========
   showQuickAdd(stage, e) {
     e.stopPropagation();
     const btn = e.target.closest('.quick-add-btn');
     if (!btn) return;
-    const userOptions = this.users.map(u => `<option value="${u.id}">${u.name||u.email}</option>`).join('');
     btn.outerHTML = `
       <div class="quick-add-form" onclick="event.stopPropagation()">
         <input type="text" id="qName_${stage}" placeholder="Name" onkeydown="if(event.key==='Enter')Kanban.quickAdd('${stage}')">
@@ -399,12 +375,12 @@ const Kanban = {
     if (!name) return alert('Name required!');
     await db.collection('leads').add({
       name, phone, status: stage, source: 'Manual', priority: 'medium',
+      clientId: getCurrentClientId(),   // ✅ clientId जोड़ा
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     this.render();
   },
 
-  // ========== ADD DEAL MODAL ==========
   showAddForm() {
     const userOptions = this.users.map(u => `<option value="${u.id}">${u.name||u.email}</option>`).join('');
     document.getElementById('kanbanModal').innerHTML = `
@@ -461,13 +437,13 @@ const Kanban = {
       followupDate: document.getElementById('kFollowup')?.value || '',
       assignedTo: document.getElementById('kAssignee')?.value || null,
       status: 'new',
+      clientId: getCurrentClientId(),   // ✅ clientId जोड़ा
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById('kanbanModal').innerHTML = '';
     this.render();
   },
 
-  // ========== HELPERS ==========
   totalValue(leads, contacts) {
     let total = 0;
     leads.forEach(l => { if (l.value) total += parseInt(l.value) || 0; });
@@ -475,11 +451,17 @@ const Kanban = {
     return total.toLocaleString();
   },
 
+  // ✅ clientId फ़िल्टर के साथ डेटा लोड
   async loadData() {
     try {
-      const lSnap = await db.collection('leads').orderBy('createdAt', 'desc').get();
+      let lQuery = db.collection('leads');
+      if (shouldFilterByClient()) lQuery = lQuery.where('clientId', '==', window.currentUser.clientId);
+      const lSnap = await lQuery.orderBy('createdAt', 'desc').get();
       this.leads = lSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const cSnap = await db.collection('contacts').orderBy('createdAt', 'desc').get();
+
+      let cQuery = db.collection('contacts');
+      if (shouldFilterByClient()) cQuery = cQuery.where('clientId', '==', window.currentUser.clientId);
+      const cSnap = await cQuery.orderBy('createdAt', 'desc').get();
       this.contacts = cSnap.docs.map(d => ({ id: d.id, ...d.data(), status: d.data().status || 'new' }));
     } catch (e) { this.leads = []; this.contacts = []; }
   },
