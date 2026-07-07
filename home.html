@@ -1,209 +1,674 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>11 Avatar Digital Hub – WhatsApp CRM Platform</title>
-  <meta name="description" content="All‑in‑one WhatsApp CRM with AI chatbot (Gemini & ChatGPT), campaign automation, lead management, and 45+ features. Meta Verified Tech Partner.">
-  <link rel="stylesheet" href="css/home.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>WA Dual CRM | AI Powered WhatsApp CRM Platform</title>
+
+<meta name="description" content="AI Powered WhatsApp CRM Platform for Lead Management, Automation, Campaigns, Chatbots and Business Growth">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<link rel="stylesheet" href="css/home.css">
+
 </head>
+
 <body>
-  <!-- Header (same as before) -->
-  <header class="header" id="header">
-    <div class="header-inner">
-      <a href="#" class="logo">
-        <img src="https://firebasestorage.googleapis.com/v0/b/avatar-wa-dual-crm.firebasestorage.app/o/branding%2FTransparent%20logo.png?alt=media&token=001ea208-b7d9-4f38-a96b-18865afb6d79" alt="Logo">
-        <span>11 Avatar Digital Hub</span>
-      </a>
-      <nav>
-        <a data-target="hero" class="nav-link active">Home</a>
-        <a data-target="features" class="nav-link">Features</a>
-        <a data-target="integrations" class="nav-link">Integrations</a>
-        <a data-target="how" class="nav-link">How It Works</a>
-        <a data-target="testimonials" class="nav-link">Testimonials</a>
-        <a data-target="pricing" class="nav-link">Pricing</a>
-        <a data-target="comingsoon" class="nav-link">Coming Soon</a>
-        <a data-target="contact" class="nav-link">Contact</a>
-      </nav>
-      <div class="header-actions">
-        <button class="btn btn-outline" onclick="showAuth('login')">Log In</button>
-        <button class="btn btn-primary" onclick="showAuth('register')">Sign Up</button>
-      </div>
-    </div>
-  </header>
 
-  <!-- Scroll Snap Container -->
-  <div class="snap-container" id="snapContainer">
-    <!-- HERO -->
-    <section class="snap-section hero" id="hero">
-      <div class="hero-content">
-        <div class="badge-meta"><i class="fas fa-check-circle"></i> Meta Verified Tech Partner</div>
-        <h1 class="hero-title">WhatsApp CRM That<br><span class="gold">Actually Grows</span> Business</h1>
-        <div class="dynamic-text" id="dynamicText">Automate Your Sales</div>
-        <p class="hero-desc">All‑in‑one platform with AI chatbot (Gemini & ChatGPT), campaign automation, lead management, and 45+ powerful features. Built by marketers with 15+ years of experience.</p>
-        <div class="hero-buttons">
-          <button class="btn btn-primary btn-lg" onclick="showAuth('register')">Start Free Trial <i class="fas fa-arrow-right"></i></button>
-          <button class="btn btn-ghost btn-lg" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Explore Features</button>
-        </div>
-        <div class="hero-stats">
-          <div class="stat"><strong>45+</strong><span>Features</span></div>
-          <div class="stat"><strong>30+</strong><span>Integrations</span></div>
-          <div class="stat"><strong>10K+</strong><span>Businesses</span></div>
-          <div class="stat"><strong>15+</strong><span>Years Exp</span></div>
-        </div>
-      </div>
-    </section>
+<div id="scrollProgress"></div>
 
-    <!-- FEATURES -->
-    <section class="snap-section" id="features">
-      <div class="section-header">
-        <h2>Everything You Need.<br><span class="gold">All In One Place.</span></h2>
-        <p>45+ powerful features across all business functions. Click a category to explore.</p>
-        <div class="divider"></div>
-      </div>
-      <div class="category-tabs" id="categoryTabs">
-        <button class="category-tab active" data-category="whatsapp">WhatsApp</button>
-        <button class="category-tab" data-category="crm">CRM</button>
-        <button class="category-tab" data-category="ecommerce">E‑commerce</button>
-        <button class="category-tab" data-category="automation">Automation</button>
-        <button class="category-tab" data-category="analytics">Analytics</button>
-        <button class="category-tab" data-category="marketing">Marketing</button>
-        <button class="category-tab" data-category="social">Social Media</button>
-      </div>
-      <div class="features-grid" id="featuresContainer"></div>
-    </section>
+<header class="navbar">
 
-    <!-- INTEGRATIONS -->
-    <section class="snap-section" id="integrations">
-      <div class="section-header">
-        <h2>30+ <span class="gold">Integrations</span></h2>
-        <p>Connect your entire stack. Every major platform, ready to sync.</p>
-        <div class="divider"></div>
-      </div>
-      <div class="integration-grid">
-        <div class="integration-item"><i class="fab fa-whatsapp" title="WhatsApp"></i></div>
-        <div class="integration-item"><i class="fab fa-facebook" title="Facebook"></i></div>
-        <div class="integration-item"><i class="fab fa-instagram" title="Instagram"></i></div>
-        <div class="integration-item"><i class="fab fa-shopify" title="Shopify"></i></div>
-        <div class="integration-item"><i class="fab fa-wordpress" title="WooCommerce"></i></div>
-        <div class="integration-item"><i class="fas fa-bolt" title="Zapier"></i></div>
-        <div class="integration-item"><i class="fas fa-calendar-alt" title="Calendly"></i></div>
-        <div class="integration-item"><i class="fas fa-rupee-sign" title="Razorpay"></i></div>
-        <div class="integration-item"><i class="fab fa-stripe-s" title="Stripe"></i></div>
-        <div class="integration-item"><i class="fab fa-google" title="Google Ads"></i></div>
-        <div class="integration-item"><i class="fab fa-meta" title="Meta Ads"></i></div>
-        <div class="integration-item"><i class="fas fa-envelope" title="Mailchimp"></i></div>
-        <div class="integration-item"><i class="fab fa-slack" title="Slack"></i></div>
-        <div class="integration-item"><i class="fas fa-robot" title="OpenAI / Gemini"></i></div>
-        <div class="integration-item"><i class="fas fa-table" title="Google Sheets"></i></div>
-        <div class="integration-item"><i class="fas fa-video" title="Zoom"></i></div>
-      </div>
-    </section>
+<div class="container">
 
-    <!-- HOW IT WORKS -->
-    <section class="snap-section" id="how">
-      <div class="section-header">
-        <h2>How It <span class="gold">Works</span></h2>
-        <p>Get started in 3 simple steps</p>
-        <div class="divider"></div>
-      </div>
-      <div class="steps-container">
-        <div class="step"><div class="step-number">1</div><h4>Connect WhatsApp</h4><p>Link your WhatsApp Business number in under 2 minutes with our guided setup wizard.</p></div>
-        <div class="step"><div class="step-number">2</div><h4>Configure Automations</h4><p>Set up chatbot, campaigns, and lead capture — all from one intuitive dashboard.</p></div>
-        <div class="step"><div class="step-number">3</div><h4>Start Growing</h4><p>Watch leads convert, campaigns deliver, and revenue grow — on autopilot.</p></div>
-      </div>
-    </section>
+<a href="#" class="logo">
 
-    <!-- TESTIMONIALS -->
-    <section class="snap-section" id="testimonials">
-      <div class="section-header">
-        <h2>What Our <span class="gold">Clients Say</span></h2>
-        <p>Real feedback from real businesses across India</p>
-        <div class="divider"></div>
-      </div>
-      <div class="testimonial-slider" id="testimonialSlider">
-        <div class="testimonial-track" id="testimonialTrack"></div>
-        <div class="slider-dots" id="sliderDots"></div>
-      </div>
-    </section>
+<img
+src="https://firebasestorage.googleapis.com/v0/b/avatar-wa-dual-crm.firebasestorage.app/o/branding%2FTransparent%20logo.png?alt=media&token=001ea208-b7d9-4f38-a96b-18865afb6d79"
+alt="Logo">
 
-    <!-- PRICING -->
-    <section class="snap-section" id="pricing">
-      <div class="section-header">
-        <h2>Simple, <span class="gold">Transparent</span> Pricing</h2>
-        <p>Choose the right plan for your business. Need something custom? Tailor it below.</p>
-        <div class="divider"></div>
-      </div>
-      <div class="pricing-grid">
-        <!-- ... same plan cards as before ... -->
-      </div>
-      <div class="customize-form">
-        <h4>Customize Your Plan</h4>
-        <p>Select the modules you need. We'll create a tailored quote.</p>
-        <div class="checkbox-grid" id="customModules">
-          <label><input type="checkbox" value="WhatsApp"> WhatsApp</label>
-          <label><input type="checkbox" value="CRM"> CRM</label>
-          <label><input type="checkbox" value="E‑commerce"> E‑commerce</label>
-          <label><input type="checkbox" value="Automation"> Automation</label>
-          <label><input type="checkbox" value="Analytics"> Analytics</label>
-          <label><input type="checkbox" value="Marketing"> Marketing</label>
-          <label><input type="checkbox" value="Social Media"> Social Media</label>
-        </div>
-        <input type="email" id="customEmail" class="form-control" placeholder="Your Email Address">
-        <button class="btn btn-primary" onclick="requestCustomPlan()">Get Custom Quote</button>
-      </div>
-    </section>
+<span>WA Dual CRM</span>
 
-    <!-- COMING SOON -->
-    <section class="snap-section" id="comingsoon">
-      <div class="section-header">
-        <h2><span class="gold">Coming Soon</span></h2>
-        <p>Exciting features currently in development</p>
-        <div class="divider"></div>
-      </div>
-      <div class="coming-soon-grid">
-        <!-- ... same coming soon cards as before ... -->
-      </div>
-    </section>
+</a>
 
-    <!-- CONTACT -->
-    <section class="snap-section" id="contact">
-      <div class="section-header">
-        <h2>Get In <span class="gold">Touch</span></h2>
-        <p>Have questions? We'll reply within 2 minutes on WhatsApp.</p>
-        <div class="divider"></div>
-      </div>
-      <form class="contact-form" onsubmit="return false;">
-        <input type="text" id="contactName" placeholder="Your Name" required>
-        <input type="email" id="contactEmail" placeholder="Email Address" required>
-        <input type="text" id="contactPhone" placeholder="Phone Number">
-        <select id="contactInterest">
-          <option>Interested In...</option>
-          <option>WhatsApp CRM</option>
-          <option>AI Chatbot</option>
-          <option>White‑Label</option>
-          <option>Enterprise Plan</option>
-        </select>
-        <textarea id="contactMessage" rows="4" placeholder="Tell us about your requirements..." required></textarea>
-        <button type="button" class="btn btn-primary" onclick="submitContact()">Send Message <i class="fas fa-paper-plane"></i></button>
-        <p id="contactResult" class="form-message"></p>
-      </form>
-    </section>
-  </div>
+<nav>
 
-  <!-- Footer, WhatsApp float, Auth modal (same as before) -->
+<a href="#hero">Home</a>
+<a href="#problem">Problem</a>
+<a href="#solution">Solution</a>
+<a href="#features">Features</a>
+<a href="#pricing">Pricing</a>
+<a href="#contact">Contact</a>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script>
-    const firebaseConfig = { /* your config */ };
-    firebase.initializeApp(firebaseConfig);
-  </script>
-  <script src="js/home.js"></script>
-  <script src="js/home-animations.js"></script>
+</nav>
+
+<div class="nav-buttons">
+
+<button class="btn-secondary" onclick="showAuth('login')">
+Login
+</button>
+
+<button class="btn-primary" onclick="showAuth('register')">
+Start Free Trial
+</button>
+
+</div>
+
+</div>
+
+</header>
+
+<main class="snap-container">
+
+<!-- HERO -->
+
+<section id="hero" class="snap-section hero-section">
+
+<div class="hero-bg"></div>
+
+<div class="hero-grid"></div>
+
+<div class="container hero-content">
+
+<div class="hero-badge">
+Meta Verified Technology Partner
+</div>
+
+<h1 class="hero-title">
+
+WhatsApp CRM That
+<span>Actually Grows Business</span>
+
+</h1>
+
+<p class="hero-description">
+
+Manage leads, automate conversations, launch campaigns,
+deploy AI chatbots and grow your business from a single platform.
+
+</p>
+
+<div class="hero-actions">
+
+<button
+class="btn-primary large-btn"
+onclick="showAuth('register')">
+
+Start Free Trial
+
+</button>
+
+<a href="#features" class="btn-secondary large-btn">
+
+Explore Platform
+
+</a>
+
+</div>
+
+<div class="hero-stats">
+
+<div class="stat-card">
+
+<h3>45+</h3>
+<p>Business Modules</p>
+
+</div>
+
+<div class="stat-card">
+
+<h3>30+</h3>
+<p>Integrations</p>
+
+</div>
+
+<div class="stat-card">
+
+<h3>10K+</h3>
+<p>Businesses</p>
+
+</div>
+
+<div class="stat-card">
+
+<h3>24/7</h3>
+<p>AI Automation</p>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- PROBLEM -->
+
+<section id="problem" class="snap-section">
+
+<div class="container">
+
+<div class="section-header">
+
+<span class="section-tag">
+Business Challenge
+</span>
+
+<h2>
+
+Most Businesses Don't Lose Leads.
+They Lose Follow-Ups.
+
+</h2>
+
+<p>
+
+Manual communication, delayed replies,
+scattered data and disconnected tools
+cost businesses thousands of opportunities.
+
+</p>
+
+</div>
+
+<div class="problem-grid">
+
+<div class="glass-card">
+
+<i class="fa-solid fa-clock"></i>
+
+<h3>Slow Response Time</h3>
+
+<p>
+Leads lose interest before your team responds.
+</p>
+
+</div>
+
+<div class="glass-card">
+
+<i class="fa-solid fa-user-xmark"></i>
+
+<h3>Missed Leads</h3>
+
+<p>
+Potential customers disappear without follow-up.
+</p>
+
+</div>
+
+<div class="glass-card">
+
+<i class="fa-solid fa-chart-line-down"></i>
+
+<h3>Low Conversions</h3>
+
+<p>
+Manual workflows reduce sales efficiency.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- SOLUTION -->
+
+<section id="solution" class="snap-section">
+
+<div class="container split-layout">
+
+<div class="content-side">
+
+<span class="section-tag">
+
+Our Solution
+
+</span>
+
+<h2>
+
+Everything In One
+AI-Powered CRM
+
+</h2>
+
+<p>
+
+Manage WhatsApp, Leads, Campaigns,
+AI Chatbots, Social Media,
+Automation and Analytics
+from one centralized dashboard.
+
+</p>
+
+<ul class="feature-list">
+
+<li>
+AI Chatbot with Gemini & ChatGPT
+</li>
+
+<li>
+WhatsApp Automation
+</li>
+
+<li>
+Lead Management
+</li>
+
+<li>
+Marketing Campaigns
+</li>
+
+<li>
+Analytics Dashboard
+</li>
+
+<li>
+White Label Ready
+</li>
+
+</ul>
+
+</div>
+
+<div class="visual-side">
+
+<div class="dashboard-preview">
+
+<div class="dashboard-header">
+
+<span></span>
+<span></span>
+<span></span>
+
+</div>
+
+<div class="dashboard-body">
+
+<div class="dashboard-card"></div>
+<div class="dashboard-card"></div>
+<div class="dashboard-card"></div>
+<div class="dashboard-card"></div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- FEATURES -->
+
+<section id="features" class="snap-section">
+
+<div class="container">
+
+<div class="section-header">
+
+<span class="section-tag">
+Features
+</span>
+
+<h2>
+
+Powerful Features
+For Every Business
+
+</h2>
+
+<p>
+
+Everything required to scale sales,
+support and customer engagement.
+
+</p>
+
+</div>
+
+<div class="features-grid">
+
+<div class="feature-card">
+
+<i class="fab fa-whatsapp"></i>
+
+<h3>WhatsApp CRM</h3>
+
+<p>
+Unified inbox and lead management.
+</p>
+
+</div>
+
+<div class="feature-card">
+
+<i class="fa-solid fa-robot"></i>
+
+<h3>AI Chatbot</h3>
+
+<p>
+Gemini and ChatGPT integration.
+</p>
+
+</div>
+
+<div class="feature-card">
+
+<i class="fa-solid fa-bullhorn"></i>
+
+<h3>Campaigns</h3>
+
+<p>
+Broadcasts, drip campaigns and automation.
+</p>
+
+</div>
+
+<div class="feature-card">
+
+<i class="fa-solid fa-users"></i>
+
+<h3>Lead Management</h3>
+
+<p>
+Track every lead lifecycle.
+</p>
+
+</div>
+
+<div class="feature-card">
+
+<i class="fa-solid fa-chart-pie"></i>
+
+<h3>Analytics</h3>
+
+<p>
+Business intelligence and reporting.
+</p>
+
+</div>
+
+<div class="feature-card">
+
+<i class="fa-solid fa-store"></i>
+
+<h3>E-Commerce</h3>
+
+<p>
+Shopify, WooCommerce and more.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- INTEGRATIONS -->
+
+<section id="integrations" class="snap-section">
+
+<div class="container">
+
+<div class="section-header">
+
+<span class="section-tag">
+Integrations
+</span>
+
+<h2>
+
+Connect Your Entire Stack
+
+</h2>
+
+</div>
+
+<div class="integration-orbit">
+
+<div><i class="fab fa-whatsapp"></i></div>
+<div><i class="fab fa-facebook"></i></div>
+<div><i class="fab fa-instagram"></i></div>
+<div><i class="fab fa-google"></i></div>
+<div><i class="fab fa-shopify"></i></div>
+<div><i class="fab fa-slack"></i></div>
+<div><i class="fa-solid fa-robot"></i></div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- PRICING -->
+
+<section id="pricing" class="snap-section">
+
+<div class="container">
+
+<div class="section-header">
+
+<span class="section-tag">
+
+Pricing
+
+</span>
+
+<h2>
+
+Simple Pricing
+
+</h2>
+
+</div>
+
+<div class="pricing-grid">
+
+<div class="pricing-card">
+
+<h3>Basic</h3>
+
+<div class="price">
+₹999
+</div>
+
+<p>
+Perfect for startups
+</p>
+
+<button class="btn-secondary">
+
+Choose Plan
+
+</button>
+
+</div>
+
+<div class="pricing-card featured">
+
+<div class="popular-tag">
+
+Popular
+
+</div>
+
+<h3>Advance</h3>
+
+<div class="price">
+
+₹2499
+
+</div>
+
+<p>
+
+Most popular choice
+
+</p>
+
+<button class="btn-primary">
+
+Start Trial
+
+</button>
+
+</div>
+
+<div class="pricing-card">
+
+<h3>Professional</h3>
+
+<div class="price">
+
+₹9999
+
+</div>
+
+<p>
+
+Growing businesses
+
+</p>
+
+<button class="btn-secondary">
+
+Contact Sales
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- CONTACT -->
+
+<section id="contact" class="snap-section">
+
+<div class="container">
+
+<div class="section-header">
+
+<span class="section-tag">
+
+Contact
+
+</span>
+
+<h2>
+
+Let's Talk
+
+</h2>
+
+<p>
+
+Tell us about your business requirements.
+
+</p>
+
+</div>
+
+<form class="contact-form">
+
+<input
+type="text"
+placeholder="Your Name">
+
+<input
+type="email"
+placeholder="Email Address">
+
+<input
+type="text"
+placeholder="Phone Number">
+
+<textarea
+placeholder="Tell us about your requirements"></textarea>
+
+<button
+type="submit"
+class="btn-primary">
+
+Send Message
+
+</button>
+
+</form>
+
+</div>
+
+</section>
+
+<!-- CTA -->
+
+<section class="snap-section final-cta">
+
+<div class="container">
+
+<h2>
+
+Ready To Scale Your Business?
+
+</h2>
+
+<p>
+
+Join thousands of businesses already using WA Dual CRM.
+
+</p>
+
+<button
+class="btn-primary large-btn"
+onclick="showAuth('register')">
+
+Start Free Trial
+
+</button>
+
+</div>
+
+</section>
+
+</main>
+
+<a
+href="https://wa.me/917489771499"
+target="_blank"
+class="wa-float">
+
+<i class="fab fa-whatsapp"></i>
+
+</a>
+
+<div id="authModal"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/bundled/lenis.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script src="js/home.js"></script>
+
+<script src="js/home-animations.js"></script>
+
 </body>
 </html>
