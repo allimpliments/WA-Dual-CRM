@@ -1,6 +1,6 @@
-// js/flows.js — Combined: Meta Templates + Visual Builder + My Flows
+// js/flows.js — Combined: Meta Templates + Visual Builder + My Flows with clientId
 const Flows = {
-  currentTab: 'templates', // templates, builder, myflows
+  currentTab: 'templates',
   editingFlowId: null,
   canvasNodes: [],
   canvasConnections: [],
@@ -54,7 +54,9 @@ const Flows = {
   async renderTemplates() {
     let flows = [];
     try {
-      const snap = await db.collection('botFlows').where('source', '==', 'meta').orderBy('category').get();
+      let query = db.collection('botFlows').where('source', '==', 'meta');
+      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      const snap = await query.orderBy('category').get();
       flows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch(e) {}
 
@@ -320,6 +322,7 @@ const Flows = {
       canvasConnections: this.canvasConnections,
       status: 'draft',
       addedToMy: true,
+      clientId: getCurrentClientId(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     try {
@@ -338,7 +341,9 @@ const Flows = {
   async renderMyFlows() {
     let flows = [];
     try {
-      const snap = await db.collection('botFlows').where('addedToMy', '==', true).orderBy('updatedAt', 'desc').get();
+      let query = db.collection('botFlows').where('addedToMy', '==', true);
+      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      const snap = await query.orderBy('updatedAt', 'desc').get();
       flows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       window._myFlowCount = flows.length;
     } catch(e) {}
@@ -388,9 +393,17 @@ const Flows = {
     ];
     let added = 0;
     for (const tpl of metaTemplates) {
-      const ex = await db.collection('botFlows').where('title','==',tpl.title).where('source','==','meta').get();
+      let query = db.collection('botFlows').where('title','==',tpl.title).where('source','==','meta');
+      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      const ex = await query.get();
       if (ex.empty) {
-        await db.collection('botFlows').add({...tpl, status:'draft', addedToMy:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        await db.collection('botFlows').add({
+          ...tpl,
+          status:'draft',
+          addedToMy:false,
+          clientId: getCurrentClientId(),
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
         added++;
       }
     }
