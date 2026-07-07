@@ -58,13 +58,12 @@ const navSections = [
 ];
 
 // 🌐 MULTI-TENANT DATA ISOLATION HELPER
-// सभी मॉड्यूल इस फंक्शन का इस्तेमाल करेंगे
 function shouldFilterByClient() {
   const user = window.currentUser;
   if (!user) return false;
-  // प्लेटफ़ॉर्म ओनर और सुपर एडमिन को सब डेटा दिखेगा
+  // ✅ Platform Owner, Super Admin, Admin — all see everything
   if (user.role === 'platform_owner' || user.role === 'platform_super_admin' || user.role === 'admin') return false;
-  // बाकी सबको सिर्फ अपनी कंपनी का डेटा दिखेगा
+  // Client users see only their company data
   return !!user.clientId;
 }
 
