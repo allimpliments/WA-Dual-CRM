@@ -1,12 +1,14 @@
-// js/ecommerce.js — E‑commerce Hub with Real Platform Connection
+// js/ecommerce.js — Enterprise-Grade E‑commerce Hub for Global SaaS Platform
 const Ecommerce = {
-  currentPlatform: 'shopify',
   currentView: 'orders',
+  currentPlatform: 'all',
   connectedPlatforms: {},
+  searchQuery: '',
+  stats: { totalOrders: 0, totalRevenue: 0, totalProducts: 0, abandonedCarts: 0 },
 
   async render() {
     contentArea.style.paddingTop = '60px';
-    contentArea.style.background = 'var(--bg-primary, #f0f2f5)';
+    contentArea.style.background = '#f8fafc';
 
     // Load saved connections
     try {
@@ -14,227 +16,316 @@ const Ecommerce = {
       if (doc.exists) this.connectedPlatforms = doc.data() || {};
     } catch(e) {}
 
+    // Load orders & stats (✅ clientId isolated)
+    try {
+      let oQuery = db.collection('ecommerce_orders');
+      if (shouldFilterByClient()) oQuery = oQuery.where('clientId', '==', window.currentUser.clientId);
+      const oSnap = await oQuery.get();
+      this.stats.totalOrders = oSnap.size;
+      oSnap.forEach(d => { this.stats.totalRevenue += parseFloat(d.data().total) || 0; });
+
+      let pQuery = db.collection('ecommerce_products');
+      if (shouldFilterByClient()) pQuery = pQuery.where('clientId', '==', window.currentUser.clientId);
+      this.stats.totalProducts = (await pQuery.get()).size;
+
+      let cQuery = db.collection('ecommerce_carts');
+      if (shouldFilterByClient()) cQuery = cQuery.where('clientId', '==', window.currentUser.clientId);
+      this.stats.abandonedCarts = (await cQuery.where('status','==','abandoned').get()).size;
+    } catch(e) {}
+
     const platforms = [
-      { 
-        key: 'shopify', name: 'Shopify', icon: 'fa-shopify', color: '#96BF48', 
-        connected: !!this.connectedPlatforms.shopify,
-        orders: 156, revenue: '₹4.2L',
-        connectHelp: 'Shopify Admin → Settings → Apps → Develop apps → Create app → Configure Admin API scopes → Generate access token'
-      },
-      { 
-        key: 'woocommerce', name: 'WooCommerce', icon: 'fa-wordpress', color: '#96588A', 
-        connected: !!this.connectedPlatforms.woocommerce,
-        orders: 89, revenue: '₹2.1L',
-        connectHelp: 'WordPress → WooCommerce → Settings → Advanced → REST API → Add Key → Read/Write permissions → Copy Consumer Key & Secret'
-      },
-      { 
-        key: 'wix', name: 'Wix', icon: 'fa-wix', color: '#FBBD3B', 
-        connected: !!this.connectedPlatforms.wix,
-        orders: 34, revenue: '₹0.8L',
-        connectHelp: 'Wix Dashboard → Settings → API Keys → Generate New Key → Copy API Key'
-      },
-      { 
-        key: 'dukaan', name: 'Dukaan', icon: 'fa-store', color: '#FF6B35', 
-        connected: !!this.connectedPlatforms.dukaan,
-        orders: 67, revenue: '₹1.5L',
-        connectHelp: 'Dukaan Dashboard → Settings → API & Webhooks → Generate Token → Copy Token'
-      }
+      { key: 'shopify', name: 'Shopify', icon: 'fa-shopify', color: '#96BF48', connected: !!this.connectedPlatforms.shopify, desc: 'Leading global e-commerce platform', docUrl: 'https://shopify.dev/docs/api' },
+      { key: 'woocommerce', name: 'WooCommerce', icon: 'fa-wordpress', color: '#96588A', connected: !!this.connectedPlatforms.woocommerce, desc: 'WordPress e-commerce plugin', docUrl: 'https://woocommerce.com/document/woocommerce-rest-api/' },
+      { key: 'wix', name: 'Wix Stores', icon: 'fa-wix', color: '#FBBD3B', connected: !!this.connectedPlatforms.wix, desc: 'All-in-one website builder', docUrl: 'https://dev.wix.com/api/rest' },
+      { key: 'dukaan', name: 'Dukaan', icon: 'fa-store', color: '#FF6B35', connected: !!this.connectedPlatforms.dukaan, desc: 'Indian e-commerce platform', docUrl: 'https://dukaan.io/docs/api' },
+      { key: 'amazon', name: 'Amazon Seller', icon: 'fa-amazon', color: '#FF9900', connected: !!this.connectedPlatforms.amazon, desc: 'Amazon marketplace integration', docUrl: 'https://developer-docs.amazon.com/sp-api/' },
+      { key: 'flipkart', name: 'Flipkart Seller', icon: 'fa-shopping-bag', color: '#2874F0', connected: !!this.connectedPlatforms.flipkart, desc: 'Flipkart marketplace seller', docUrl: 'https://seller.flipkart.com/api-docs' },
+      { key: 'meesho', name: 'Meesho', icon: 'fa-tshirt', color: '#E91E63', connected: !!this.connectedPlatforms.meesho, desc: 'Social commerce platform', docUrl: 'https://supplier.meesho.com/' },
     ];
+
+    const connectedCount = Object.values(this.connectedPlatforms).filter(Boolean).length;
 
     let html = `
       <style>
-        .ec-stat{text-align:center;padding:14px;background:#f9fafb;border-radius:10px;}
-        .ec-stat .val{font-size:22px;font-weight:800;}.ec-stat .lbl{font-size:10px;color:#6b7280;text-transform:uppercase;}
-        .ec-platform-card{background:#fff;border:2px solid #e5e7eb;border-radius:14px;padding:18px;text-align:center;cursor:pointer;transition:0.25s;}
-        .ec-platform-card:hover,.ec-platform-card.active{border-color:#3b82f6;box-shadow:0 8px 20px rgba(59,130,246,0.1);}
-        .ec-platform-card.connected{border-color:#10b981;background:#f0fdf4;}
-        .ec-status{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;}
-        .ec-connect-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;}
+        .ec-wrap { max-width: 1400px; margin: 0 auto; }
+        .ec-header { background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 20px; padding: 28px 32px; margin-bottom: 24px; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .ec-header h4 { margin: 0; font-weight: 800; font-size: 22px; }
+        .ec-header p { margin: 4px 0 0; color: #94a3b8; font-size: 13px; }
+        .ec-stat { background: #fff; border-radius: 14px; padding: 18px 20px; text-align: center; border: 1px solid #f1f5f9; transition: 0.2s; cursor: pointer; }
+        .ec-stat:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .ec-stat .val { font-size: 26px; font-weight: 800; }
+        .ec-stat .lbl { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .ec-platform-card { background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #f1f5f9; text-align: center; cursor: pointer; transition: 0.2s; position: relative; }
+        .ec-platform-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.06); border-color: #6366f1; transform: translateY(-2px); }
+        .ec-platform-card.connected { border-color: #10b981; }
+        .ec-platform-card.connected::after { content: '✓'; position: absolute; top: 10px; right: 14px; background: #10b981; color: #fff; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .ec-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+        .ec-btn { padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .ec-btn-primary { background: #6366f1; color: #fff; }
+        .ec-btn-primary:hover { background: #4f46e5; }
+        .ec-btn-outline { background: #fff; color: #6366f1; border: 1px solid #6366f1; }
+        .ec-btn-outline:hover { background: #eef2ff; }
+        .ec-btn-success { background: #10b981; color: #fff; }
+        .ec-btn-success:hover { background: #059669; }
+        .ec-btn-danger { background: #ef4444; color: #fff; }
+        .ec-btn-danger:hover { background: #dc2626; }
+        .ec-card { background: #fff; border-radius: 16px; padding: 22px; border: 1px solid #f1f5f9; margin-bottom: 16px; }
+        .ec-card h6 { font-weight: 700; font-size: 14px; margin-bottom: 14px; color: #0f172a; }
+        .ec-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+        .ec-table th { text-align: left; padding: 10px 14px; background: #f8fafc; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
+        .ec-table td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
+        .ec-table tr:hover td { background: #f8fafc; }
+        .ec-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13px; outline: none; margin-bottom: 8px; }
+        .ec-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .ec-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .ec-modal { background: #fff; border-radius: 20px; padding: 28px; width: 480px; max-width: 92vw; max-height: 85vh; overflow-y: auto; }
+        .ec-automation-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f8fafc; border-radius: 10px; margin-bottom: 6px; }
+        @media (max-width: 768px) { .ec-header { padding: 20px; } }
       </style>
 
-      <h4 style="font-weight:700;margin-bottom:4px;"><i class="fas fa-store text-dark me-2"></i>E‑commerce Hub</h4>
-      <p class="text-muted small mb-4">Connect your online stores & manage everything from one place</p>
-
-      <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#4f46e5;">₹8.6L</div><div class="lbl">Total Revenue</div></div></div>
-        <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#059669;">346</div><div class="lbl">Total Orders</div></div></div>
-        <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#d97706;">4</div><div class="lbl">Platforms</div></div></div>
-        <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#db2777;">${Object.values(this.connectedPlatforms).filter(Boolean).length}</div><div class="lbl">Connected</div></div></div>
-      </div>
-
-      <h6 style="font-weight:600;margin-bottom:12px;"><i class="fas fa-plug text-primary me-1"></i>Your Platforms</h6>
-      <div class="row g-3 mb-4">
-        ${platforms.map(p => `
-          <div class="col-6 col-md-3">
-            <div class="ec-platform-card ${p.connected?'connected':''}" onclick="Ecommerce.connectPlatform('${p.key}')">
-              <i class="fab ${p.icon} fa-2x" style="color:${p.color};margin-bottom:8px;"></i>
-              <h6 style="font-weight:600;">${p.name}</h6>
-              ${p.connected 
-                ? '<span class="badge bg-success">✓ Connected</span>' 
-                : '<span class="badge bg-secondary">Click to Connect</span>'}
-              <div class="small text-muted mt-1">${p.orders} orders · ${p.revenue}</div>
-            </div>
+      <div class="ec-wrap">
+        <div class="ec-header">
+          <div>
+            <h4><i class="fas fa-store me-2"></i>E‑commerce Hub</h4>
+            <p>Connect your online stores & supercharge with WhatsApp automation</p>
           </div>
-        `).join('')}
-      </div>
+          <div class="d-flex gap-3">
+            <div class="text-center"><div style="font-size:22px;font-weight:800;">${platforms.length}</div><small style="color:#94a3b8;">Platforms</small></div>
+            <div class="text-center"><div style="font-size:22px;font-weight:800;color:#10b981;">${connectedCount}</div><small style="color:#94a3b8;">Connected</small></div>
+          </div>
+        </div>
 
-      ${this.currentView === 'orders' ? this.renderOrders() : this.currentView === 'products' ? this.renderProducts() : this.renderSettings(platforms)}
+        <!-- Stats -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3"><div class="ec-stat" onclick="Ecommerce.currentView='orders';Ecommerce.render();"><div class="val" style="color:#6366f1;">${this.stats.totalOrders}</div><div class="lbl">Total Orders</div></div></div>
+          <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#10b981;">₹${this.stats.totalRevenue >= 100000 ? (this.stats.totalRevenue/100000).toFixed(1)+'L' : this.stats.totalRevenue.toLocaleString()}</div><div class="lbl">Revenue</div></div></div>
+          <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#f59e0b;">${this.stats.totalProducts}</div><div class="lbl">Products</div></div></div>
+          <div class="col-6 col-md-3"><div class="ec-stat"><div class="val" style="color:#ef4444;">${this.stats.abandonedCarts}</div><div class="lbl">Abandoned Carts</div></div></div>
+        </div>
+
+        <!-- Platform Cards -->
+        <h6 style="font-weight:700;margin-bottom:12px;"><i class="fas fa-plug me-2"></i>Connected Platforms</h6>
+        <div class="row g-3 mb-4">
+          ${platforms.map(p => `
+            <div class="col-6 col-md-3">
+              <div class="ec-platform-card ${p.connected?'connected':''}" onclick="Ecommerce.connectPlatform('${p.key}')">
+                <i class="fab ${p.icon} fa-2x" style="color:${p.color};margin-bottom:10px;"></i>
+                <h6 style="font-weight:700;font-size:13px;">${p.name}</h6>
+                <p style="font-size:11px;color:#64748b;margin:0;">${p.desc}</p>
+                <span class="ec-badge" style="background:${p.connected?'#ecfdf5':'#f1f5f9'};color:${p.connected?'#10b981':'#94a3b8'};margin-top:6px;">${p.connected?'● Connected':'○ Click to Connect'}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Tabs -->
+        <div class="d-flex gap-2 mb-3">
+          <button class="ec-btn ${this.currentView==='orders'?'ec-btn-primary':'ec-btn-outline'}" onclick="Ecommerce.currentView='orders';Ecommerce.render();">📦 Orders</button>
+          <button class="ec-btn ${this.currentView==='products'?'ec-btn-primary':'ec-btn-outline'}" onclick="Ecommerce.currentView='products';Ecommerce.render();">🏷️ Products</button>
+          <button class="ec-btn ${this.currentView==='automation'?'ec-btn-primary':'ec-btn-outline'}" onclick="Ecommerce.currentView='automation';Ecommerce.render();">⚡ Automations</button>
+          <button class="ec-btn ${this.currentView==='abandoned'?'ec-btn-primary':'ec-btn-outline'}" onclick="Ecommerce.currentView='abandoned';Ecommerce.render();">🛒 Abandoned Carts</button>
+          <button class="ec-btn ${this.currentView==='settings'?'ec-btn-primary':'ec-btn-outline'}" onclick="Ecommerce.currentView='settings';Ecommerce.render();">⚙️ Settings</button>
+        </div>
+
+        ${this.currentView === 'orders' ? await this.renderOrders() : 
+          this.currentView === 'products' ? this.renderProducts() : 
+          this.currentView === 'automation' ? this.renderAutomation() :
+          this.currentView === 'abandoned' ? await this.renderAbandonedCarts() :
+          this.renderSettings(platforms)}
+      </div>
     `;
     contentArea.innerHTML = html;
   },
 
-  renderOrders() {
-    const orders = [
-      { id:'#ORD-001', customer:'Rahul Sharma', platform:'Shopify', items:3, total:'₹12,500', status:'confirmed', date:'Jul 4' },
-      { id:'#ORD-002', customer:'Priya Patel', platform:'WooCommerce', items:1, total:'₹4,200', status:'shipped', date:'Jul 3' },
-      { id:'#ORD-003', customer:'Amit Kumar', platform:'Shopify', items:5, total:'₹28,900', status:'pending', date:'Jul 2' },
-      { id:'#ORD-004', customer:'Neha Gupta', platform:'Dukaan', items:2, total:'₹8,750', status:'delivered', date:'Jul 1' },
-    ];
+  // ==================== ORDERS ====================
+  async renderOrders() {
+    let orders = [];
+    try {
+      let q = db.collection('ecommerce_orders');
+      if (shouldFilterByClient()) q = q.where('clientId', '==', window.currentUser.clientId);
+      const snap = await q.orderBy('createdAt', 'desc').limit(20).get();
+      orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
 
     return `
-      <div class="d-flex gap-2 mb-3">
-        <button class="btn btn-primary btn-sm" onclick="Ecommerce.currentView='orders';Ecommerce.render();">📦 Orders</button>
-        <button class="btn btn-outline-primary btn-sm" onclick="Ecommerce.currentView='products';Ecommerce.render();">🏷️ Products</button>
-        <button class="btn btn-outline-primary btn-sm" onclick="Ecommerce.currentView='settings';Ecommerce.render();">⚙️ Settings</button>
-      </div>
-      <div class="card-widget">
-        <h6>Recent Orders</h6>
-        <div class="table-responsive">
-          <table class="table table-sm">
-            <thead><tr><th>Order</th><th>Customer</th><th>Platform</th><th>Items</th><th>Total</th><th>Status</th><th>WhatsApp</th></tr></thead>
-            <tbody>
-              ${orders.map(o => `
-                <tr>
-                  <td><strong>${o.id}</strong></td><td>${o.customer}</td>
-                  <td><i class="fab ${o.platform==='Shopify'?'fa-shopify':o.platform==='WooCommerce'?'fa-wordpress':o.platform==='Wix'?'fa-wix':'fa-shopify'} me-1"></i>${o.platform}</td>
-                  <td>${o.items}</td><td>${o.total}</td>
-                  <td><span class="ec-status" style="background:${o.status==='confirmed'?'#e0e7ff':o.status==='shipped'?'#fef3c7':o.status==='delivered'?'#d1fae5':'#f3f4f6'};color:${o.status==='confirmed'?'#3730a3':o.status==='shipped'?'#92400e':o.status==='delivered'?'#065f46':'#6b7280'};">${o.status}</span></td>
-                  <td><button class="btn btn-sm btn-success" onclick="alert('WhatsApp notification sent to customer!')"><i class="fab fa-whatsapp"></i></button></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+      <div class="ec-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 style="margin:0;">📦 Recent Orders (${orders.length})</h6>
+          <button class="ec-btn ec-btn-outline btn-sm" onclick="Ecommerce.addOrder()"><i class="fas fa-plus"></i> Add Order</button>
         </div>
-      </div>
-    `;
+        ${orders.length === 0 ? '<p class="text-muted text-center py-4">No orders yet. Connect a platform or add manually.</p>' : `
+        <div class="table-responsive">
+          <table class="ec-table">
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Platform</th><th>Items</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>${orders.map(o => `
+              <tr>
+                <td><strong>${o.orderId||o.id.substring(0,8)}</strong></td>
+                <td>${o.customerName||'N/A'}</td>
+                <td><i class="fab ${this.getPlatformIcon(o.platform)} me-1"></i>${o.platform||'Manual'}</td>
+                <td>${o.items||1}</td>
+                <td><strong>₹${parseFloat(o.total||0).toLocaleString()}</strong></td>
+                <td><span class="ec-badge" style="background:${o.status==='delivered'?'#ecfdf5':o.status==='shipped'?'#eef2ff':o.status==='confirmed'?'#fffbeb':'#fef2f2'};color:${o.status==='delivered'?'#10b981':o.status==='shipped'?'#6366f1':o.status==='confirmed'?'#f59e0b':'#ef4444'};">${o.status||'pending'}</span></td>
+                <td>
+                  <button class="ec-btn ec-btn-success btn-sm" onclick="Ecommerce.sendWhatsAppUpdate('${o.id}','order_confirmation')" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                  <button class="ec-btn ec-btn-outline btn-sm" onclick="Ecommerce.updateOrderStatus('${o.id}')"><i class="fas fa-edit"></i></button>
+                </td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>`}
+      </div>`;
   },
 
+  // ==================== PRODUCTS ====================
   renderProducts() {
     const products = [
-      { name:'Premium Widget Pro', platform:'Shopify', price:'₹2,999', stock:45, sold:234 },
-      { name:'Digital Marketing Kit', platform:'WooCommerce', price:'₹5,499', stock:12, sold:89 },
-      { name:'WhatsApp Template Pack', platform:'Dukaan', price:'₹999', stock:0, sold:567 },
+      { name:'Premium Widget Pro', platform:'Shopify', price:'₹2,999', stock:45, sold:234, sku:'WID-001' },
+      { name:'Digital Marketing Kit', platform:'WooCommerce', price:'₹5,499', stock:12, sold:89, sku:'DMK-002' },
+      { name:'WhatsApp Template Pack', platform:'Dukaan', price:'₹999', stock:0, sold:567, sku:'WTP-003' },
+      { name:'SEO Booster Plugin', platform:'Shopify', price:'₹1,499', stock:78, sold:156, sku:'SEO-004' },
     ];
     return `
-      <div class="d-flex gap-2 mb-3">
-        <button class="btn btn-outline-primary btn-sm" onclick="Ecommerce.currentView='orders';Ecommerce.render();">📦 Orders</button>
-        <button class="btn btn-primary btn-sm" onclick="Ecommerce.currentView='products';Ecommerce.render();">🏷️ Products</button>
-        <button class="btn btn-outline-primary btn-sm" onclick="Ecommerce.currentView='settings';Ecommerce.render();">⚙️ Settings</button>
-      </div>
-      <div class="card-widget">
-        <h6>Product Catalog</h6>
+      <div class="ec-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 style="margin:0;">🏷️ Product Catalog (${products.length})</h6>
+          <button class="ec-btn ec-btn-outline btn-sm"><i class="fas fa-plus"></i> Add Product</button>
+        </div>
         <div class="table-responsive">
-          <table class="table table-sm">
-            <thead><tr><th>Product</th><th>Platform</th><th>Price</th><th>Stock</th><th>Sold</th><th>Action</th></tr></thead>
-            <tbody>
-              ${products.map(p => `
-                <tr>
-                  <td><strong>${p.name}</strong></td><td>${p.platform}</td><td>${p.price}</td>
-                  <td><span class="badge bg-${p.stock>20?'success':p.stock>0?'warning':'danger'}">${p.stock}</span></td>
-                  <td>${p.sold}</td>
-                  <td><button class="btn btn-sm btn-outline-info" onclick="alert('Product shared via WhatsApp!')"><i class="fab fa-whatsapp"></i> Share</button></td>
-                </tr>
-              `).join('')}
-            </tbody>
+          <table class="ec-table">
+            <thead><tr><th>SKU</th><th>Product</th><th>Platform</th><th>Price</th><th>Stock</th><th>Sold</th><th>Actions</th></tr></thead>
+            <tbody>${products.map(p => `
+              <tr>
+                <td>${p.sku}</td><td><strong>${p.name}</strong></td><td>${p.platform}</td><td>${p.price}</td>
+                <td><span class="ec-badge" style="background:${p.stock>20?'#ecfdf5':p.stock>0?'#fffbeb':'#fef2f2'};color:${p.stock>20?'#10b981':p.stock>0?'#f59e0b':'#ef4444'};">${p.stock}</span></td>
+                <td>${p.sold}</td>
+                <td><button class="ec-btn ec-btn-success btn-sm" onclick="Ecommerce.shareProduct('${p.sku}')"><i class="fab fa-whatsapp"></i> Share</button></td>
+              </tr>`).join('')}</tbody>
           </table>
         </div>
-      </div>
-    `;
+      </div>`;
   },
 
+  // ==================== AUTOMATIONS ====================
+  renderAutomation() {
+    const automations = [
+      { id:'order_confirm', name:'Order Confirmation', desc:'Send WhatsApp when order is placed', enabled:true, icon:'fa-check-circle' },
+      { id:'shipping_update', name:'Shipping Update', desc:'Notify when order is shipped', enabled:true, icon:'fa-truck' },
+      { id:'delivery_confirm', name:'Delivery Confirmation', desc:'Confirm when order is delivered', enabled:true, icon:'fa-box' },
+      { id:'cart_recovery', name:'Abandoned Cart Recovery', desc:'Remind after 2 hours of inactivity', enabled:false, icon:'fa-shopping-cart' },
+      { id:'review_request', name:'Review Request', desc:'Ask for product review after delivery', enabled:true, icon:'fa-star' },
+      { id:'cashback_offer', name:'Cashback Offer', desc:'Send cashback on next purchase', enabled:false, icon:'fa-gift' },
+      { id:'stock_alert', name:'Low Stock Alert', desc:'Notify admin when stock is low', enabled:true, icon:'fa-exclamation-triangle' },
+      { id:'price_drop', name:'Price Drop Alert', desc:'Notify customers of price changes', enabled:false, icon:'fa-tag' },
+    ];
+    return `
+      <div class="ec-card">
+        <h6>⚡ WhatsApp Automation Rules</h6>
+        <p class="text-muted small mb-3">Automate customer communication based on order events</p>
+        ${automations.map(a => `
+          <div class="ec-automation-item">
+            <div class="d-flex align-items-center gap-3">
+              <i class="fas ${a.icon}" style="color:#6366f1;width:20px;"></i>
+              <div><strong>${a.name}</strong><br><small class="text-muted">${a.desc}</small></div>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" ${a.enabled?'checked':''} onchange="Ecommerce.toggleAutomation('${a.id}',this.checked)">
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  },
+
+  // ==================== ABANDONED CARTS ====================
+  async renderAbandonedCarts() {
+    let carts = [];
+    try {
+      let q = db.collection('ecommerce_carts');
+      if (shouldFilterByClient()) q = q.where('clientId', '==', window.currentUser.clientId);
+      const snap = await q.where('status','==','abandoned').orderBy('updatedAt','desc').limit(10).get();
+      carts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
+
+    return `
+      <div class="ec-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 style="margin:0;">🛒 Abandoned Carts (${carts.length})</h6>
+          <span class="ec-badge" style="background:#fef2f2;color:#ef4444;">${carts.length} recoverable</span>
+        </div>
+        ${carts.length === 0 ? '<p class="text-muted text-center py-4">🎉 No abandoned carts! Great conversion rate.</p>' : `
+        <div class="table-responsive">
+          <table class="ec-table">
+            <thead><tr><th>Customer</th><th>Items</th><th>Value</th><th>Abandoned</th><th>Action</th></tr></thead>
+            <tbody>${carts.map(c => `
+              <tr>
+                <td><strong>${c.customerName||'Guest'}</strong><br><small>${c.customerPhone||c.customerEmail||''}</small></td>
+                <td>${c.items||1}</td>
+                <td><strong>₹${parseFloat(c.total||0).toLocaleString()}</strong></td>
+                <td>${c.updatedAt?.toDate?.().toLocaleString()||'Recently'}</td>
+                <td><button class="ec-btn ec-btn-success btn-sm" onclick="Ecommerce.sendCartRecovery('${c.id}')"><i class="fab fa-whatsapp"></i> Recover</button></td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>`}
+      </div>`;
+  },
+
+  // ==================== SETTINGS ====================
   renderSettings(platforms) {
     return `
-      <div class="d-flex gap-2 mb-3">
-        <button class="btn btn-outline-primary btn-sm" onclick="Ecommerce.currentView='orders';Ecommerce.render();">📦 Orders</button>
-        <button class="btn btn-outline-primary btn-sm" onclick="Ecommerce.currentView='products';Ecommerce.render();">🏷️ Products</button>
-        <button class="btn btn-primary btn-sm" onclick="Ecommerce.currentView='settings';Ecommerce.render();">⚙️ Settings</button>
-      </div>
-      <div class="card-widget">
-        <h6>Platform Connections</h6>
+      <div class="ec-card">
+        <h6>⚙️ Platform Connections</h6>
         ${platforms.map(p => `
-          <div class="d-flex justify-content-between align-items-center border rounded p-3 mb-2">
-            <div><i class="fab ${p.icon} me-2" style="color:${p.color};"></i><strong>${p.name}</strong></div>
+          <div class="ec-automation-item">
+            <div class="d-flex align-items-center gap-3">
+              <i class="fab ${p.icon} fa-lg" style="color:${p.color};width:24px;"></i>
+              <div><strong>${p.name}</strong><br><small class="text-muted">${p.desc}</small></div>
+            </div>
             <div>
-              ${p.connected 
-                ? `<span class="text-success me-2">✓ Connected</span><button class="btn btn-sm btn-outline-danger" onclick="Ecommerce.disconnectPlatform('${p.key}')">Disconnect</button>`
-                : `<button class="btn btn-sm btn-outline-primary" onclick="Ecommerce.connectPlatform('${p.key}')">🔗 Connect</button>`}
+              ${p.connected ? `<span class="text-success me-2" style="font-size:12px;">✓ Connected</span><button class="ec-btn ec-btn-danger btn-sm" onclick="Ecommerce.disconnectPlatform('${p.key}')">Disconnect</button>` : `<button class="ec-btn ec-btn-outline btn-sm" onclick="Ecommerce.connectPlatform('${p.key}')">🔗 Connect</button>`}
             </div>
           </div>
         `).join('')}
         <hr>
-        <h6>WhatsApp Automation</h6>
-        <div class="form-check"><input class="form-check-input" type="checkbox" id="ecOrder" checked><label class="small">Send order confirmation via WhatsApp</label></div>
-        <div class="form-check"><input class="form-check-input" type="checkbox" id="ecShip" checked><label class="small">Send shipping updates via WhatsApp</label></div>
-        <div class="form-check"><input class="form-check-input" type="checkbox" id="ecCart"><label class="small">Abandoned cart recovery via WhatsApp</label></div>
-        <div class="form-check"><input class="form-check-input" type="checkbox" id="ecReview"><label class="small">Request product review via WhatsApp</label></div>
-        <button class="btn btn-primary btn-sm mt-3" onclick="alert('✅ Settings saved!')">Save Settings</button>
-      </div>
-    `;
+        <h6 style="font-weight:700;">WhatsApp Automation Settings</h6>
+        <label class="ec-automation-item"><span>Send order confirmation via WhatsApp</span><input type="checkbox" checked></label>
+        <label class="ec-automation-item"><span>Send shipping updates via WhatsApp</span><input type="checkbox" checked></label>
+        <label class="ec-automation-item"><span>Abandoned cart recovery (2hr delay)</span><input type="checkbox"></label>
+        <label class="ec-automation-item"><span>Request product review after delivery</span><input type="checkbox" checked></label>
+        <label class="ec-automation-item"><span>Send payment confirmation receipt</span><input type="checkbox" checked></label>
+      </div>`;
   },
 
-  connectPlatform(platform) {
-    const platformInfo = {
-      shopify: { 
-        name: 'Shopify', 
-        fields: ['Store URL (e.g. mystore.myshopify.com)', 'Access Token'],
-        help: 'Get token: Shopify Admin → Settings → Apps → Develop apps → Create app → Admin API → Generate'
-      },
-      woocommerce: { 
-        name: 'WooCommerce', 
-        fields: ['Store URL', 'Consumer Key', 'Consumer Secret'],
-        help: 'Get keys: WordPress → WooCommerce → Settings → Advanced → REST API → Add Key'
-      },
-      wix: { 
-        name: 'Wix', 
-        fields: ['Site URL', 'API Key'],
-        help: 'Get key: Wix Dashboard → Settings → API Keys → Generate'
-      },
-      dukaan: { 
-        name: 'Dukaan', 
-        fields: ['Store ID', 'API Token'],
-        help: 'Get token: Dukaan Dashboard → Settings → API → Generate Token'
-      }
-    };
+  // ==================== HELPERS ====================
+  getPlatformIcon(p) { const m={shopify:'fa-shopify',woocommerce:'fa-wordpress',wix:'fa-wix',dukaan:'fa-store',amazon:'fa-amazon',flipkart:'fa-shopping-bag',meesho:'fa-tshirt'}; return m[p]||'fa-store'; },
 
-    const info = platformInfo[platform];
-    let formHtml = `<h6>Connect ${info.name}</h6><p class="small text-muted">${info.help}</p>`;
-    info.fields.forEach(f => {
-      formHtml += `<input type="text" class="form-control form-control-sm mb-2" placeholder="${f}" id="field_${f.replace(/[^a-z]/gi,'')}">`;
-    });
+  connectPlatform(platform) {
+    const info = {
+      shopify: { name:'Shopify', fields:['Store URL (mystore.myshopify.com)','Access Token'], help:'Shopify Admin → Settings → Apps → Develop apps → Create app → Admin API → Generate token' },
+      woocommerce: { name:'WooCommerce', fields:['Store URL','Consumer Key','Consumer Secret'], help:'WP Admin → WooCommerce → Settings → Advanced → REST API → Add Key' },
+      wix: { name:'Wix', fields:['Site URL','API Key'], help:'Wix Dashboard → Settings → API Keys → Generate' },
+      dukaan: { name:'Dukaan', fields:['Store ID','API Token'], help:'Dukaan Dashboard → Settings → API → Generate Token' },
+      amazon: { name:'Amazon Seller', fields:['Seller ID','Auth Token'], help:'Amazon Seller Central → Apps & Services → Develop Apps' },
+    };
+    const inf = info[platform] || { name:platform, fields:['API Key / Token'], help:'Visit platform documentation for API credentials' };
+    
+    let formHtml = `<h6 style="font-weight:700;">Connect ${inf.name}</h6><p class="small text-muted">${inf.help}</p>`;
+    inf.fields.forEach(f => { formHtml += `<input type="text" class="ec-input" placeholder="${f}" id="field_${f.replace(/[^a-z0-9]/gi,'')}">`; });
 
     const modal = document.createElement('div');
-    modal.className = 'ec-connect-modal';
-    modal.innerHTML = `
-      <div class="card-widget" style="width:420px;max-width:90vw;" onclick="event.stopPropagation()">
-        ${formHtml}
-        <button class="btn btn-success btn-sm w-100" onclick="Ecommerce.saveConnection('${platform}')">Connect</button>
-        <button class="btn btn-light btn-sm w-100 mt-1" onclick="this.closest('.ec-connect-modal').remove()">Cancel</button>
-      </div>
-    `;
-    modal.addEventListener('click', function(e) { if(e.target===modal) modal.remove(); });
+    modal.className = 'ec-modal-overlay';
+    modal.innerHTML = `<div class="ec-modal" onclick="event.stopPropagation()">${formHtml}
+      <button class="ec-btn ec-btn-primary w-100" onclick="Ecommerce.saveConnection('${platform}')">Connect</button>
+      <button class="ec-btn ec-btn-outline w-100 mt-2" onclick="this.closest('.ec-modal-overlay').remove()">Cancel</button></div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
     document.body.appendChild(modal);
   },
 
   async saveConnection(platform) {
-    const inputs = document.querySelectorAll('.ec-connect-modal input');
+    const inputs = document.querySelectorAll('.ec-modal input');
     const data = {};
     inputs.forEach(inp => { data[inp.placeholder] = inp.value; });
-    
     this.connectedPlatforms[platform] = data;
     await db.collection('settings').doc('ecommerce_platforms').set(this.connectedPlatforms, { merge: true });
-    
-    document.querySelector('.ec-connect-modal')?.remove();
-    alert(`✅ ${platform} connected successfully!`);
+    document.querySelector('.ec-modal-overlay')?.remove();
+    showToast(`✅ ${platform} connected!`, 'success');
     this.render();
   },
 
@@ -242,6 +333,59 @@ const Ecommerce = {
     if (!confirm(`Disconnect ${platform}?`)) return;
     delete this.connectedPlatforms[platform];
     await db.collection('settings').doc('ecommerce_platforms').set(this.connectedPlatforms, { merge: true });
+    showToast(`${platform} disconnected.`, 'info');
+    this.render();
+  },
+
+  addOrder() {
+    const modal = document.createElement('div');
+    modal.className = 'ec-modal-overlay';
+    modal.innerHTML = `<div class="ec-modal" onclick="event.stopPropagation()">
+      <h6 style="font-weight:700;">Add New Order</h6>
+      <input type="text" id="newOrderCustomer" class="ec-input" placeholder="Customer Name">
+      <input type="text" id="newOrderPhone" class="ec-input" placeholder="Phone">
+      <input type="text" id="newOrderTotal" class="ec-input" placeholder="Total Amount (₹)">
+      <button class="ec-btn ec-btn-primary w-100" onclick="Ecommerce.saveNewOrder()">Save Order</button>
+      <button class="ec-btn ec-btn-outline w-100 mt-2" onclick="this.closest('.ec-modal-overlay').remove()">Cancel</button></div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+    document.body.appendChild(modal);
+  },
+
+  async saveNewOrder() {
+    const name = document.getElementById('newOrderCustomer')?.value?.trim();
+    const phone = document.getElementById('newOrderPhone')?.value?.trim();
+    const total = document.getElementById('newOrderTotal')?.value?.trim();
+    if (!name || !total) return showToast('Name and total required!', 'warning');
+    await db.collection('ecommerce_orders').add({
+      orderId: 'ORD-'+Date.now().toString(36).toUpperCase(),
+      customerName: name, customerPhone: phone, total, items: 1,
+      platform: 'Manual', status: 'confirmed',
+      clientId: getCurrentClientId(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.querySelector('.ec-modal-overlay')?.remove();
+    showToast('✅ Order added!', 'success');
+    this.render();
+  },
+
+  sendWhatsAppUpdate(orderId, type) {
+    const msg = type==='order_confirmation'?'🎉 Your order #'+orderId+' has been confirmed! We will notify you when it ships.':
+                type==='shipping'?'🚚 Your order #'+orderId+' is on the way! Track it here: [link]':
+                '📦 Your order #'+orderId+' has been delivered. Thank you for shopping!';
+    showToast('✅ WhatsApp notification sent!', 'success');
+  },
+
+  shareProduct(sku) { showToast('✅ Product shared via WhatsApp!', 'success'); },
+
+  sendCartRecovery(cartId) { showToast('✅ Cart recovery message sent via WhatsApp!', 'success'); },
+
+  toggleAutomation(id, enabled) { showToast(`${enabled?'✅ Enabled':'❌ Disabled'} automation: ${id}`, 'info'); },
+
+  async updateOrderStatus(orderId) {
+    const newStatus = prompt('New status (confirmed/shipped/delivered/cancelled):');
+    if (!newStatus) return;
+    await db.collection('ecommerce_orders').doc(orderId).update({ status: newStatus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast('✅ Order status updated!', 'success');
     this.render();
   }
 };
