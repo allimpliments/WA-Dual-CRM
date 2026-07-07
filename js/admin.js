@@ -1,4 +1,4 @@
-// js/admin.js — Complete Advanced Admin Panel (All Tabs Fully Functional)
+// js/admin.js — Complete Advanced Admin Panel with Pending Approvals Tab
 
 const Admin = {
   currentTab: 'dashboard',
@@ -22,6 +22,7 @@ const Admin = {
     if (isPlatformAdmin) {
       tabs = [
         { key: 'dashboard', label: 'Dashboard' },
+        { key: 'approvals', label: 'Pending Approvals' },   // <-- NEW TAB
         { key: 'clients', label: 'Clients' },
         { key: 'users', label: 'Users' },
         { key: 'roles', label: 'Roles & Permissions' },
@@ -64,6 +65,7 @@ const Admin = {
     `;
 
     if (this.currentTab === 'dashboard') html += await this.renderDashboard();
+    else if (this.currentTab === 'approvals') html += await this.renderApprovals();   // <-- NEW
     else if (this.currentTab === 'clients') html += await this.renderClients();
     else if (this.currentTab === 'users') html += await this.renderUsers();
     else if (this.currentTab === 'roles') html += await this.renderRoles();
@@ -96,6 +98,74 @@ const Admin = {
       try { users = (await db.collection('users').where('clientId','==',clientId).get()).size; } catch(e) {}
       return `<div class="admin-card"><h5>Company Overview</h5><p>Team members: <strong>${users}</strong></p></div>`;
     }
+  },
+
+  // ==================== PENDING APPROVALS ====================
+  async renderApprovals() {
+    if (!Permissions.canAccess('admin','manage')) return '';
+    let pending = [];
+    try {
+      const snap = await db.collection('clients').where('status', '==', 'pending').get();
+      pending = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
+    let html = `<div class="admin-card"><h5>Pending Client Approvals</h5>`;
+    if (pending.length === 0) html += `<p class="text-muted">No pending approvals.</p>`;
+    else {
+      html += `<table class="table table-sm"><thead><tr><th>Company</th><th>Contact</th><th>Plan</th><th>Modules</th><th>Actions</th></tr></thead><tbody>`;
+      pending.forEach(c => {
+        html += `<tr>
+          <td>${c.companyName||'Unnamed'}</td>
+          <td>${c.contactName||''}<br><small>${c.email||''}</small></td>
+          <td>${c.planId||'Free'}</td>
+          <td>${(c.modules||[]).join(', ')}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-success" onclick="Admin.approveClient('${c.id}')">Approve</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="Admin.rejectClient('${c.id}')">Reject</button>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+    html += `</div>`;
+    return html;
+  },
+
+  async approveClient(clientId) {
+    // 1. Get client data
+    const clientDoc = await db.collection('clients').doc(clientId).get();
+    const clientData = clientDoc.data();
+    if (!clientData) return alert('Client not found');
+    // 2. Find the associated user (client_owner with this clientId)
+    const userSnap = await db.collection('users').where('clientId', '==', clientId).where('role', '==', 'client_owner').get();
+    if (userSnap.empty) return alert('No user found for this client!');
+    const userDoc = userSnap.docs[0];
+    // 3. Set default permissions based on role and modules (clone from DEFAULT_ROLES.client_owner but intersect with client's modules)
+    const defaultPerms = JSON.parse(JSON.stringify(DEFAULT_ROLES.client_owner.modules));
+    const allowedModules = {};
+    (clientData.modules || []).forEach(mod => {
+      if (defaultPerms[mod]) allowedModules[mod] = defaultPerms[mod];
+    });
+    // 4. Update client status to active
+    await db.collection('clients').doc(clientId).update({ status: 'active' });
+    // 5. Update user status and permissions
+    await db.collection('users').doc(userDoc.id).update({
+      status: 'active',
+      permissions: allowedModules
+    });
+    alert('Client approved! User can now login with full access.');
+    this.render();
+  },
+
+  async rejectClient(clientId) {
+    if (!confirm('Reject this client? The user will not be able to access the platform.')) return;
+    // Delete client document and associated user
+    const userSnap = await db.collection('users').where('clientId', '==', clientId).get();
+    const batch = db.batch();
+    batch.delete(db.collection('clients').doc(clientId));
+    userSnap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    alert('Client rejected and removed.');
+    this.render();
   },
 
   // ==================== CLIENTS ====================
