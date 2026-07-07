@@ -1424,6 +1424,16 @@ nav a:hover, nav a.active { color:var(--gold); }
       });
     });
   }
+  // ================== FIREBASE (पहले जैसा) ==================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZDaHJSt-4AV6EJYG76p8kcsIHf6LOxdU",
+    authDomain: "avatar-wa-dual-crm.firebaseapp.com",
+    projectId: "avatar-wa-dual-crm",
+    storageBucket: "avatar-wa-dual-crm.firebasestorage.app",
+    messagingSenderId: "946959261009",
+    appId: "1:946959261009:web:db7ce59b52e454caf8c770"
+  };
+  firebase.initializeApp(firebaseConfig);
 
   // ===== SCROLL REVEAL (CSS ANIMATIONS) =====
   function initScrollReveal() {
@@ -1504,56 +1514,69 @@ nav a:hover, nav a.active { color:var(--gold); }
 
   // ===== UPDATED AUTH (REGISTRATION WITH CLIENT ONBOARDING) =====
   function showAuth(type) {
-    const isLogin = type === 'login';
-    const modalContent = `
-      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">
-        <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:16px;padding:28px;width:550px;max-width:92vw;max-height:85vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
-          <button style="position:absolute;top:10px;right:15px;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;" onclick="document.getElementById('authModal').innerHTML=''">&times;</button>
-          <h4 style="text-align:center;margin-bottom:16px;color:#f5f5f5;">${isLogin ? 'Welcome Back' : 'Start Your Free Trial'}</h4>
-          ${!isLogin ? `
-            <input type="text" id="regName" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Full Name *">
-            <input type="text" id="regCompany" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Company Name *">
-            <input type="text" id="regGST" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="GST Number (optional)">
-            <input type="text" id="regPhone" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Phone Number *">
-            <select id="regPlan" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;">
-              <option value="free">Free Plan</option>
-              <option value="advance" selected>Advance Plan</option>
-              <option value="professional">Professional Plan</option>
-              <option value="enterprise">Enterprise Plan</option>
-            </select>
-            <label style="color:#b0b0b0;font-size:12px;margin-bottom:5px;display:block;">Select Modules You Need:</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;">
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="dashboard" checked> Dashboard</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="leads" checked> Leads</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="contacts" checked> Contacts</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="campaigns" checked> Campaigns</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="chats" checked> Chats</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="templates"> Templates</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="flows"> Flows</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="social"> Social</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="chatbot"> Chatbot</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="forms"> Forms</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="kanban"> Kanban</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="knowledge"> Knowledge</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="ecommerce"> E‑commerce</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="appointments"> Appointments</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="analytics"> Analytics</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="tickets"> Tickets</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="integrations"> Integrations</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="agents"> Agents</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="clients"> Clients</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="marketing"> Marketing</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="setup"> Setup</label>
-              <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="reports"> Reports</label>
-            </div>
-          ` : ''}
-          <input type="email" id="authEmail" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Email *">
-          <input type="password" id="authPassword" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:16px;" placeholder="Password *">
-          <button class="btn-primary" style="width:100%;padding:12px;border-radius:30px;font-weight:600;cursor:pointer;background:#c8a84e;color:#0d0d0d;border:none;" onclick="${isLogin ? 'doLogin()' : 'doRegister()'}">${isLogin ? 'Login' : 'Create Free Account'}</button>
-          <p style="text-align:center;margin-top:12px;font-size:13px;color:#b0b0b0;">${isLogin ? "Don't have account?" : "Already have account?"} <a href="#" style="color:#c8a84e;" onclick="showAuth('${isLogin ? 'register' : 'login'}')">${isLogin ? 'Sign Up' : 'Login'}</a></p>
-        </div>
-      </div>`;
-    document.getElementById('authModal').innerHTML = modalContent;
+  const modal = document.getElementById('authModal');
+  const isLogin = type === 'login';
+
+  modal.innerHTML = `
+    <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="closeAuthModal()">
+      <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:16px;padding:28px;width:550px;max-width:92vw;max-height:85vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
+        <button style="position:absolute;top:10px;right:15px;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;" onclick="closeAuthModal()">&times;</button>
+        <h4 style="text-align:center;margin-bottom:16px;color:#f5f5f5;">${isLogin ? 'Welcome Back' : 'Start Your Free Trial'}</h4>
+        ${!isLogin ? `
+          <input type="text" id="regName" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Full Name *">
+          <input type="text" id="regCompany" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Company Name *">
+          <input type="text" id="regGST" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="GST Number (optional)">
+          <input type="text" id="regPhone" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Phone Number *">
+          <select id="regPlan" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;">
+            <option value="free">Free Plan</option>
+            <option value="advance" selected>Advance Plan</option>
+            <option value="professional">Professional Plan</option>
+            <option value="enterprise">Enterprise Plan</option>
+          </select>
+          <label style="color:#b0b0b0;font-size:12px;margin-bottom:5px;display:block;">Select Modules You Need:</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;">
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="dashboard" checked> Dashboard</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="leads" checked> Leads</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="contacts" checked> Contacts</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="campaigns" checked> Campaigns</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="chats" checked> Chats</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="templates"> Templates</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="flows"> Flows</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="social"> Social</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="chatbot"> Chatbot</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="forms"> Forms</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="kanban"> Kanban</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="knowledge"> Knowledge</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="ecommerce"> E‑commerce</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="appointments"> Appointments</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="analytics"> Analytics</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="tickets"> Tickets</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="integrations"> Integrations</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="agents"> Agents</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="clients"> Clients</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="marketing"> Marketing</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="setup"> Setup</label>
+            <label style="color:#b0b0b0;font-size:12px;"><input type="checkbox" class="regModule" value="reports"> Reports</label>
+          </div>
+        ` : ''}
+        <input type="email" id="authEmail" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:10px;" placeholder="Email *">
+        <input type="password" id="authPassword" class="form-control" style="background:#0d0d0d;border:1px solid #2a2a2a;color:#fff;padding:10px;border-radius:8px;width:100%;margin-bottom:16px;" placeholder="Password *">
+        <button class="btn-primary" style="width:100%;padding:12px;border-radius:30px;font-weight:600;cursor:pointer;background:#c8a84e;color:#0d0d0d;border:none;" onclick="${isLogin ? 'doLogin()' : 'doRegister()'}">${isLogin ? 'Login' : 'Create Free Account'}</button>
+        <p style="text-align:center;margin-top:12px;font-size:13px;color:#b0b0b0;">${isLogin ? "Don't have account?" : "Already have account?"} <a href="#" style="color:#c8a84e;" onclick="showAuth('${isLogin ? 'register' : 'login'}')">${isLogin ? 'Sign Up' : 'Login'}</a></p>
+      </div>
+    </div>`;
+
+    // मोडल को दृश्य बनाएँ
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  
+  // मोडल बंद करने का फंक्शन
+  function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    modal.innerHTML = '';
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
   }
 
   async function doRegister() {
@@ -1602,20 +1625,19 @@ nav a:hover, nav a.active { color:var(--gold); }
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert('Registration successful! Your account is pending approval. You will be notified once approved.');
-      document.getElementById('authModal').innerHTML = '';
+        alert('Registration successful! Pending approval.');
+      closeAuthModal();  // ← यह जोड़ें
     } catch (err) {
-      alert('Error: ' + err.message);
+      alert(err.message);
     }
   }
-
+  
   async function doLogin() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     if (!email || !password) return alert('Please enter email and password.');
     try {
       await firebase.auth().signInWithEmailAndPassword(email, password);
-      // Successful login → redirect to CRM (app main page)
       window.location.href = '/WA-Dual-CRM/';
     } catch (err) {
       alert(err.message);
