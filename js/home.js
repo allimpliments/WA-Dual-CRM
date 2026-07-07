@@ -1,113 +1,564 @@
-// home.js — Immediately visible sections + navigation, testimonials, auth
+// ======================================
+// WA DUAL CRM PREMIUM LANDING
+// home.js
+// ======================================
 
-// 1. Immediately make ALL sections visible (no waiting for observer)
-document.querySelectorAll('.snap-section').forEach(s => s.classList.add('in-view'));
+document.addEventListener("DOMContentLoaded", () => {
 
-// 2. Intersection Observer ONLY for active nav link update
-const sections = document.querySelectorAll('.snap-section');
-const navLinks = document.querySelectorAll('.nav-link');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const id = entry.target.id;
-      navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.dataset.target === id) link.classList.add('active');
-      });
+  initLenis();
+
+  initNavbar();
+
+  initScrollProgress();
+
+  initSmoothLinks();
+
+  initCounterAnimation();
+
+  initMobileEffects();
+
+});
+
+// ======================================
+// LENIS SMOOTH SCROLL
+// ======================================
+
+function initLenis() {
+
+  if (typeof Lenis === "undefined") return;
+
+  const lenis = new Lenis({
+    duration: 1.2,
+    smoothWheel: true,
+    smoothTouch: true,
+    wheelMultiplier: 1
+  });
+
+  function raf(time) {
+    lenis.raf(time);
+    requestAnimationFrame(raf);
+  }
+
+  requestAnimationFrame(raf);
+
+  window.lenis = lenis;
+}
+
+// ======================================
+// NAVBAR
+// ======================================
+
+function initNavbar() {
+
+  const navbar = document.querySelector(".navbar");
+
+  if (!navbar) return;
+
+  window.addEventListener("scroll", () => {
+
+    if (window.scrollY > 40) {
+
+      navbar.style.background =
+        "rgba(8,8,8,.75)";
+
+      navbar.style.backdropFilter =
+        "blur(24px)";
+
+      navbar.style.borderBottom =
+        "1px solid rgba(255,255,255,.08)";
+
+    } else {
+
+      navbar.style.background =
+        "rgba(8,8,8,.50)";
+
     }
+
   });
-}, { threshold: 0.5 });
 
-sections.forEach(section => observer.observe(section));
+}
 
-// 3. Header scroll effect
-const header = document.getElementById('header');
-window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 50));
+// ======================================
+// SCROLL PROGRESS
+// ======================================
 
-// 4. Nav click smooth scroll
-navLinks.forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    const target = document.getElementById(link.dataset.target);
-    if (target) target.scrollIntoView({ behavior: 'smooth' });
+function initScrollProgress() {
+
+  const progress =
+    document.getElementById(
+      "scrollProgress"
+    );
+
+  if (!progress) return;
+
+  window.addEventListener("scroll", () => {
+
+    const winScroll =
+      document.documentElement
+        .scrollTop;
+
+    const height =
+      document.documentElement
+        .scrollHeight -
+      document.documentElement
+        .clientHeight;
+
+    const scrolled =
+      (winScroll / height) * 100;
+
+    progress.style.width =
+      scrolled + "%";
+
   });
-});
 
-// 5. Feature categories (same as before)
-const featureData = { /* unchanged feature data object */ };
-function renderFeatures(category) {
-  const container = document.getElementById('featuresContainer');
-  const features = featureData[category] || [];
-  container.innerHTML = features.map(f => `
-    <div class="feature-card">
-      <i class="fas ${f.icon}"></i>
-      <h4>${f.title}</h4>
-      <p>${f.desc}</p>
-    </div>
-  `).join('');
 }
-document.querySelectorAll('.category-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-    this.classList.add('active');
-    renderFeatures(this.dataset.category);
+
+// ======================================
+// SMOOTH SECTION LINKS
+// ======================================
+
+function initSmoothLinks() {
+
+  const links =
+    document.querySelectorAll(
+      'a[href^="#"]'
+    );
+
+  links.forEach(link => {
+
+    link.addEventListener(
+      "click",
+      e => {
+
+        const targetId =
+          link.getAttribute("href");
+
+        if (
+          !targetId ||
+          targetId === "#"
+        )
+          return;
+
+        const target =
+          document.querySelector(
+            targetId
+          );
+
+        if (!target) return;
+
+        e.preventDefault();
+
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+
+      }
+    );
+
   });
-});
-renderFeatures('whatsapp');
 
-// 6. Dynamic text rotation
-const phrases = ["Automate Your Sales", "Generate More Leads", "Engage Customers 24/7", "Scale with AI"];
-let idx = 0;
-setInterval(() => {
-  document.getElementById('dynamicText').textContent = phrases[idx];
-  idx = (idx + 1) % phrases.length;
-}, 2000);
-
-// 7. Testimonials slider (unchanged)
-const testimonials = [ /* same array */ ];
-const track = document.getElementById('testimonialTrack');
-const dotsContainer = document.getElementById('sliderDots');
-let currentSlide = 0;
-function buildSlider() {
-  track.innerHTML = testimonials.map(t => `
-    <div class="testimonial-slide">
-      <div class="testimonial-card">
-        <div class="chat-bubble">${t.text}</div>
-        <div class="client-info">
-          <div class="client-avatar">${t.initials}</div>
-          <div><strong>${t.name}</strong><br><small>${t.role}</small></div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-  dotsContainer.innerHTML = testimonials.map((_, i) => `<span class="dot ${i===0?'active':''}" data-index="${i}"></span>`).join('');
-  document.querySelectorAll('.dot').forEach(dot => dot.addEventListener('click', function() {
-    goToSlide(parseInt(this.dataset.index));
-  }));
-}
-function goToSlide(index) {
-  currentSlide = index;
-  track.style.transform = `translateX(-${currentSlide * 100}%)`;
-  document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
-  document.querySelector(`.dot[data-index="${currentSlide}"]`).classList.add('active');
-}
-buildSlider();
-setInterval(() => {
-  currentSlide = (currentSlide + 1) % testimonials.length;
-  goToSlide(currentSlide);
-}, 3000);
-
-// 8. Custom plan request
-function requestCustomPlan() {
-  const email = document.getElementById('customEmail').value.trim();
-  if (!email) return alert('Please enter your email.');
-  const modules = Array.from(document.querySelectorAll('#customModules input:checked')).map(cb => cb.value);
-  if (modules.length === 0) return alert('Select at least one module.');
-  alert(`Thanks! We'll send a custom ${modules.join(', ')} plan to ${email}.`);
 }
 
-// 9. Auth & Contact (unchanged)
-function showAuth(type) { /* same as before */ }
-async function doRegister() { /* same */ }
-async function doLogin() { /* same */ }
-async function submitContact() { /* same */ }
+// ======================================
+// HERO COUNTERS
+// ======================================
+
+function initCounterAnimation() {
+
+  const counters =
+    document.querySelectorAll(
+      ".stat-card h3"
+    );
+
+  if (!counters.length) return;
+
+  const observer =
+    new IntersectionObserver(
+      entries => {
+
+        entries.forEach(entry => {
+
+          if (
+            !entry.isIntersecting
+          )
+            return;
+
+          animateCounter(
+            entry.target
+          );
+
+          observer.unobserve(
+            entry.target
+          );
+
+        });
+
+      },
+      {
+        threshold: 0.5
+      }
+    );
+
+  counters.forEach(counter =>
+    observer.observe(counter)
+  );
+
+}
+
+// ======================================
+// COUNTER ANIMATION
+// ======================================
+
+function animateCounter(el) {
+
+  const original =
+    el.innerText;
+
+  const numeric =
+    parseInt(
+      original.replace(
+        /[^0-9]/g,
+        ""
+      )
+    );
+
+  if (!numeric) return;
+
+  let current = 0;
+
+  const increment =
+    numeric / 60;
+
+  const timer =
+    setInterval(() => {
+
+      current += increment;
+
+      if (current >= numeric) {
+
+        el.innerText =
+          original;
+
+        clearInterval(timer);
+
+      } else {
+
+        const suffix =
+          original.replace(
+            /[0-9]/g,
+            ""
+          );
+
+        el.innerText =
+          Math.floor(current) +
+          suffix;
+
+      }
+
+    }, 25);
+
+}
+
+// ======================================
+// ACTIVE MENU
+// ======================================
+
+const sections =
+  document.querySelectorAll(
+    "section[id]"
+  );
+
+const navLinks =
+  document.querySelectorAll(
+    "nav a"
+  );
+
+window.addEventListener(
+  "scroll",
+  () => {
+
+    let current = "";
+
+    sections.forEach(section => {
+
+      const top =
+        section.offsetTop - 150;
+
+      const height =
+        section.offsetHeight;
+
+      if (
+        pageYOffset >= top &&
+        pageYOffset <
+          top + height
+      ) {
+        current =
+          section.getAttribute(
+            "id"
+          );
+      }
+
+    });
+
+    navLinks.forEach(link => {
+
+      link.classList.remove(
+        "active"
+      );
+
+      if (
+        link.getAttribute(
+          "href"
+        ) ===
+        "#" + current
+      ) {
+        link.classList.add(
+          "active"
+        );
+      }
+
+    });
+
+  }
+);
+
+// ======================================
+// KEYBOARD NAVIGATION
+// ======================================
+
+document.addEventListener(
+  "keydown",
+  e => {
+
+    const sectionList =
+      [
+        ...document.querySelectorAll(
+          ".snap-section"
+        )
+      ];
+
+    if (
+      !sectionList.length
+    )
+      return;
+
+    const current =
+      sectionList.findIndex(
+        section => {
+
+          const rect =
+            section.getBoundingClientRect();
+
+          return (
+            rect.top >= -100 &&
+            rect.top <= 200
+          );
+
+        }
+      );
+
+    if (
+      e.key ===
+      "ArrowDown"
+    ) {
+
+      const next =
+        sectionList[
+          current + 1
+        ];
+
+      if (next) {
+
+        next.scrollIntoView({
+          behavior:
+            "smooth"
+        });
+
+      }
+
+    }
+
+    if (
+      e.key ===
+      "ArrowUp"
+    ) {
+
+      const prev =
+        sectionList[
+          current - 1
+        ];
+
+      if (prev) {
+
+        prev.scrollIntoView({
+          behavior:
+            "smooth"
+        });
+
+      }
+
+    }
+
+  }
+);
+
+// ======================================
+// TOUCH SWIPE
+// ======================================
+
+let touchStartY = 0;
+
+document.addEventListener(
+  "touchstart",
+  e => {
+
+    touchStartY =
+      e.changedTouches[0]
+        .clientY;
+
+  }
+);
+
+document.addEventListener(
+  "touchend",
+  e => {
+
+    const touchEndY =
+      e.changedTouches[0]
+        .clientY;
+
+    const diff =
+      touchStartY -
+      touchEndY;
+
+    const sections =
+      [
+        ...document.querySelectorAll(
+          ".snap-section"
+        )
+      ];
+
+    const current =
+      sections.findIndex(
+        section => {
+
+          const rect =
+            section.getBoundingClientRect();
+
+          return (
+            rect.top >= -100 &&
+            rect.top <= 200
+          );
+
+        }
+      );
+
+    if (
+      Math.abs(diff) < 80
+    )
+      return;
+
+    if (diff > 0) {
+
+      const next =
+        sections[
+          current + 1
+        ];
+
+      if (next) {
+
+        next.scrollIntoView({
+          behavior:
+            "smooth"
+        });
+
+      }
+
+    } else {
+
+      const prev =
+        sections[
+          current - 1
+        ];
+
+      if (prev) {
+
+        prev.scrollIntoView({
+          behavior:
+            "smooth"
+        });
+
+      }
+
+    }
+
+  }
+);
+
+// ======================================
+// OPTIONAL MAGNETIC BUTTON
+// ======================================
+
+document
+  .querySelectorAll(
+    ".btn-primary"
+  )
+  .forEach(button => {
+
+    button.addEventListener(
+      "mousemove",
+      e => {
+
+        const rect =
+          button.getBoundingClientRect();
+
+        const x =
+          e.clientX -
+          rect.left -
+          rect.width / 2;
+
+        const y =
+          e.clientY -
+          rect.top -
+          rect.height / 2;
+
+        button.style.transform =
+          `translate(${x * .12}px, ${y * .12}px)`;
+
+      }
+    );
+
+    button.addEventListener(
+      "mouseleave",
+      () => {
+
+        button.style.transform =
+          "translate(0,0)";
+
+      }
+    );
+
+  });
+
+// ======================================
+// AUTH PLACEHOLDER
+// Existing Firebase logic remains
+// ======================================
+
+if (
+  typeof showAuth !==
+  "function"
+) {
+
+  window.showAuth =
+    function(type) {
+
+      console.log(
+        "Auth:",
+        type
+      );
+
+    };
+
+}
