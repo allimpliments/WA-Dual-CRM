@@ -711,3 +711,10 @@ nav a.active { color: var(--gold); }
   .dash-topbar { flex-direction: column; gap: 8px; }
   .dash-msg { flex-wrap: wrap; }
 }
+// ======================================
+// MOBILE EFFECTS (Empty function - fix for missing function error)
+// ======================================
+function initMobileEffects() {
+  // This function is intentionally empty.
+  // It prevents the JavaScript error that was breaking the page.
+}
