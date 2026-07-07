@@ -10,7 +10,9 @@ const Templates = {
 
     let templates = [];
     try {
-      const snap = await db.collection('templates').orderBy('createdAt', 'desc').get();
+      let query = db.collection('templates');
+      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      const snap = await query.orderBy('createdAt', 'desc').get();
       templates = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (err) {
       console.error('Error loading templates:', err);
@@ -164,6 +166,7 @@ const Templates = {
           const data = {
             name: mt.name, category: mt.category, language: mt.language,
             metaTemplateId: mt.id, metaStatus: mt.status, components: mt.components || [],
+            clientId: getCurrentClientId(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           };
           if (existing.empty) {
@@ -251,6 +254,7 @@ const Templates = {
       buttonPhone: document.getElementById('tplButtonPhone')?.value?.trim() || '',
       buttonPhone2: document.getElementById('tplButtonPhone2')?.value?.trim() || '',
       quickReply: document.getElementById('tplQuickReply')?.checked || false,
+      clientId: getCurrentClientId(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     if (!data.name || !data.body) return alert('Name & Body required!');
