@@ -1555,7 +1555,55 @@ nav a:hover, nav a.active { color:var(--gold); }
       </div>
     </div>`;
 }
+async function doRegister() {
+  const name = document.getElementById('regName')?.value?.trim();
+  const company = document.getElementById('regCompany')?.value?.trim();
+  const gst = document.getElementById('regGST')?.value?.trim();
+  const phone = document.getElementById('regPhone')?.value?.trim();
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const plan = document.getElementById('regPlan').value;
+  const modules = Array.from(document.querySelectorAll('.regModule:checked')).map(cb => cb.value);
 
+  if (!name || !email || !company || !phone || password.length < 6) return alert('Fill all required fields!');
+
+  try {
+    // 1. Firebase Auth user create
+    const userCred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+    const uid = userCred.user.uid;
+
+    // 2. Create client company document (status: pending)
+    const clientRef = await firebase.firestore().collection('clients').add({
+      companyName: company,
+      contactName: name,
+      phone: phone,
+      email: email,
+      gst: gst,
+      planId: plan,
+      modules: modules,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 3. Create user document with empty permissions (pending)
+    await firebase.firestore().collection('users').doc(uid).set({
+      name: name,
+      email: email,
+      phone: phone,
+      role: 'client_owner',
+      clientId: clientRef.id,
+      plan: plan,
+      status: 'pending',
+      permissions: {},
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert('Registration submitted! Your account is pending approval. You will be notified once approved.');
+    document.getElementById('authModal').innerHTML = '';
+  } catch (err) {
+    alert(err.message);
+  }
+}
   // ===== DEMO =====
   window.openDemoModal = function() {
     document.getElementById("demoModal").classList.add("active");
