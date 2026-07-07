@@ -1,4 +1,4 @@
-// auth.js — Multi-User Auth with Home Page Redirect & Permissions
+// auth.js — Multi-User Auth with Home Page Redirect, Permissions & Pending Approval Check
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -191,7 +191,19 @@ if (formId) {
       window.currentUser = { uid: user.uid, ...userData };
       window.currentUser.role = userData.role || 'admin';
       window.currentUser.clientId = userData.clientId || null;
-      
+
+      // ====== PENDING APPROVAL CHECK ======
+      if (userData.status === 'pending') {
+        loginScreen.style.display = 'none';
+        appMain.style.display = 'block';
+        const ca = document.getElementById('contentArea');
+        if (ca) ca.innerHTML = `<div class="card-widget text-center py-5">
+          <h4>Account Pending Approval</h4>
+          <p>Your account is currently under review by the platform administrator. You will receive access once approved.</p>
+        </div>`;
+        return;
+      }
+
       // 🔐 Load permissions BEFORE initApp
       try {
         const perms = await Permissions.getEffectivePermissions();
