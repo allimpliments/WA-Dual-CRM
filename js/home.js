@@ -9,8 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initScrollProgress();
   initSmoothLinks();
   initCounterAnimation();
-  initFaqAccordion();
-  initMobileEffects();
+  initFaqAccordion(); });
 });
 
 // ======================================
@@ -114,7 +113,7 @@ function animateCounter(el) {
 // ======================================
 // FAQ ACCORDION
 // ======================================
-function initFaqAccordion() {
+function  {
   document.querySelectorAll(".faq-question").forEach(btn => {
     btn.addEventListener("click", function() {
       const item = this.parentElement;
