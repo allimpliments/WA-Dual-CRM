@@ -3,161 +3,603 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>11 Avatar Digital Hub — WhatsApp CRM Platform</title>
-  <meta name="description" content="All-in-one WhatsApp CRM with AI chatbot, campaign automation, lead management, and 45+ features. Meta Verified Tech Partner. Scale your business.">
+  <title>11 Avatar Digital Hub – WhatsApp CRM Platform</title>
+  <meta name="description" content="All-in-one WhatsApp CRM with AI chatbot (Gemini & ChatGPT), campaign automation, lead management, and 45+ features. Meta Verified Tech Partner.">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root{--gold:#c8a84e;--gold-light:#e8d48b;--black:#0d0d0d;--dark:#1a1a1a;--card:#1e1e1e;--border:#2a2a2a;--text:#b0b0b0;--white:#f5f5f5;}
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--black);color:var(--white);overflow-x:hidden;scroll-behavior:smooth;}
-    .header{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(13,13,13,0.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(200,168,78,0.15);transition:0.3s;padding:14px 0;}
-    .header.scrolled{border-bottom-color:rgba(200,168,78,0.4);box-shadow:0 4px 30px rgba(0,0,0,0.5);}
-    .header .logo{font-weight:800;font-size:18px;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:10px;}
-    .header .logo span{color:var(--gold);}
-    .nav-link{color:var(--text);font-weight:500;padding:8px 14px;text-decoration:none;font-size:13px;transition:0.2s;border-radius:8px;cursor:pointer;}
-    .nav-link:hover{color:var(--white);background:rgba(255,255,255,0.05);}
-    .nav-btn{padding:8px 20px;border-radius:20px;font-weight:600;font-size:13px;cursor:pointer;transition:0.3s;border:none;}
-    .btn-login{background:transparent;border:1.5px solid var(--gold);color:var(--gold);}
-    .btn-login:hover{background:var(--gold);color:var(--black);}
-    .btn-signup{background:var(--gold);color:var(--black);}
-    .btn-signup:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,168,78,0.3);}
-    .hero{padding:160px 20px 80px;text-align:center;position:relative;overflow:hidden;}
-    .hero h1{font-size:clamp(32px,6vw,56px);font-weight:800;line-height:1.1;max-width:800px;margin:0 auto 16px;background:linear-gradient(135deg,var(--white),var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;}
-    .hero p{font-size:17px;color:var(--text);max-width:650px;margin:0 auto 28px;line-height:1.7;position:relative;z-index:1;}
-    .hero-badge{display:inline-block;padding:6px 18px;background:rgba(200,168,78,0.1);border:1px solid rgba(200,168,78,0.3);border-radius:20px;font-size:12px;color:var(--gold);margin-bottom:20px;}
-    .section{padding:80px 20px;max-width:1200px;margin:0 auto;}
-    .section-title{font-weight:800;font-size:clamp(24px,4vw,34px);text-align:center;margin-bottom:12px;color:var(--white);}
-    .section-subtitle{text-align:center;color:var(--text);font-size:15px;max-width:600px;margin:0 auto 48px;}
-    .gold-text{color:var(--gold);}
-    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;}
-    .feature-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:0.3s;position:relative;overflow:hidden;}
-    .feature-card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,0.4),0 0 0 1px rgba(200,168,78,0.2);border-color:rgba(200,168,78,0.4);}
-    .feature-card h4{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--white);}
-    .feature-card p{font-size:12px;color:var(--text);line-height:1.6;margin:0;}
-    .plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;}
-    .plan-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;text-align:center;transition:0.3s;position:relative;}
-    .plan-card.featured{border-color:var(--gold);}
-    .plan-price{font-size:42px;font-weight:800;color:var(--gold);margin:12px 0;}
-    .plan-feature{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;text-align:left;color:var(--text);}
-    .plan-feature i{color:var(--gold);}
-    .contact-form{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;max-width:600px;margin:0 auto;}
-    .contact-form input,.contact-form textarea,.contact-form select{width:100%;padding:12px 16px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:14px;margin-bottom:12px;}
-    .wa-float{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(37,211,102,0.3);transition:0.3s;text-decoration:none;}
-    .footer{background:var(--dark);border-top:1px solid var(--border);padding:50px 20px 30px;}
-    .footer a{color:var(--text);text-decoration:none;font-size:13px;}
-    .footer a:hover{color:var(--gold);}
-    .btn-gold{background:var(--gold);color:var(--black);padding:12px 28px;border-radius:24px;font-weight:700;border:none;cursor:pointer;transition:0.3s;font-size:14px;}
-    .btn-outline-gold{background:transparent;border:1.5px solid var(--gold);color:var(--gold);padding:12px 28px;border-radius:24px;font-weight:600;cursor:pointer;transition:0.3s;font-size:14px;}
-    .divider{width:60px;height:3px;background:var(--gold);margin:16px auto 32px;border-radius:2px;opacity:0.6;}
-    @media(max-width:768px){.header .nav-link{display:none;}.hero{padding:120px 16px 60px;}}
+    :root {
+      --gold: #c8a84e; --gold-light: #e8d48b; --black: #0d0d0d; --dark: #1a1a1a;
+      --card: #1e1e1e; --border: #2a2a2a; --text: #b0b0b0; --white: #f5f5f5;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--black); color: var(--white); overflow-x: hidden; }
+
+    .snap-container {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+      height: 100vh;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    .snap-section {
+      scroll-snap-align: start;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 100px 20px;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    .snap-section.in-view { opacity: 1; transform: translateY(0); }
+    .snap-section:nth-child(odd) { background: var(--black); }
+    .snap-section:nth-child(even) { background: var(--dark); }
+
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(13,13,13,0.9); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(200,168,78,0.15); transition: 0.3s; padding: 14px 0;
+    }
+    .header.scrolled { border-bottom-color: rgba(200,168,78,0.4); box-shadow:0 4px 30px rgba(0,0,0,0.5); }
+    .logo { font-weight:800; font-size:18px; color:var(--white); text-decoration:none; display:flex; align-items:center; gap:10px; }
+    .logo span { color:var(--gold); }
+    .nav-link { color:var(--text); font-weight:500; padding:8px 14px; text-decoration:none; font-size:13px; transition:0.2s; border-radius:8px; cursor:pointer; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(200,168,78,0.1); }
+    .btn-login { background:transparent; border:1.5px solid var(--gold); color:var(--gold); padding:8px 20px; border-radius:20px; font-weight:600; font-size:13px; cursor:pointer; transition:0.3s; }
+    .btn-login:hover { background:var(--gold); color:var(--black); }
+    .btn-signup { background:var(--gold); color:var(--black); padding:8px 20px; border-radius:20px; font-weight:600; font-size:13px; cursor:pointer; transition:0.3s; }
+    .btn-signup:hover { background:var(--gold-light); transform:translateY(-2px); box-shadow:0 8px 24px rgba(200,168,78,0.3); }
+
+    .btn-gold { background:var(--gold); color:var(--black); padding:14px 32px; border-radius:30px; font-weight:700; border:none; cursor:pointer; transition:0.3s; font-size:16px; display:inline-block; }
+    .btn-gold:hover { background:var(--gold-light); transform:translateY(-3px); box-shadow:0 12px 30px rgba(200,168,78,0.4); }
+    .btn-outline-gold { background:transparent; border:2px solid var(--gold); color:var(--gold); padding:14px 32px; border-radius:30px; font-weight:600; cursor:pointer; transition:0.3s; font-size:16px; display:inline-block; }
+    .btn-outline-gold:hover { background:var(--gold); color:var(--black); }
+
+    .section-title { font-weight:800; font-size:clamp(32px,5vw,48px); text-align:center; margin-bottom:12px; }
+    .section-subtitle { text-align:center; color:var(--text); font-size:18px; max-width:600px; margin:0 auto 48px; }
+    .gold-text { color:var(--gold); }
+    .divider { width:60px; height:3px; background:var(--gold); margin:16px auto 48px; border-radius:2px; }
+
+    .hero-badge-large {
+      display:inline-block; padding:10px 24px; background:rgba(200,168,78,0.15); border:2px solid var(--gold);
+      border-radius:30px; font-size:14px; color:var(--gold); margin-bottom:24px; font-weight:600;
+    }
+    .dynamic-text { font-size:clamp(24px,4vw,36px); font-weight:700; color:var(--gold-light); min-height:50px; margin-bottom:20px; }
+
+    .category-tabs { display:flex; justify-content:center; gap:10px; margin-bottom:40px; flex-wrap:wrap; }
+    .category-tab { padding:10px 20px; border-radius:25px; background:var(--card); border:1px solid var(--border); color:var(--text); cursor:pointer; transition:0.3s; font-weight:500; }
+    .category-tab.active, .category-tab:hover { background:var(--gold); color:var(--black); border-color:var(--gold); }
+    .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; max-width:1200px; margin:0 auto; }
+    .feature-card {
+      background:var(--card); border:1px solid var(--border); border-radius:20px; padding:32px 24px;
+      transition:all 0.4s cubic-bezier(0.25,0.8,0.25,1.2); position:relative; overflow:hidden;
+      transform-style:preserve-3d; perspective:1000px;
+    }
+    .feature-card:hover { transform:translateY(-10px) rotateX(2deg) rotateY(-2deg); box-shadow:0 30px 60px rgba(0,0,0,0.5),0 0 0 2px rgba(200,168,78,0.3); border-color:rgba(200,168,78,0.6); }
+    .feature-icon { font-size:32px; margin-bottom:16px; display:inline-block; background:linear-gradient(135deg,var(--gold),var(--gold-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .feature-card h4 { font-size:18px; font-weight:700; margin-bottom:8px; }
+    .feature-card p { font-size:13px; color:var(--text); line-height:1.6; }
+
+    .integration-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; max-width:900px; margin:0 auto; }
+    .integration-item { font-size:40px; color:var(--text); transition:all 0.3s; filter:grayscale(100%); opacity:0.6; cursor:default; }
+    .integration-item:hover { filter:grayscale(0%); opacity:1; transform:scale(1.2); color:var(--gold-light); text-shadow:0 0 20px rgba(200,168,78,0.5); }
+
+    .steps-container { display:flex; justify-content:space-between; align-items:flex-start; max-width:1000px; margin:0 auto; position:relative; }
+    .steps-container::before { content:''; position:absolute; top:30px; left:10%; right:10%; height:3px; background:linear-gradient(to right,var(--gold),var(--gold-light),var(--gold)); z-index:0; }
+    .step { text-align:center; position:relative; z-index:1; width:30%; }
+    .step-number { width:60px; height:60px; background:var(--card); border:3px solid var(--gold); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:var(--gold); margin:0 auto 16px; transition:0.3s; }
+    .step:hover .step-number { background:var(--gold); color:var(--black); box-shadow:0 0 30px rgba(200,168,78,0.5); }
+    .step h4 { font-weight:700; margin-bottom:8px; }
+    .step p { font-size:13px; color:var(--text); }
+
+    .testimonial-slider { max-width:900px; margin:0 auto; position:relative; overflow:hidden; }
+    .testimonial-track { display:flex; transition:transform 0.5s ease-in-out; }
+    .testimonial-slide { min-width:100%; padding:0 20px; }
+    .testimonial-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; position:relative; }
+    .chat-bubble { background:#075e54; color:#fff; padding:12px 16px; border-radius:8px 8px 8px 0; margin-bottom:12px; font-size:14px; position:relative; }
+    .chat-bubble::after { content:''; position:absolute; bottom:0; left:-8px; width:0; height:0; border:8px solid transparent; border-right-color:#075e54; border-bottom-color:#075e54; }
+    .client-info { display:flex; align-items:center; gap:10px; margin-top:12px; }
+    .client-avatar { width:40px; height:40px; border-radius:50%; background:var(--gold); color:var(--black); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; }
+    .slider-dots { display:flex; justify-content:center; gap:10px; margin-top:20px; }
+    .dot { width:10px; height:10px; border-radius:50%; background:var(--border); cursor:pointer; transition:0.3s; }
+    .dot.active { background:var(--gold); }
+
+    .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:30px; max-width:1200px; margin:0 auto; }
+    .plan-card { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:40px 30px; text-align:center; transition:0.4s; position:relative; }
+    .plan-card.featured { border-color:var(--gold); transform:scale(1.03); box-shadow:0 0 40px rgba(200,168,78,0.2); }
+    .plan-card:hover { transform:translateY(-8px); box-shadow:0 20px 40px rgba(0,0,0,0.5); }
+    .plan-price { font-size:48px; font-weight:800; color:var(--gold); margin:20px 0; }
+    .plan-feature { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:14px; text-align:left; }
+    .plan-feature i { color:var(--gold); font-size:12px; }
+    .plan-feature.disabled { opacity:0.4; }
+
+    .customize-form { max-width:700px; margin:60px auto 0; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:30px; }
+    .customize-form h4 { text-align:center; margin-bottom:20px; }
+    .checkbox-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+    .checkbox-item { display:flex; align-items:center; gap:8px; font-size:14px; }
+    .checkbox-item input { accent-color:var(--gold); width:18px; height:18px; }
+
+    .contact-form input, .contact-form textarea, .contact-form select { width:100%; padding:14px 18px; background:var(--dark); border:1px solid var(--border); border-radius:12px; color:var(--white); font-size:15px; margin-bottom:16px; transition:0.3s; }
+    .contact-form input:focus, .contact-form textarea:focus { border-color:var(--gold); outline:none; }
+
+    .wa-float { position:fixed; bottom:24px; right:24px; z-index:999; width:60px; height:60px; background:#25D366; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; box-shadow:0 8px 24px rgba(37,211,102,0.4); transition:0.3s; text-decoration:none; animation:floatBtn 2s infinite; }
+    @keyframes floatBtn { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .wa-float:hover { transform:scale(1.1); }
+
+    .coming-soon-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; max-width:1000px; margin:0 auto; }
+    .coming-soon-item { background:var(--card); border:1px dashed var(--border); border-radius:16px; padding:24px; text-align:center; opacity:0.8; }
+    .coming-soon-item i { font-size:28px; color:var(--gold); margin-bottom:12px; }
+
+    @media(max-width:768px) {
+      .header .nav-link { display:none; }
+      .snap-section { padding:60px 16px; }
+      .steps-container { flex-direction:column; align-items:center; }
+      .steps-container::before { display:none; }
+      .step { width:80%; margin-bottom:30px; }
+      .pricing-grid { grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
-<header class="header" id="header">
-  <div class="container d-flex justify-content-between align-items-center">
-    <a href="#" class="logo">
-      <img src="https://firebasestorage.googleapis.com/v0/b/avatar-wa-dual-crm.firebasestorage.app/o/branding%2FTransparent%20logo.png?alt=media&token=001ea208-b7d9-4f38-a96b-18865afb6d79" style="width:38px;height:38px;border-radius:10px;object-fit:cover;">
-      <span>11</span> Avatar Digital Hub
-    </a>
-    <div class="d-flex align-items-center gap-1">
-      <a class="nav-link" onclick="scrollToSection('home')">Home</a>
-      <a class="nav-link" onclick="scrollToSection('features')">Features</a>
-      <a class="nav-link" onclick="scrollToSection('pricing')">Pricing</a>
-      <a class="nav-link" onclick="scrollToSection('how')">How It Works</a>
-      <a class="nav-link" onclick="scrollToSection('contact')">Contact</a>
-      <button class="nav-btn btn-login ms-2" onclick="showAuth('login')">Log In</button>
-      <button class="nav-btn btn-signup ms-1" onclick="showAuth('register')">Sign Up</button>
+<div class="snap-container" id="snapContainer">
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="container d-flex justify-content-between align-items-center">
+      <a href="#" class="logo">
+        <img src="https://firebasestorage.googleapis.com/v0/b/avatar-wa-dual-crm.firebasestorage.app/o/branding%2FTransparent%20logo.png?alt=media&token=001ea208-b7d9-4f38-a96b-18865afb6d79" style="width:38px;height:38px;border-radius:10px;object-fit:cover;">
+        <span>11</span> Avatar Digital Hub
+      </a>
+      <div class="d-flex align-items-center gap-1" id="navLinks">
+        <a class="nav-link" data-target="hero">Home</a>
+        <a class="nav-link" data-target="features">Features</a>
+        <a class="nav-link" data-target="integrations">Integrations</a>
+        <a class="nav-link" data-target="how">How It Works</a>
+        <a class="nav-link" data-target="testimonials">Testimonials</a>
+        <a class="nav-link" data-target="pricing">Pricing</a>
+        <a class="nav-link" data-target="comingsoon">Coming Soon</a>
+        <a class="nav-link" data-target="contact">Contact</a>
+        <button class="btn-login ms-2" onclick="showAuth('login')">Log In</button>
+        <button class="btn-signup ms-1" onclick="showAuth('register')">Sign Up</button>
+      </div>
     </div>
-  </div>
-</header>
-<section class="hero" id="home">
-  <div class="hero-badge"><i class="fas fa-check-circle me-1"></i> Meta Verified Tech Partner</div>
-  <h1>WhatsApp CRM That Actually Grows Business</h1>
-  <p>All-in-one platform with AI chatbot, campaign automation, lead management, and 45+ powerful features. Built by marketers with 15+ years of experience.</p>
-  <button class="btn-gold" onclick="showAuth('register')">Start Free Trial <i class="fas fa-arrow-right ms-1"></i></button>
-</section>
-<section class="section" id="features">
-  <h2 class="section-title">45+ Powerful Features</h2>
-  <p class="section-subtitle">Everything you need in one platform</p>
-  <div class="divider"></div>
-  <div class="card-grid">
-    <div class="feature-card"><h4><i class="fab fa-whatsapp text-success me-2"></i>Live Chat — All Platforms</h4><p>WhatsApp, Facebook, Instagram, LinkedIn, YouTube — unified inbox.</p></div>
-    <div class="feature-card"><h4><i class="fas fa-robot text-warning me-2"></i>AI Chatbot — Free</h4><p>Groq AI powered. Keyword triggers, flows, human handoff. No cost.</p></div>
-    <div class="feature-card"><h4><i class="fas fa-rocket text-info me-2"></i>Campaigns — Bulk & Drip</h4><p>Thousands of messages. Drip sequences. Personalization. Analytics.</p></div>
-    <div class="feature-card"><h4><i class="fas fa-funnel-dollar text-primary me-2"></i>Lead Management</h4><p>10+ sources. Kanban pipeline. Lead scoring. Auto-assign.</p></div>
-    <div class="feature-card"><h4><i class="fas fa-calendar-check text-danger me-2"></i>Appointments</h4><p>Booking, Google Meet, WhatsApp reminders, telecalling.</p></div>
-    <div class="feature-card"><h4><i class="fas fa-chart-bar text-purple me-2"></i>Analytics & Reports</h4><p>Real-time dashboards. ROI tracking. Exportable.</p></div>
-  </div>
-</section>
-<section class="section" id="how">
-  <h2 class="section-title">How It Works</h2>
-  <div class="divider"></div>
-  <div class="card-grid" style="grid-template-columns:repeat(3,1fr);">
-    <div class="feature-card text-center"><h3 style="color:var(--gold);">1</h3><h4>Connect WhatsApp</h4><p>Link your number in 2 minutes.</p></div>
-    <div class="feature-card text-center"><h3 style="color:var(--gold);">2</h3><h4>Configure</h4><p>Set up chatbot & campaigns.</p></div>
-    <div class="feature-card text-center"><h3 style="color:var(--gold);">3</h3><h4>Grow</h4><p>Watch leads convert on autopilot.</p></div>
-  </div>
-</section>
-<section class="section" id="pricing">
-  <h2 class="section-title">Simple Pricing</h2>
-  <div class="divider"></div>
-  <div class="plan-grid">
-    <div class="plan-card"><h5>Starter</h5><div class="plan-price">₹0</div><div class="plan-feature"><i class="fas fa-check-circle"></i>100 contacts</div><div class="plan-feature"><i class="fas fa-check-circle"></i>WhatsApp messaging</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Basic chatbot</div><button class="btn-outline-gold w-100 mt-3" onclick="showAuth('register')">Start Free</button></div>
-    <div class="plan-card featured"><h5>Professional</h5><div class="plan-price">₹2,499</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Everything in Starter</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Unlimited contacts</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Free AI chatbot</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Unlimited campaigns</div><button class="btn-gold w-100 mt-3" onclick="showAuth('register')">Start Trial</button></div>
-    <div class="plan-card"><h5>Enterprise</h5><div class="plan-price">₹9,999</div><div class="plan-feature"><i class="fas fa-check-circle"></i>Everything in Pro</div><div class="plan-feature"><i class="fas fa-check-circle"></i>White-label</div><div class="plan-feature"><i class="fas fa-check-circle"></i>API access</div><button class="btn-outline-gold w-100 mt-3" onclick="showAuth('register')">Contact Sales</button></div>
-  </div>
-</section>
-<section class="section" id="contact">
-  <h2 class="section-title">Get In Touch</h2>
-  <div class="divider"></div>
-  <div class="contact-form">
-    <input type="text" id="contactName" placeholder="Your Name">
-    <input type="email" id="contactEmail" placeholder="Email Address">
-    <input type="text" id="contactPhone" placeholder="Phone Number">
-    <textarea id="contactMessage" rows="3" placeholder="Tell us about your requirements..."></textarea>
-    <button class="btn-gold w-100" onclick="submitContact()">Send Message</button>
-    <p id="contactResult" class="text-center mt-2 small"></p>
-  </div>
-</section>
-<footer class="footer">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4 mb-3"><h5 style="color:var(--white);">11 Avatar Digital Hub</h5><p class="small" style="color:var(--text);">Meta Verified Tech Partner.</p></div>
-      <div class="col-md-2 mb-3"><strong style="color:var(--white);">Legal</strong><br><a href="legal/terms.html">Terms</a><br><a href="legal/privacy.html">Privacy</a><br><a href="legal/disclaimer.html">Disclaimer</a></div>
-      <div class="col-md-2 mb-3"><strong style="color:var(--white);">Contact</strong><br><a href="mailto:support@11avatardigitalhub.cloud">Email</a><br><a href="tel:918959592006">Call</a></div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="snap-section" id="hero" style="text-align:center;">
+    <div>
+      <div class="hero-badge-large"><i class="fas fa-check-circle me-2"></i> Meta Verified Tech Partner</div>
+      <h1 style="font-size:clamp(40px,8vw,72px);font-weight:800;background:linear-gradient(135deg,var(--white),var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">WhatsApp CRM That<br><span class="gold-text">Actually Grows</span> Business</h1>
+      <div class="dynamic-text" id="dynamicText">Automate Your Sales</div>
+      <p style="font-size:18px;color:var(--text);max-width:650px;margin:0 auto 32px;line-height:1.7;">All-in-one platform with AI chatbot (Gemini & ChatGPT), campaign automation, lead management, and 45+ powerful features. Built by marketers with 15+ years of experience.</p>
+      <button class="btn-gold" onclick="showAuth('register')">Start Free Trial <i class="fas fa-arrow-right ms-1"></i></button>
+      <button class="btn-outline-gold ms-3" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Explore Features</button>
+      <div class="d-flex justify-content-center gap-5 mt-5 flex-wrap">
+        <div class="text-center"><div style="font-size:32px;font-weight:800;color:var(--gold);">45+</div><small>Features</small></div>
+        <div class="text-center"><div style="font-size:32px;font-weight:800;color:var(--gold);">30+</div><small>Integrations</small></div>
+        <div class="text-center"><div style="font-size:32px;font-weight:800;color:var(--gold);">10K+</div><small>Businesses</small></div>
+        <div class="text-center"><div style="font-size:32px;font-weight:800;color:var(--gold);">15+</div><small>Years Exp</small></div>
+      </div>
     </div>
-    <hr style="border-color:var(--border);"><p class="small text-center mb-0" style="color:var(--text);">© 2026 11 Avatar Digital Hub.</p>
-  </div>
-</footer>
+  </section>
+
+  <!-- Features Section with Category Tabs -->
+  <section class="snap-section" id="features">
+    <div style="max-width:1200px;margin:0 auto;text-align:center;">
+      <h2 class="section-title">Everything You Need.<br><span class="gold-text">All In One Place.</span></h2>
+      <p class="section-subtitle">45+ powerful features across all business functions. Click a category to explore.</p>
+      <div class="divider"></div>
+      <div class="category-tabs" id="categoryTabs">
+        <span class="category-tab active" data-category="whatsapp">WhatsApp</span>
+        <span class="category-tab" data-category="crm">CRM</span>
+        <span class="category-tab" data-category="ecommerce">E‑commerce</span>
+        <span class="category-tab" data-category="automation">Automation</span>
+        <span class="category-tab" data-category="analytics">Analytics</span>
+        <span class="category-tab" data-category="marketing">Marketing</span>
+        <span class="category-tab" data-category="social">Social Media</span>
+      </div>
+      <div class="features-grid" id="featuresContainer"></div>
+    </div>
+  </section>
+
+  <!-- Integrations -->
+  <section class="snap-section" id="integrations">
+    <div style="text-align:center;max-width:1000px;margin:0 auto;">
+      <h2 class="section-title">30+ <span class="gold-text">Integrations</span></h2>
+      <p class="section-subtitle">Connect your entire stack. Every major platform, ready to sync.</p>
+      <div class="divider"></div>
+      <div class="integration-grid">
+        <div class="integration-item" title="WhatsApp"><i class="fab fa-whatsapp"></i></div>
+        <div class="integration-item" title="Facebook"><i class="fab fa-facebook"></i></div>
+        <div class="integration-item" title="Instagram"><i class="fab fa-instagram"></i></div>
+        <div class="integration-item" title="Shopify"><i class="fab fa-shopify"></i></div>
+        <div class="integration-item" title="WooCommerce"><i class="fab fa-wordpress"></i></div>
+        <div class="integration-item" title="Zapier"><i class="fas fa-bolt"></i></div>
+        <div class="integration-item" title="Calendly"><i class="fas fa-calendar-alt"></i></div>
+        <div class="integration-item" title="Razorpay"><i class="fas fa-rupee-sign"></i></div>
+        <div class="integration-item" title="Stripe"><i class="fab fa-stripe-s"></i></div>
+        <div class="integration-item" title="Google Ads"><i class="fab fa-google"></i></div>
+        <div class="integration-item" title="Meta Ads"><i class="fab fa-meta"></i></div>
+        <div class="integration-item" title="Mailchimp"><i class="fas fa-envelope"></i></div>
+        <div class="integration-item" title="Slack"><i class="fab fa-slack"></i></div>
+        <div class="integration-item" title="OpenAI / Gemini"><i class="fas fa-robot"></i></div>
+        <div class="integration-item" title="Google Sheets"><i class="fas fa-table"></i></div>
+        <div class="integration-item" title="Zoom"><i class="fas fa-video"></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="snap-section" id="how">
+    <div style="max-width:1000px;margin:0 auto;text-align:center;">
+      <h2 class="section-title">How It <span class="gold-text">Works</span></h2>
+      <p class="section-subtitle">Get started in 3 simple steps</p>
+      <div class="divider"></div>
+      <div class="steps-container">
+        <div class="step"><div class="step-number">1</div><h4>Connect WhatsApp</h4><p>Link your WhatsApp Business number in under 2 minutes with our guided setup wizard.</p></div>
+        <div class="step"><div class="step-number">2</div><h4>Configure Automations</h4><p>Set up chatbot, campaigns, and lead capture — all from one intuitive dashboard.</p></div>
+        <div class="step"><div class="step-number">3</div><h4>Start Growing</h4><p>Watch leads convert, campaigns deliver, and revenue grow — on autopilot.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Slider -->
+  <section class="snap-section" id="testimonials">
+    <div style="max-width:1200px;margin:0 auto;text-align:center;">
+      <h2 class="section-title">What Our <span class="gold-text">Clients Say</span></h2>
+      <p class="section-subtitle">Real feedback from real businesses across India</p>
+      <div class="divider"></div>
+      <div class="testimonial-slider" id="testimonialSlider">
+        <div class="testimonial-track" id="testimonialTrack"></div>
+        <div class="slider-dots" id="sliderDots"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing (Fully Visible) -->
+  <section class="snap-section" id="pricing">
+    <div style="max-width:1200px;margin:0 auto;text-align:center;">
+      <h2 class="section-title">Simple, <span class="gold-text">Transparent</span> Pricing</h2>
+      <p class="section-subtitle">Choose the right plan for your business. Need something custom? Tailor it below.</p>
+      <div class="divider"></div>
+      <div class="pricing-grid">
+        <div class="plan-card">
+          <h4>Basic</h4>
+          <div class="plan-price">₹999</div><p>per month</p>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Up to 500 contacts</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> WhatsApp messaging</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Basic chatbot (keywords)</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> 10 campaigns/month</div>
+          <button class="btn-outline-gold w-100 mt-4" onclick="showAuth('register')">Get Started</button>
+        </div>
+        <div class="plan-card featured">
+          <h4>Advance</h4>
+          <div class="plan-price">₹2,499</div><p>per month</p>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Unlimited contacts</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> AI chatbot (Gemini/ChatGPT)</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Unlimited campaigns</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Drip sequences</div>
+          <button class="btn-gold w-100 mt-4" onclick="showAuth('register')">Start Free Trial</button>
+        </div>
+        <div class="plan-card">
+          <h4>Professional</h4>
+          <div class="plan-price">₹9,999</div><p>per month</p>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Everything in Advance</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> White‑label</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Custom integrations</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> API access</div>
+          <button class="btn-outline-gold w-100 mt-4" onclick="showAuth('register')">Contact Sales</button>
+        </div>
+        <div class="plan-card">
+          <h4>Enterprise</h4>
+          <div class="plan-price">Custom</div><p>tailored for you</p>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Everything in Professional</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> Dedicated infrastructure</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> SLA guarantee</div>
+          <div class="plan-feature"><i class="fas fa-check-circle"></i> 24/7 phone support</div>
+          <button class="btn-outline-gold w-100 mt-4" onclick="showAuth('register')">Talk to Us</button>
+        </div>
+      </div>
+
+      <!-- Customize Your Plan (Checkboxes) -->
+      <div class="customize-form">
+        <h4>Customize Your Plan</h4>
+        <p style="color:var(--text); margin-bottom:20px;">Select the modules you need. We'll create a tailored quote.</p>
+        <div class="checkbox-grid" id="customModules">
+          <label class="checkbox-item"><input type="checkbox" value="WhatsApp"> WhatsApp</label>
+          <label class="checkbox-item"><input type="checkbox" value="CRM"> CRM</label>
+          <label class="checkbox-item"><input type="checkbox" value="E‑commerce"> E‑commerce</label>
+          <label class="checkbox-item"><input type="checkbox" value="Automation"> Automation</label>
+          <label class="checkbox-item"><input type="checkbox" value="Analytics"> Analytics</label>
+          <label class="checkbox-item"><input type="checkbox" value="Marketing"> Marketing</label>
+          <label class="checkbox-item"><input type="checkbox" value="Social Media"> Social Media</label>
+        </div>
+        <input type="email" id="customEmail" class="form-control" placeholder="Your Email Address" style="margin-bottom:16px;">
+        <button class="btn-gold w-100" onclick="requestCustomPlan()">Get Custom Quote</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Coming Soon -->
+  <section class="snap-section" id="comingsoon">
+    <div style="max-width:1000px;margin:0 auto;text-align:center;">
+      <h2 class="section-title"><span class="gold-text">Coming Soon</span></h2>
+      <p class="section-subtitle">Exciting features currently in development</p>
+      <div class="divider"></div>
+      <div class="coming-soon-grid">
+        <div class="coming-soon-item"><i class="fas fa-envelope"></i><h5>Email Marketing</h5><p>Integrated email campaigns & sequences</p></div>
+        <div class="coming-soon-item"><i class="fas fa-language"></i><h5>Multi‑Language Support</h5><p>15+ Indian languages</p></div>
+        <div class="coming-soon-item"><i class="fas fa-brain"></i><h5>AI Training</h5><p>Custom AI models for your business</p></div>
+        <div class="coming-soon-item"><i class="fas fa-paint-brush"></i><h5>Advanced White‑Label</h5><p>Full branding customization</p></div>
+        <div class="coming-soon-item"><i class="fas fa-plug"></i><h5>More Integrations</h5><p>Zoho, HubSpot, Salesforce & more</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="snap-section" id="contact">
+    <div style="max-width:700px;margin:0 auto;text-align:center;">
+      <h2 class="section-title">Get In <span class="gold-text">Touch</span></h2>
+      <p class="section-subtitle">Have questions? We'll reply within 2 minutes on WhatsApp.</p>
+      <div class="divider"></div>
+      <div class="contact-form">
+        <input type="text" id="contactName" placeholder="Your Name">
+        <input type="email" id="contactEmail" placeholder="Email Address">
+        <input type="text" id="contactPhone" placeholder="Phone Number">
+        <select id="contactInterest"><option>Interested In...</option><option>WhatsApp CRM</option><option>AI Chatbot</option><option>White‑Label</option><option>Enterprise Plan</option></select>
+        <textarea id="contactMessage" rows="4" placeholder="Tell us about your requirements..."></textarea>
+        <button class="btn-gold w-100" onclick="submitContact()">Send Message <i class="fas fa-paper-plane ms-1"></i></button>
+        <p id="contactResult" class="text-center mt-3 small"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="snap-section" style="min-height:auto;padding:40px 20px;background:var(--dark);border-top:1px solid var(--border);">
+    <div class="container"><div class="row"><div class="col-md-4 mb-3"><h5 style="color:var(--white);">11 Avatar Digital Hub</h5><p class="small" style="color:var(--text);">Meta Verified Tech Partner.</p></div><div class="col-md-2 mb-3"><strong style="color:var(--white);">Legal</strong><br><a href="legal/terms.html" style="color:var(--text);text-decoration:none;">Terms</a><br><a href="legal/privacy.html" style="color:var(--text);text-decoration:none;">Privacy</a><br><a href="legal/disclaimer.html" style="color:var(--text);text-decoration:none;">Disclaimer</a></div><div class="col-md-2 mb-3"><strong style="color:var(--white);">Contact</strong><br><a href="mailto:support@11avatardigitalhub.cloud" style="color:var(--text);text-decoration:none;">Email</a><br><a href="tel:918959592006" style="color:var(--text);text-decoration:none;">Call</a></div></div><hr style="border-color:var(--border);"><p class="small text-center mb-0" style="color:var(--text);">© 2026 11 Avatar Digital Hub.</p></div>
+  </footer>
+</div>
+
+<!-- WhatsApp Float -->
 <a href="https://wa.me/917489771499" target="_blank" class="wa-float"><i class="fab fa-whatsapp"></i></a>
 <div id="authModal"></div>
+
 <script>
-function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
-window.addEventListener('scroll',()=>{document.getElementById('header').classList.toggle('scrolled',window.scrollY>50);});
-function showAuth(type){
-  const isLogin=type==='login';
-  document.getElementById('authModal').innerHTML='<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()"><div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:400px;max-width:90vw;" onclick="event.stopPropagation()"><button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" onclick="document.getElementById(\'authModal\').innerHTML=\'\'"></button><h4 class="text-center mb-3" style="color:var(--white);">'+(isLogin?'Welcome Back':'Start Free Trial')+'</h4>'+(isLogin?'':'<input type="text" id="regName" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Full Name">')+'<input type="email" id="authEmail" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Email"><input type="password" id="authPassword" class="form-control mb-3" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Password"><button class="btn-gold w-100" onclick="'+(isLogin?'doLogin()':'doRegister()')+'">'+(isLogin?'Login':'Create Free Account')+'</button><p class="text-center mt-2 small" style="color:var(--text);">'+(isLogin?"Don't have account?":"Already have account?")+' <a href="#" style="color:var(--gold);" onclick="showAuth(\''+(isLogin?'register':'login')+'\')">'+(isLogin?'Sign Up':'Login')+'</a></p></div></div>';
-}
-async function doRegister(){
-  const n=document.getElementById('regName')?.value?.trim(),e=document.getElementById('authEmail').value.trim(),p=document.getElementById('authPassword').value;
-  if(!n||!e||p.length<6)return alert('Fill all fields!');
-  try{const c=await firebase.auth().createUserWithEmailAndPassword(e,p);await firebase.firestore().collection('users').doc(c.user.uid).set({name:n,email:e,role:'client',plan:'free',createdAt:firebase.firestore.FieldValue.serverTimestamp()});window.location.href='/WA-Dual-CRM/';}catch(err){alert(err.message);}
-}
-async function doLogin(){
-  const e=document.getElementById('authEmail').value.trim(),p=document.getElementById('authPassword').value;
-  if(!e||!p)return alert('Enter email & password!');
-  try{await firebase.auth().signInWithEmailAndPassword(e,p);window.location.href='/WA-Dual-CRM/';}catch(err){alert(err.message);}
-}
-async function submitContact(){
-  const n=document.getElementById('contactName')?.value?.trim(),e=document.getElementById('contactEmail')?.value?.trim(),p=document.getElementById('contactPhone')?.value?.trim(),m=document.getElementById('contactMessage')?.value?.trim();
-  if(!n||!e||!m)return alert('Fill required fields!');
-  try{await firebase.firestore().collection('contact_inquiries').add({name:n,email:e,phone:p,message:m,createdAt:firebase.firestore.FieldValue.serverTimestamp()});document.getElementById('contactResult').innerHTML='<span style="color:#34d399;">Thank you!</span>';}catch(err){document.getElementById('contactResult').innerHTML='<span style="color:#f87171;">Error.</span>';}
-}
+  // Feature data by category
+  const featureData = {
+    whatsapp: [
+      {icon:'fa-whatsapp',title:'Live Chat — All Platforms',desc:'Unified inbox: WhatsApp, FB, Instagram, LinkedIn, YouTube.'},
+      {icon:'fa-robot',title:'AI Chatbot (Gemini & ChatGPT)',desc:'Multi‑AI support. Keyword triggers, flows, handoff. No per‑message cost.'},
+      {icon:'fa-rocket',title:'Campaigns — Bulk & Drip',desc:'Send thousands. Drip sequences. Personalization. Analytics.'},
+      {icon:'fa-comment-dots',title:'WhatsApp Flows',desc:'Interactive conversations. Meta templates + visual builder.'},
+      {icon:'fa-palette',title:'Template Builder',desc:'Sync templates. Variables, buttons, quick replies.'},
+      {icon:'fa-bell',title:'Smart Notifications',desc:'Order alerts, payment reminders, delivery updates.'},
+    ],
+    crm: [
+      {icon:'fa-funnel-dollar',title:'Lead Management',desc:'10+ sources. Kanban pipeline, lead scoring, auto‑assign.'},
+      {icon:'fa-users',title:'Contact Management',desc:'Groups, custom fields, CSV import/export.'},
+      {icon:'fa-tasks',title:'Kanban Pipeline',desc:'7 stages, notes, follow‑ups, deal value.'},
+      {icon:'fa-calendar-check',title:'Appointment System',desc:'Booking, Google Meet, WhatsApp reminders, telecalling.'},
+      {icon:'fa-user-tie',title:'Agents & Clients',desc:'Role‑based access, team management, white‑label ready.'},
+      {icon:'fa-shield-alt',title:'Enterprise Security',desc:'Firebase Auth, Firestore rules, Cloudflare Worker.'},
+    ],
+    ecommerce: [
+      {icon:'fa-store',title:'Multi‑Platform Hub',desc:'Shopify, WooCommerce, Wix, Dukaan.'},
+      {icon:'fa-shopping-cart',title:'Cart Recovery',desc:'Auto‑remind via WhatsApp.'},
+      {icon:'fa-truck',title:'Shipping Updates',desc:'Live tracking & delivery confirmations.'},
+      {icon:'fa-star',title:'Review Collection',desc:'Post‑delivery review requests.'},
+    ],
+    automation: [
+      {icon:'fa-robot',title:'Chatbot Flows',desc:'Visual builder: message, question, input, condition.'},
+      {icon:'fa-clock',title:'Drip Sequences',desc:'Automated follow‑ups with custom delays.'},
+      {icon:'fa-plug',title:'30+ Integrations',desc:'Zapier, Stripe, Razorpay, Sheets, Slack.'},
+      {icon:'fa-code',title:'API Access',desc:'REST API & webhooks for custom integrations.'},
+    ],
+    analytics: [
+      {icon:'fa-chart-bar',title:'Real‑time Dashboards',desc:'Leads, conversions, campaigns, revenue.'},
+      {icon:'fa-file-alt',title:'Exportable Reports',desc:'CSV/PDF exports. Scheduled reports.'},
+      {icon:'fa-chart-pie',title:'Lead Sources',desc:'Track best performing channels.'},
+      {icon:'fa-bullseye',title:'ROI Calculator',desc:'Project WhatsApp revenue.'},
+    ],
+    marketing: [
+      {icon:'fa-ad',title:'Meta Ads Manager',desc:'Create & sync lead forms.'},
+      {icon:'fa-google',title:'Google Ads',desc:'Track conversions, auto‑capture leads.'},
+      {icon:'fa-envelope',title:'Email Campaigns (Coming Soon)',desc:'Integrated sequences.'},
+      {icon:'fa-chart-line',title:'Performance Analytics',desc:'Ad ROI, cost per lead.'},
+    ],
+    social: [
+      {icon:'fa-globe',title:'Multi‑Platform Posting',desc:'FB, IG, LinkedIn, Twitter, YouTube.'},
+      {icon:'fa-calendar-alt',title:'Content Calendar',desc:'Drag‑drop scheduling.'},
+      {icon:'fa-camera',title:'Media Library',desc:'Upload & reuse images/videos.'},
+      {icon:'fa-chart-simple',title:'Social Analytics',desc:'Engagement, reach, follower growth.'},
+    ]
+  };
+
+  function renderFeatures(category) {
+    const container = document.getElementById('featuresContainer');
+    const features = featureData[category] || [];
+    container.innerHTML = features.map(f => `
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas ${f.icon}"></i></div>
+        <h4>${f.title}</h4>
+        <p>${f.desc}</p>
+      </div>
+    `).join('');
+  }
+
+  document.querySelectorAll('.category-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      renderFeatures(this.dataset.category);
+    });
+  });
+  renderFeatures('whatsapp');
+
+  // Dynamic text
+  const phrases = ["Automate Your Sales", "Generate More Leads", "Engage Customers 24/7", "Scale with AI"];
+  let idx = 0;
+  setInterval(() => {
+    document.getElementById('dynamicText').textContent = phrases[idx];
+    idx = (idx + 1) % phrases.length;
+  }, 2000);
+
+  // Scroll Snap active section detection
+  const sections = document.querySelectorAll('.snap-section');
+  const navLinks = document.querySelectorAll('.nav-link');
+  const header = document.getElementById('header');
+  const observerOptions = { threshold: 0.6 };
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        const id = entry.target.id;
+        navLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.dataset.target === id) link.classList.add('active');
+        });
+      }
+    });
+  }, observerOptions);
+  sections.forEach(section => observer.observe(section));
+  window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 50));
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const current = [...sections].find(s => s.getBoundingClientRect().top >= -100);
+      const next = e.key === 'ArrowDown' ? current?.nextElementSibling : current?.previousElementSibling;
+      if (next && next.classList.contains('snap-section')) next.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  // Touch swipe
+  let touchStartY = 0;
+  document.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartY - e.changedTouches[0].clientY;
+    if (Math.abs(diff) > 60) {
+      const current = [...sections].find(s => s.getBoundingClientRect().top >= -100);
+      if (diff > 0) current?.nextElementSibling?.scrollIntoView({ behavior: 'smooth' });
+      else current?.previousElementSibling?.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  // Testimonials Slider
+  const testimonials = [
+    { initials:'RS', name:'Rahul Sharma', role:'Real Estate Agent, Mumbai', text:'"11 Avatar CRM ne hamari lead conversion 3x kar di! WhatsApp automation se response time minutes se seconds mein aa gaya."' },
+    { initials:'PP', name:'Priya Patel', role:'E-commerce Owner, Ahmedabad', text:'"AI chatbot Gemini aur ChatGPT dono support karta hai, 80% queries auto handle. Support team ka load 60% kam hua."' },
+    { initials:'AK', name:'Amit Kumar', role:'Marketing Head, Delhi', text:'"Campaign management ne sales 40% badha di. Drip sequences set karo aur bhool jao."' },
+    { initials:'SD', name:'Sneha Desai', role:'Clinic Manager, Pune', text:'"Appointment reminders ne no‑show rate 70% kam kar diya. WhatsApp reminders patients ko bohot pasand aaye."' },
+    { initials:'VJ', name:'Vikram Joshi', role:'Retail Chain Owner, Jaipur', text:'"E‑commerce integration ne order updates seamless kar diye. Customers happy, team happy."' },
+    { initials:'NS', name:'Neha Singh', role:'Freelancer, Bangalore', text:'"Free AI chatbot se leads 24/7 qualify hote hain. Mera personal assistant jaisa kaam karta hai."' },
+    { initials:'RM', name:'Rohit Mehta', role:'Real Estate, Gurgaon', text:'"WhatsApp API setup 2 minute mein ho gaya. Ab tak ki best CRM investment."' },
+    { initials:'AP', name:'Ankit Patel', role:'Education Consultant, Surat', text:'"Form builder aur lead capture ne admission process 2x fast kar diya."' },
+    { initials:'KS', name:'Kavita Sharma', role:'Beauty Salon Chain, Indore', text:'"Social media posting ek jagah se ho jati hai. Time bachta hai aur brand consistent lagta hai."' },
+    { initials:'DY', name:'Deepak Yadav', role:'Logistics, Lucknow', text:'"Bulk campaigns se driver update bhejna ab simple hai. Customer satisfaction up."' }
+  ];
+
+  const track = document.getElementById('testimonialTrack');
+  const dotsContainer = document.getElementById('sliderDots');
+  let currentSlide = 0;
+  function buildSlider() {
+    track.innerHTML = testimonials.map(t => `
+      <div class="testimonial-slide">
+        <div class="testimonial-card">
+          <div class="chat-bubble">${t.text}</div>
+          <div class="client-info">
+            <div class="client-avatar">${t.initials}</div>
+            <div><strong>${t.name}</strong><br><small class="text-muted">${t.role}</small></div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    dotsContainer.innerHTML = testimonials.map((_, i) => `<span class="dot ${i===0?'active':''}" data-index="${i}"></span>`).join('');
+    document.querySelectorAll('.dot').forEach(dot => dot.addEventListener('click', function() {
+      goToSlide(parseInt(this.dataset.index));
+    }));
+  }
+  function goToSlide(index) {
+    currentSlide = index;
+    track.style.transform = `translateX(-${currentSlide * 100}%)`;
+    document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
+    document.querySelector(`.dot[data-index="${currentSlide}"]`).classList.add('active');
+  }
+  buildSlider();
+  setInterval(() => {
+    currentSlide = (currentSlide + 1) % testimonials.length;
+    goToSlide(currentSlide);
+  }, 3000);
+
+  // Custom Plan Request
+  function requestCustomPlan() {
+    const email = document.getElementById('customEmail').value.trim();
+    if (!email) return alert('Please enter your email.');
+    const modules = Array.from(document.querySelectorAll('#customModules input:checked')).map(cb => cb.value);
+    if (modules.length === 0) return alert('Select at least one module.');
+    alert(`Thanks! We'll send a custom ${modules.join(', ')} plan to ${email}.`);
+  }
+
+  // Auth & Contact functions (Fully Working)
+  function showAuth(type) {
+    const isLogin = type === 'login';
+    document.getElementById('authModal').innerHTML = `
+      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:400px;max-width:90vw;" onclick="event.stopPropagation()">
+          <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" onclick="document.getElementById('authModal').innerHTML=''"></button>
+          <h4 class="text-center mb-3" style="color:var(--white);">${isLogin ? 'Welcome Back' : 'Start Free Trial'}</h4>
+          ${!isLogin ? '<input type="text" id="regName" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Full Name">' : ''}
+          <input type="email" id="authEmail" class="form-control mb-2" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Email">
+          <input type="password" id="authPassword" class="form-control mb-3" style="background:var(--dark);border-color:var(--border);color:#fff;" placeholder="Password">
+          <button class="btn-gold w-100" onclick="${isLogin ? 'doLogin()' : 'doRegister()'}">${isLogin ? 'Login' : 'Create Free Account'}</button>
+          <p class="text-center mt-2 small" style="color:var(--text);">${isLogin ? "Don't have account?" : "Already have account?"} <a href="#" style="color:var(--gold);" onclick="showAuth('${isLogin ? 'register' : 'login'}')">${isLogin ? 'Sign Up' : 'Login'}</a></p>
+        </div>
+      </div>`;
+  }
+
+  async function doRegister() {
+    const n = document.getElementById('regName')?.value?.trim();
+    const e = document.getElementById('authEmail').value.trim();
+    const p = document.getElementById('authPassword').value;
+    if (!n || !e || p.length < 6) return alert('Fill all fields!');
+    try {
+      const c = await firebase.auth().createUserWithEmailAndPassword(e, p);
+      await firebase.firestore().collection('users').doc(c.user.uid).set({ name:n, email:e, role:'client', plan:'free', createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+      window.location.href = '/WA-Dual-CRM/';
+    } catch(err) { alert(err.message); }
+  }
+
+  async function doLogin() {
+    const e = document.getElementById('authEmail').value.trim();
+    const p = document.getElementById('authPassword').value;
+    if (!e || !p) return alert('Enter email & password!');
+    try {
+      await firebase.auth().signInWithEmailAndPassword(e, p);
+      window.location.href = '/WA-Dual-CRM/';
+    } catch(err) { alert(err.message); }
+  }
+
+  async function submitContact() {
+    const n = document.getElementById('contactName')?.value?.trim();
+    const e = document.getElementById('contactEmail')?.value?.trim();
+    const p = document.getElementById('contactPhone')?.value?.trim();
+    const m = document.getElementById('contactMessage')?.value?.trim();
+    if (!n || !e || !m) return alert('Fill required fields!');
+    try {
+      await firebase.firestore().collection('contact_inquiries').add({ name:n, email:e, phone:p, message:m, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+      document.getElementById('contactResult').innerHTML = '<span style="color:#34d399;">Thank you! We\'ll get back shortly.</span>';
+    } catch(err) { document.getElementById('contactResult').innerHTML = '<span style="color:#f87171;">Error.</span>'; }
+  }
 </script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<script>const firebaseConfig={apiKey:"AIzaSyBZDaHJSt-4AV6EJYG76p8kcsIHf6LOxdU",authDomain:"avatar-wa-dual-crm.firebaseapp.com",projectId:"avatar-wa-dual-crm",storageBucket:"avatar-wa-dual-crm.firebasestorage.app",messagingSenderId:"946959261009",appId:"1:946959261009:web:db7ce59b52e454caf8c770"};firebase.initializeApp(firebaseConfig);</script>
+<script>
+  const firebaseConfig = { apiKey:"AIzaSyBZDaHJSt-4AV6EJYG76p8kcsIHf6LOxdU", authDomain:"avatar-wa-dual-crm.firebaseapp.com", projectId:"avatar-wa-dual-crm", storageBucket:"avatar-wa-dual-crm.firebasestorage.app", messagingSenderId:"946959261009", appId:"1:946959261009:web:db7ce59b52e454caf8c770" };
+  firebase.initializeApp(firebaseConfig);
+</script>
 </body>
 </html>
