@@ -1,4 +1,4 @@
-// auth.js — Multi-User Auth with Home Page Redirect, Permissions & Pending Approval Check
+// auth.js — Multi-User Auth with Home Page Redirect, Permissions, Pending Approval, clientId, SaaS Ready
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
@@ -117,7 +117,12 @@ if (formId) {
           }
         });
         try {
-          await db.collection('formSubmissions').add({ formId: formId, data: formData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          await db.collection('formSubmissions').add({
+            formId: formId,
+            data: formData,
+            clientId: form.clientId || null,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
           await db.collection('forms').doc(formId).update({ submissionCount: firebase.firestore.FieldValue.increment(1) });
           await LeadCapture.fromForm(formData, formId);
           document.getElementById('publicFormMsg').innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
@@ -128,8 +133,9 @@ if (formId) {
   })();
 } else {
   // ========== NORMAL AUTH FLOW ==========
-  console.log('Auth script loaded');
+  console.log('Auth script loaded — SaaS Multi-Tenant Mode');
 
+  // Toggle between Login and Register forms
   document.getElementById('showRegister').addEventListener('click', (e) => {
     e.preventDefault();
     loginFormDiv.style.display = 'none';
@@ -141,6 +147,7 @@ if (formId) {
     loginFormDiv.style.display = 'block';
   });
 
+  // ========== REGISTER (Direct on Index Page - Fallback) ==========
   document.getElementById('registerBtn').addEventListener('click', async () => {
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -149,14 +156,18 @@ if (formId) {
     try {
       const userCred = await auth.createUserWithEmailAndPassword(email, password);
       await db.collection('users').doc(userCred.user.uid).set({
-        name, email, role: 'client', plan: 'free',
+        name, email, role: 'client_owner', plan: 'free',
+        status: 'pending',
+        permissions: {},
+        clientId: null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      alert('Registration successful! Redirecting to CRM...');
+      alert('Registration successful! Your account is pending approval. You will be redirected to the CRM.');
       window.location.href = '/WA-Dual-CRM/';
     } catch (err) { alert(err.message); }
   });
 
+  // ========== LOGIN ==========
   document.getElementById('loginBtn').addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
@@ -166,6 +177,7 @@ if (formId) {
     } catch (err) { alert(err.message); }
   });
 
+  // ========== AUTH STATE CHANGE — MAIN ENTRY POINT ==========
   auth.onAuthStateChanged(async (user) => {
     console.log('Auth state changed', user ? 'logged in' : 'logged out');
     if (user) {
@@ -175,32 +187,104 @@ if (formId) {
         if (doc.exists) {
           userData = doc.data();
         } else {
-          userData = { name: user.email, email: user.email, role: 'admin' };
+          // Auto-create user document if not exists (fallback)
+          userData = { name: user.email, email: user.email, role: 'admin', status: 'approved', permissions: {}, clientId: null };
           await db.collection('users').doc(user.uid).set({
             name: user.email,
             email: user.email,
             role: 'admin',
+            status: 'approved',
+            permissions: {},
+            clientId: null,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
-        userData = { name: user.email, email: user.email, role: 'admin' };
+        userData = { name: user.email, email: user.email, role: 'admin', status: 'approved', permissions: {}, clientId: null };
       }
-      
-      window.currentUser = { uid: user.uid, ...userData };
-      window.currentUser.role = userData.role || 'admin';
-      window.currentUser.clientId = userData.clientId || null;
+
+      // Set global currentUser object
+      window.currentUser = {
+        uid: user.uid,
+        name: userData.name || user.email,
+        email: userData.email || user.email,
+        role: userData.role || 'admin',
+        status: userData.status || 'approved',
+        clientId: userData.clientId || null,
+        permissions: userData.permissions || {},
+        plan: userData.plan || 'free',
+        phone: userData.phone || ''
+      };
 
       // ====== PENDING APPROVAL CHECK ======
       if (userData.status === 'pending') {
         loginScreen.style.display = 'none';
         appMain.style.display = 'block';
         const ca = document.getElementById('contentArea');
-        if (ca) ca.innerHTML = `<div class="card-widget text-center py-5">
-          <h4>Account Pending Approval</h4>
-          <p>Your account is currently under review by the platform administrator. You will receive access once approved.</p>
-        </div>`;
+        if (ca) ca.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
+            <div style="text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+              <i class="fas fa-clock fa-4x" style="color:#f59e0b;margin-bottom:20px;"></i>
+              <h3 style="font-weight:800;color:#0f172a;">Account Pending Approval</h3>
+              <p style="color:#64748b;margin:12px 0;">Your account is currently under review by the platform administrator. You will receive access once approved.</p>
+              <div style="background:#fef3c7;padding:12px;border-radius:10px;margin-top:16px;">
+                <small style="color:#92400e;"><i class="fas fa-info-circle me-1"></i> If this is urgent, please contact your platform administrator.</small>
+              </div>
+              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      // ====== REJECTED CHECK ======
+      if (userData.status === 'rejected') {
+        loginScreen.style.display = 'none';
+        appMain.style.display = 'block';
+        const ca = document.getElementById('contentArea');
+        if (ca) ca.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
+            <div style="text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+              <i class="fas fa-times-circle fa-4x" style="color:#ef4444;margin-bottom:20px;"></i>
+              <h3 style="font-weight:800;color:#0f172a;">Account Rejected</h3>
+              <p style="color:#64748b;margin:12px 0;">Your account registration has been rejected by the platform administrator. Please contact support for more information.</p>
+              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      // ====== SUSPENDED CHECK ======
+      if (userData.status === 'suspended') {
+        loginScreen.style.display = 'none';
+        appMain.style.display = 'block';
+        const ca = document.getElementById('contentArea');
+        if (ca) ca.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
+            <div style="text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+              <i class="fas fa-ban fa-4x" style="color:#f59e0b;margin-bottom:20px;"></i>
+              <h3 style="font-weight:800;color:#0f172a;">Account Suspended</h3>
+              <p style="color:#64748b;margin:12px 0;">Your account has been temporarily suspended. Please contact your platform administrator for assistance.</p>
+              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      // ====== INACTIVE CHECK ======
+      if (userData.status === 'inactive') {
+        loginScreen.style.display = 'none';
+        appMain.style.display = 'block';
+        const ca = document.getElementById('contentArea');
+        if (ca) ca.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
+            <div style="text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+              <i class="fas fa-user-slash fa-4x" style="color:#94a3b8;margin-bottom:20px;"></i>
+              <h3 style="font-weight:800;color:#0f172a;">Account Inactive</h3>
+              <p style="color:#64748b;margin:12px 0;">Your account is currently inactive. Please contact your platform administrator to reactivate it.</p>
+              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+            </div>
+          </div>`;
         return;
       }
 
@@ -210,18 +294,29 @@ if (formId) {
         window.__currentPermissions = perms;
       } catch (e) {
         console.error('Permissions load error:', e);
+        window.__currentPermissions = { modules: {}, isPlatformRole: false, level: 99 };
       }
 
-      // 🌐 Load user language preference AFTER user data is ready
-      I18n.init();
+      // 🌐 Load user language preference
+      if (typeof I18n !== 'undefined' && I18n.init) {
+        I18n.init();
+      }
+
+      // Update last login timestamp
+      try {
+        await db.collection('users').doc(user.uid).update({
+          lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) { /* silent */ }
 
       // Show the app
       loginScreen.style.display = 'none';
       appMain.style.display = 'block';
       initApp(userData.role);
       const roleBadge = document.getElementById('userRoleBadge');
-      if (roleBadge) roleBadge.textContent = '(' + userData.role + ')';
+      if (roleBadge) roleBadge.textContent = '(' + (userData.role || 'admin') + ')';
     } else {
+      // User logged out
       window.currentUser = null;
       window.__currentPermissions = null;
       loginScreen.style.display = 'flex';
