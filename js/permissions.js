@@ -1,4 +1,4 @@
-// js/permissions.js — Role‑Based Access Control Engine (Working)
+// js/permissions.js — Role‑Based Access Control Engine (Updated with Pending User Check)
 
 const DEFAULT_ROLES = {
   // 1. PLATFORM OWNER
@@ -186,8 +186,13 @@ const ROLE_MAP = {
 window.Permissions = {
   async getEffectivePermissions() {
     const user = window.currentUser;
-    // If no user, return a safe minimal permission set
+    // यदि कोई user नहीं (fallback) — platform owner दे दें (सिर्फ सेफ्टी के लिए)
     if (!user) return DEFAULT_ROLES.platform_owner;
+
+    // 🚫 PENDING USER — अप्रूवल से पहले कोई एक्सेस नहीं
+    if (user.status === 'pending') {
+      return { modules: {}, isPlatformRole: false, level: 99 };
+    }
 
     // Resolve role ID (old → new)
     let roleId = user.role;
@@ -195,20 +200,20 @@ window.Permissions = {
       roleId = ROLE_MAP[roleId] || 'platform_owner';
     }
 
-    // Get the role definition (clone it to avoid modifying the original)
+    // रोल डेफिनिशन की कॉपी बनाएँ (मूल ऑब्जेक्ट को न छेड़ें)
     const role = JSON.parse(JSON.stringify(DEFAULT_ROLES[roleId] || DEFAULT_ROLES.platform_owner));
 
-    // If client user, intersect with plan modules
+    // यदि क्लाइंट यूज़र है, तो उसकी कंपनी को असाइन किए गए मॉड्यूल के अनुसार फ़िल्टर करें
     if (!role.isPlatformRole && user.clientId) {
       try {
         const clientDoc = await db.collection('clients').doc(user.clientId).get();
         const clientData = clientDoc.data() || {};
-        const planModules = clientData.modules || [];
+        const clientModules = clientData.modules || [];
 
-        if (planModules.length > 0) {
+        if (clientModules.length > 0) {
           const allowedModules = {};
           Object.keys(role.modules).forEach(mod => {
-            if (planModules.includes(mod)) {
+            if (clientModules.includes(mod)) {
               allowedModules[mod] = role.modules[mod];
             }
           });
@@ -219,9 +224,17 @@ window.Permissions = {
       }
     }
 
-    // Apply user-level overrides (if any)
+    // यूज़र-लेवल परमिशन ओवरराइड (यदि एडमिन ने users डॉक्यूमेंट में permissions डाली हैं)
     if (user.permissions) {
-      Object.assign(role.modules, user.permissions);
+      Object.keys(user.permissions).forEach(mod => {
+        if (role.modules[mod]) {
+          // पहले से मौजूद मॉड्यूल के एक्शन मर्ज करें
+          Object.assign(role.modules[mod], user.permissions[mod]);
+        } else {
+          // नया मॉड्यूल ऐड करें
+          role.modules[mod] = user.permissions[mod];
+        }
+      });
     }
 
     return role;
@@ -229,13 +242,15 @@ window.Permissions = {
 
   canAccess(module, action = 'read') {
     const perms = window.__currentPermissions;
-    // If permissions are still loading, allow everything (prevents blank header)
+    // लोडिंग के दौरान (permissions अभी सेट नहीं हुई) — एक्सेस दें ताकि UI टूटे नहीं
     if (!perms) return true;
 
-    // Platform Owner and Super Admin have full access
+    // प्लेटफ़ॉर्म ओनर और सुपर एडमिन को हर जगह पूरा एक्सेस
     if (perms.isPlatformRole && (perms.level === 0 || perms.level === 1)) return true;
 
-    // Check specific module permission
+    // पेंडिंग यूज़र (level 99) — किसी भी मॉड्यूल का एक्सेस नहीं
+    if (perms.level === 99) return false;
+
     const modPerms = perms.modules?.[module];
     if (!modPerms) return false;
 
