@@ -1,4 +1,4 @@
-// js/campaigns.js — Bulk + Drip Campaigns (Fixed)
+// js/campaigns.js — Bulk + Drip Campaigns with clientId isolation
 const Campaigns = {
   currentTab: 'bulk',
   editingCampaign: null,
@@ -16,7 +16,10 @@ const Campaigns = {
   async renderBulk() {
     let campaigns = [];
     try {
-      const snap = await db.collection('campaigns').where('type', '==', 'bulk').orderBy('createdAt', 'desc').get();
+      // ✅ clientId फ़िल्टर
+      let query = db.collection('campaigns').where('type', '==', 'bulk');
+      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      const snap = await query.orderBy('createdAt', 'desc').get();
       campaigns = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch(e){ console.error(e); }
 
@@ -79,6 +82,7 @@ const Campaigns = {
       media:document.getElementById('bMedia').value.trim(),
       status:action==='send'?(document.getElementById('bSchedule').value==='later'?'scheduled':'running'):'draft',
       total:0, sent:0, delivered:0, failed:0,
+      clientId: getCurrentClientId(),   // ✅ clientId जोड़ा
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     const ref=await db.collection('campaigns').add(data);
@@ -88,8 +92,21 @@ const Campaigns = {
   },
 
   async getContacts(groupId) {
-    if(groupId){const g=await db.collection('contactGroups').doc(groupId).get();const ids=g.data().memberIds||[];const cs=[];for(const id of ids){const d=await db.collection('contacts').doc(id).get();if(d.exists)cs.push({id:d.id,...d.data()});}return cs;}
-    const sn=await db.collection('contacts').get();return sn.docs.map(d=>({id:d.id,...d.data()}));
+    if(groupId){
+      const g=await db.collection('contactGroups').doc(groupId).get();
+      const ids=g.data().memberIds||[];
+      const cs=[];
+      for(const id of ids){
+        const d=await db.collection('contacts').doc(id).get();
+        if(d.exists) cs.push({id:d.id,...d.data()});
+      }
+      return cs;
+    }
+    // ✅ clientId फ़िल्टर
+    let query = db.collection('contacts');
+    if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+    const sn=await query.get();
+    return sn.docs.map(d=>({id:d.id,...d.data()}));
   },
 
   async sendOne(phone, msg, media) {
@@ -123,7 +140,13 @@ const Campaigns = {
   // ==================== DRIP ====================
   async renderDrip() {
     let drips=[];
-    try{const sn=await db.collection('campaigns').where('type','==','drip').orderBy('createdAt','desc').get();drips=sn.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+    try{
+      // ✅ clientId फ़िल्टर
+      let query = db.collection('campaigns').where('type', '==', 'drip');
+      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      const sn=await query.orderBy('createdAt', 'desc').get();
+      drips=sn.docs.map(d=>({id:d.id,...d.data()}));
+    }catch(e){}
     let html=`
       <div class="d-flex gap-2 mb-3">
         <button class="btn btn-outline-primary btn-sm" onclick="Campaigns.currentTab='bulk';Campaigns.render();">📢 Bulk</button>
@@ -179,7 +202,13 @@ const Campaigns = {
     const steps=[];
     document.querySelectorAll('#dripStepsContainer .border').forEach(r=>{const m=r.querySelector('textarea')?.value.trim();const d=parseInt(r.querySelector('input')?.value)||0;if(m)steps.push({message:m,delayHours:d});});
     if(steps.length===0) return alert('Add steps!');
-    const data={name,type:'drip',groupId:document.getElementById('dGroup').value,dripSteps:steps,total:0,sent:0,delivered:0,failed:0,status:action==='send'?'running':'draft',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const data={
+      name, type:'drip', groupId:document.getElementById('dGroup').value,
+      dripSteps:steps, total:0, sent:0, delivered:0, failed:0,
+      status:action==='send'?'running':'draft',
+      clientId: getCurrentClientId(),   // ✅ clientId जोड़ा
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
     const ref=await db.collection('campaigns').add(data);
     if(data.status==='running') this.executeDrip(ref.id); else alert('✅ Saved!');
     this.render();
@@ -189,7 +218,18 @@ const Campaigns = {
     const doc=await db.collection('campaigns').doc(id).get();const c=doc.data();
     const contacts=await this.getContacts(c.groupId); if(contacts.length===0) return alert('No contacts!');
     await db.collection('campaigns').doc(id).update({total:contacts.length,status:'running'});
-    (c.dripSteps||[]).forEach((step,i)=>{const delay=(step.delayHours||0)*3600000;setTimeout(async()=>{for(const ct of contacts){const phone=ct.mobile||ct.phone||'';const msg=(step.message||'').replace(/\{first_name\}/g,ct.firstName||'').replace(/\{last_name\}/g,ct.lastName||'').replace(/\{phone\}/g,phone);await this.sendOne(phone,msg);await new Promise(r=>setTimeout(r,500));}if(i===c.dripSteps.length-1)await db.collection('campaigns').doc(id).update({status:'completed'});},delay);});
+    (c.dripSteps||[]).forEach((step,i)=>{
+      const delay=(step.delayHours||0)*3600000;
+      setTimeout(async()=>{
+        for(const ct of contacts){
+          const phone=ct.mobile||ct.phone||'';
+          const msg=(step.message||'').replace(/\{first_name\}/g,ct.firstName||'').replace(/\{last_name\}/g,ct.lastName||'').replace(/\{phone\}/g,phone);
+          await this.sendOne(phone,msg);
+          await new Promise(r=>setTimeout(r,500));
+        }
+        if(i===c.dripSteps.length-1) await db.collection('campaigns').doc(id).update({status:'completed'});
+      },delay);
+    });
     alert('🔄 Drip started!'); this.render();
   },
 
