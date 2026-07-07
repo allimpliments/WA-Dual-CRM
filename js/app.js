@@ -57,6 +57,22 @@ const navSections = [
   ]}
 ];
 
+// 🌐 MULTI-TENANT DATA ISOLATION HELPER
+// सभी मॉड्यूल इस फंक्शन का इस्तेमाल करेंगे
+function shouldFilterByClient() {
+  const user = window.currentUser;
+  if (!user) return false;
+  // प्लेटफ़ॉर्म ओनर और सुपर एडमिन को सब डेटा दिखेगा
+  if (user.role === 'platform_owner' || user.role === 'platform_super_admin' || user.role === 'admin') return false;
+  // बाकी सबको सिर्फ अपनी कंपनी का डेटा दिखेगा
+  return !!user.clientId;
+}
+
+// 🌐 GET CURRENT USER'S CLIENT ID
+function getCurrentClientId() {
+  return window.currentUser?.clientId || null;
+}
+
 function buildSidebar(role) {
   let html = '<div class="brand"><i class="fab fa-whatsapp text-success fs-3"></i> Panel</div>';
   navSections.forEach(group => {
@@ -229,7 +245,6 @@ function renderGlobalHeader(currentSection) {
   `;
   
   document.body.insertAdjacentHTML('afterbegin', h);
-  // Google Translate को header के अंदर initialize करें
   setTimeout(function() {
     if (window.google && window.google.translate) {
       new google.translate.TranslateElement({
@@ -249,12 +264,11 @@ function renderGlobalHeader(currentSection) {
   }
 }
 
-// 🌐 Google Translate को नए कंटेंट के लिए रीफ़्रेश करने वाला फ़ंक्शन
 function refreshGoogleTranslate() {
   const combo = document.querySelector('.goog-te-combo');
   if (!combo) return;
   const lang = combo.value;
-  if (lang === 'en') return; // अंग्रेज़ी से कोई ट्रांसलेशन नहीं
+  if (lang === 'en') return;
   combo.value = 'en';
   combo.dispatchEvent(new Event('change'));
   setTimeout(() => {
@@ -302,7 +316,6 @@ function loadSection(section) {
     case 'admin': Admin.render(); break;
     default: contentArea.innerHTML = `<div class="card-widget"><h4>${section}</h4><p>Coming soon...</p></div>`;
   }
-  // 🌐 हर सेक्शन लोड होने पर ट्रांसलेशन रीफ़्रेश करो
   setTimeout(refreshGoogleTranslate, 600);
 }
 
