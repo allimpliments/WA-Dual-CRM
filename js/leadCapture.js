@@ -1,4 +1,4 @@
-// Lead Capture Engine — Centralized Lead Creation
+// Lead Capture Engine — Centralized Lead Creation with clientId
 const LeadCapture = {
   // Main function to capture lead from any source
   async capture(data) {
@@ -9,6 +9,7 @@ const LeadCapture = {
       source: data.source || 'Unknown',
       status: 'new',
       tags: data.tags || [],
+      clientId: window.currentUser?.clientId || null,   // ✅ clientId जोड़ा
       customData: data.customData || {},
       campaignId: data.campaignId || null,
       adId: data.adId || null,
@@ -33,7 +34,9 @@ const LeadCapture = {
 
   // Sync lead to contacts collection
   async syncToContacts(lead) {
-    const existing = await db.collection('contacts')
+    let query = db.collection('contacts');
+    if (shouldFilterByClient()) query = query.where('clientId', '==', lead.clientId);
+    const existing = await query
       .where('mobile', '==', lead.phone)
       .where('email', '==', lead.email)
       .get();
@@ -47,6 +50,7 @@ const LeadCapture = {
         source: lead.source,
         status: 'new',
         tags: lead.tags,
+        clientId: lead.clientId,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
