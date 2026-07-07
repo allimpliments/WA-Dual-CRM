@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initScrollProgress();
   initSmoothLinks();
   initCounterAnimation();
-  initFaqAccordion(); });
+  initFaqAccordion();
 });
 
 // ======================================
