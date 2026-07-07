@@ -463,7 +463,13 @@
       }
     });
   }, observerOptions);
-  sections.forEach(section => observer.observe(section));
+  sections.forEach(section => {
+  observer.observe(section);
+  // Immediately show sections that are already in the viewport
+  if (section.getBoundingClientRect().top < window.innerHeight) {
+    section.classList.add('in-view');
+    }
+  });
   window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 50));
 
   // Keyboard navigation
