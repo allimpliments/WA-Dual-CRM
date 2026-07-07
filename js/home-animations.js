@@ -1,6 +1,6 @@
 // ============================================
 // WA DUAL CRM PREMIUM LANDING
-// home-animations.js (FULL UPGRADED)
+// home-animations.js (FULLY FIXED)
 // ============================================
 
 gsap.registerPlugin(ScrollTrigger);
@@ -31,7 +31,7 @@ gsap.utils.toArray(".section-header").forEach(section => {
 });
 
 // ============================================
-// DASHBOARD CHART BARS ANIMATION (NEW)
+// DASHBOARD CHART BARS ANIMATION
 // ============================================
 gsap.from(".dash-chart-bars span", {
   height: 0,
