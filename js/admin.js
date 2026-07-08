@@ -247,40 +247,40 @@ const Admin = {
     });
   },
 
-    async approveWithModules(clientId) {
-      const selectedModules = Array.from(document.querySelectorAll('.approval-module:checked')).map(cb => cb.value);
-      
-      // ✅ FIX: अगर प्लेटफ़ॉर्म ओनर ने कोई मॉड्यूल सेलेक्ट नहीं किया, तो कम से कम dashboard दे दो
-      if (selectedModules.length === 0) {
-          selectedModules.push('dashboard');
-      }
-      
-      const permissions = {};
-      selectedModules.forEach(mod => { permissions[mod] = { read: true, write: true }; });
-  
-      try {
-        await db.collection('clients').doc(clientId).update({
-          status: 'approved', modules: selectedModules, permissions: permissions,
-          approvedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-  
-        const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
-        const batch = db.batch();
-        usersSnap.forEach(userDoc => { 
-          batch.update(userDoc.ref, { 
-            status: 'approved', 
-            permissions: permissions 
-          }); 
-        });
-        await batch.commit();
-  
-        document.querySelector('.modal-overlay')?.remove();
-        alert('✅ Client approved with ' + selectedModules.length + ' modules!');
-        this.render();
-      } catch (err) { 
-        alert('Error: ' + err.message); 
-      }
-  }
+  async approveWithModules(clientId) {
+    const selectedModules = Array.from(document.querySelectorAll('.approval-module:checked')).map(cb => cb.value);
+    
+    // ✅ FIX: अगर प्लेटफ़ॉर्म ओनर ने कोई मॉड्यूल सेलेक्ट नहीं किया, तो कम से कम dashboard दे दो
+    if (selectedModules.length === 0) {
+        selectedModules.push('dashboard');
+    }
+    
+    const permissions = {};
+    selectedModules.forEach(mod => { permissions[mod] = { read: true, write: true }; });
+
+    try {
+      await db.collection('clients').doc(clientId).update({
+        status: 'approved', modules: selectedModules, permissions: permissions,
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
+      const batch = db.batch();
+      usersSnap.forEach(userDoc => { 
+        batch.update(userDoc.ref, { 
+          status: 'approved', 
+          permissions: permissions 
+        }); 
+      });
+      await batch.commit();
+
+      document.querySelector('.modal-overlay')?.remove();
+      alert('✅ Client approved with ' + selectedModules.length + ' modules!');
+      this.render();
+    } catch (err) { 
+      alert('Error: ' + err.message); 
+    }
+  },
 
   async rejectClient(clientId) {
     if (!confirm('Reject this client? This will delete the client and all associated users.')) return;
@@ -375,7 +375,14 @@ const Admin = {
     let users = [];
     try {
       let query = db.collection('users');
-      if (!isPlatform && clientId) query = query.where('clientId','==',clientId);
+      
+      // ✅ FIX: Platform admin — सिर्फ platform roles वाले users
+      if (isPlatform) {
+        query = query.where('role', 'in', ['platform_owner', 'platform_super_admin', 'admin']);
+      } else if (clientId) {
+        query = query.where('clientId', '==', clientId);
+      }
+      
       const snap = await query.orderBy('name').get();
       users = snap.docs.map(d => ({id:d.id, ...d.data()}));
     } catch(e) {}
@@ -402,13 +409,16 @@ const Admin = {
       }
 
       let roles = [];
+      // ✅ FIX: Platform admin को सिर्फ platform roles
       if (Permissions.canAccess('admin','manage')) {
-        roles = Object.keys(DEFAULT_ROLES);
+        roles = ['platform_super_admin', 'admin'];
       } else {
         const clientId = window.currentUser?.clientId;
-        const snap = await db.collection('clients').doc(clientId).collection('roles').get();
-        roles = snap.docs.map(d => d.id);
-        if (roles.length === 0) roles = ['executive','manager','client_admin'];
+        if (clientId) {
+          const snap = await db.collection('clients').doc(clientId).collection('roles').get();
+          roles = snap.docs.map(d => d.id);
+        }
+        if (!roles || roles.length === 0) roles = ['client_admin', 'manager', 'executive', 'viewer'];
       }
       const roleOptions = roles.map(r => '<option value="'+r+'" '+(user.role===r?'selected':'')+'>'+r+'</option>').join('');
 
@@ -526,7 +536,7 @@ const Admin = {
     const level = parseInt(document.getElementById('rLevel')?.value);
     const isPlatformRole = document.getElementById('rPlatform')?.checked;
     const modules = {};
-    document.querySelectorAll('#roleModal .perm-module, .modal-box .perm-item').forEach(div => {
+    document.querySelectorAll('.modal-box .perm-item').forEach(div => {
       const modName = div.querySelector('strong')?.innerText;
       if (!modName) return;
       modules[modName] = {};
@@ -594,7 +604,7 @@ const Admin = {
     if (!name) return alert('Plan name required');
     const price = parseInt(document.getElementById('pPrice')?.value) || 0;
     const maxUsers = parseInt(document.getElementById('pMaxUsers')?.value) || 10;
-    const modules = Array.from(document.querySelectorAll('#planModal input[type=checkbox]:checked, .modal-box input[type=checkbox]:checked')).map(cb => cb.value);
+    const modules = Array.from(document.querySelectorAll('.modal-box input[type=checkbox]:checked')).map(cb => cb.value);
     const data = { name, price, maxUsers, modules };
     try {
       if (editId) await db.collection('plans').doc(editId).update(data);
