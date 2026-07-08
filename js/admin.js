@@ -247,27 +247,40 @@ const Admin = {
     });
   },
 
-  async approveWithModules(clientId) {
-    const selectedModules = Array.from(document.querySelectorAll('.approval-module:checked')).map(cb => cb.value);
-    const permissions = {};
-    selectedModules.forEach(mod => { permissions[mod] = { read: true, write: true }; });
-
-    try {
-      await db.collection('clients').doc(clientId).update({
-        status: 'approved', modules: selectedModules, permissions: permissions,
-        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
-      const batch = db.batch();
-      usersSnap.forEach(userDoc => { batch.update(userDoc.ref, { status: 'approved', permissions: permissions }); });
-      await batch.commit();
-
-      document.querySelector('.modal-overlay')?.remove();
-      alert('✅ Client approved with selected modules!');
-      this.render();
-    } catch (err) { alert('Error: ' + err.message); }
-  },
+    async approveWithModules(clientId) {
+      const selectedModules = Array.from(document.querySelectorAll('.approval-module:checked')).map(cb => cb.value);
+      
+      // ✅ FIX: अगर प्लेटफ़ॉर्म ओनर ने कोई मॉड्यूल सेलेक्ट नहीं किया, तो कम से कम dashboard दे दो
+      if (selectedModules.length === 0) {
+          selectedModules.push('dashboard');
+      }
+      
+      const permissions = {};
+      selectedModules.forEach(mod => { permissions[mod] = { read: true, write: true }; });
+  
+      try {
+        await db.collection('clients').doc(clientId).update({
+          status: 'approved', modules: selectedModules, permissions: permissions,
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+  
+        const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
+        const batch = db.batch();
+        usersSnap.forEach(userDoc => { 
+          batch.update(userDoc.ref, { 
+            status: 'approved', 
+            permissions: permissions 
+          }); 
+        });
+        await batch.commit();
+  
+        document.querySelector('.modal-overlay')?.remove();
+        alert('✅ Client approved with ' + selectedModules.length + ' modules!');
+        this.render();
+      } catch (err) { 
+        alert('Error: ' + err.message); 
+      }
+  }
 
   async rejectClient(clientId) {
     if (!confirm('Reject this client? This will delete the client and all associated users.')) return;
