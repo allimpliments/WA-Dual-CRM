@@ -9,8 +9,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const formId = urlParams.get('form');
 
 if (formId) {
-  loginScreen.style.display = 'none';
-  appMain.style.display = 'block';
+  if (loginScreen) loginScreen.style.display = 'none';
+  if (appMain) appMain.style.display = 'block';
   const sidebar = document.getElementById('sidebar');
   if (sidebar) sidebar.style.display = 'none';
   const topbar = document.querySelector('.topbar');
@@ -20,7 +20,8 @@ if (formId) {
     try {
       const doc = await db.collection('forms').doc(formId).get();
       if (!doc.exists) {
-        document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Form not found.</p>';
+        const ca = document.getElementById('contentArea');
+        if (ca) ca.innerHTML = '<p class="text-center py-5">Form not found.</p>';
         return;
       }
       const form = doc.data();
@@ -70,117 +71,158 @@ if (formId) {
         </div>
         ${design.customCSS ? `<style>${design.customCSS}</style>` : ''}
       `;
-      document.getElementById('contentArea').innerHTML = html;
+      const ca = document.getElementById('contentArea');
+      if (ca) ca.innerHTML = html;
 
-      document.getElementById('publicFormForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fields = form.fields || [];
-        let isValid = true;
-        document.querySelectorAll('#publicFormForm .error').forEach(el => el.classList.remove('error'));
-        fields.forEach((f, i) => {
-          if (!f.required) return;
-          let value = '';
-          if (f.type === 'radio') {
-            const selected = document.querySelector(`input[name="field_${i}"]:checked`);
-            value = selected ? selected.value : '';
-          } else if (f.type === 'checkbox') {
-            const checked = document.querySelectorAll(`input[name="field_${i}"]:checked`);
-            value = Array.from(checked).map(c => c.value).join(', ');
-          } else {
-            const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
-            if (inputs[i]) value = inputs[i].value.trim();
-          }
-          if (!value) {
-            isValid = false;
-            const fieldContainer = document.querySelector(`#publicFormForm .field:nth-of-type(${i+1})`);
-            if (fieldContainer) {
-              const inputEl = fieldContainer.querySelector('input, select, textarea');
-              if (inputEl) inputEl.classList.add('error');
+      const publicForm = document.getElementById('publicFormForm');
+      if (publicForm) {
+        publicForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fields = form.fields || [];
+          let isValid = true;
+          document.querySelectorAll('#publicFormForm .error').forEach(el => el.classList.remove('error'));
+          fields.forEach((f, i) => {
+            if (!f.required) return;
+            let value = '';
+            if (f.type === 'radio') {
+              const selected = document.querySelector(`input[name="field_${i}"]:checked`);
+              value = selected ? selected.value : '';
+            } else if (f.type === 'checkbox') {
+              const checked = document.querySelectorAll(`input[name="field_${i}"]:checked`);
+              value = Array.from(checked).map(c => c.value).join(', ');
+            } else {
+              const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
+              if (inputs[i]) value = inputs[i].value.trim();
             }
-          }
-        });
-        if (!isValid) {
-          document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Please fill all required fields.</span>';
-          return;
-        }
-        const formData = {};
-        fields.forEach((f, i) => {
-          if (f.type === 'radio') {
-            const selected = document.querySelector(`input[name="field_${i}"]:checked`);
-            formData[f.label] = selected ? selected.value : '';
-          } else if (f.type === 'checkbox') {
-            const checked = document.querySelectorAll(`input[name="field_${i}"]:checked`);
-            formData[f.label] = Array.from(checked).map(c => c.value).join(', ');
-          } else {
-            const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
-            if (inputs[i]) formData[f.label] = inputs[i].value;
-          }
-        });
-        try {
-          await db.collection('formSubmissions').add({
-            formId: formId,
-            data: formData,
-            clientId: form.clientId || null,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            if (!value) {
+              isValid = false;
+              const fieldContainer = document.querySelector(`#publicFormForm .field:nth-of-type(${i+1})`);
+              if (fieldContainer) {
+                const inputEl = fieldContainer.querySelector('input, select, textarea');
+                if (inputEl) inputEl.classList.add('error');
+              }
+            }
           });
-          await db.collection('forms').doc(formId).update({ submissionCount: firebase.firestore.FieldValue.increment(1) });
-          await LeadCapture.fromForm(formData, formId);
-          document.getElementById('publicFormMsg').innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
-          document.getElementById('publicFormForm').reset();
-        } catch (err) { console.error(err); document.getElementById('publicFormMsg').innerHTML = '<span class="text-danger">Error submitting form. Please try again.</span>'; }
-      });
-    } catch (e) { console.error(e); document.getElementById('contentArea').innerHTML = '<p class="text-center py-5">Error loading form.</p>'; }
+          if (!isValid) {
+            const msg = document.getElementById('publicFormMsg');
+            if (msg) msg.innerHTML = '<span class="text-danger">Please fill all required fields.</span>';
+            return;
+          }
+          const formData = {};
+          fields.forEach((f, i) => {
+            if (f.type === 'radio') {
+              const selected = document.querySelector(`input[name="field_${i}"]:checked`);
+              formData[f.label] = selected ? selected.value : '';
+            } else if (f.type === 'checkbox') {
+              const checked = document.querySelectorAll(`input[name="field_${i}"]:checked`);
+              formData[f.label] = Array.from(checked).map(c => c.value).join(', ');
+            } else {
+              const inputs = document.querySelectorAll('#publicFormForm input, #publicFormForm select, #publicFormForm textarea');
+              if (inputs[i]) formData[f.label] = inputs[i].value;
+            }
+          });
+          try {
+            await db.collection('formSubmissions').add({
+              formId: formId,
+              data: formData,
+              clientId: form.clientId || null,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await db.collection('forms').doc(formId).update({ submissionCount: firebase.firestore.FieldValue.increment(1) });
+            await LeadCapture.fromForm(formData, formId);
+            const msg = document.getElementById('publicFormMsg');
+            if (msg) msg.innerHTML = `<span class="text-success">${form.successMsg || 'Thank you! Your response has been recorded.'}</span>`;
+            publicForm.reset();
+          } catch (err) {
+            console.error(err);
+            const msg = document.getElementById('publicFormMsg');
+            if (msg) msg.innerHTML = '<span class="text-danger">Error submitting form. Please try again.</span>';
+          }
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      const ca = document.getElementById('contentArea');
+      if (ca) ca.innerHTML = '<p class="text-center py-5">Error loading form.</p>';
+    }
   })();
+
 } else {
   // ========== NORMAL AUTH FLOW ==========
   console.log('Auth script loaded — SaaS Multi-Tenant Mode');
 
   // Toggle between Login and Register forms
-  document.getElementById('showRegister').addEventListener('click', (e) => {
-    e.preventDefault();
-    loginFormDiv.style.display = 'none';
-    registerFormDiv.style.display = 'block';
-  });
-  document.getElementById('showLogin').addEventListener('click', (e) => {
-    e.preventDefault();
-    registerFormDiv.style.display = 'none';
-    loginFormDiv.style.display = 'block';
-  });
+  const showRegisterBtn = document.getElementById('showRegister');
+  const showLoginBtn = document.getElementById('showLogin');
+  const registerBtn = document.getElementById('registerBtn');
+  const loginBtn = document.getElementById('loginBtn');
+
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginFormDiv) loginFormDiv.style.display = 'none';
+      if (registerFormDiv) registerFormDiv.style.display = 'block';
+    });
+  }
+  if (showLoginBtn) {
+    showLoginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (registerFormDiv) registerFormDiv.style.display = 'none';
+      if (loginFormDiv) loginFormDiv.style.display = 'block';
+    });
+  }
 
   // ========== REGISTER (Direct on Index Page - Fallback) ==========
-  document.getElementById('registerBtn').addEventListener('click', async () => {
-    const name = document.getElementById('regName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    if (!name || !email || password.length < 6) return alert('Please fill all fields correctly.');
-    try {
-      const userCred = await auth.createUserWithEmailAndPassword(email, password);
-      await db.collection('users').doc(userCred.user.uid).set({
-        name, email, role: 'client_owner', plan: 'free',
-        status: 'pending',
-        permissions: {},
-        clientId: null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert('Registration successful! Your account is pending approval. You will be redirected to the CRM.');
-      window.location.href = '/WA-Dual-CRM/';
-    } catch (err) { alert(err.message); }
-  });
+  if (registerBtn) {
+    registerBtn.addEventListener('click', async () => {
+      const nameEl = document.getElementById('regName');
+      const emailEl = document.getElementById('regEmail');
+      const passwordEl = document.getElementById('regPassword');
+      if (!nameEl || !emailEl || !passwordEl) return;
+      
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+      if (!name || !email || password.length < 6) return alert('Please fill all fields correctly.');
+      
+      try {
+        const userCred = await auth.createUserWithEmailAndPassword(email, password);
+        await db.collection('users').doc(userCred.user.uid).set({
+          name, email, role: 'client_owner', plan: 'free',
+          status: 'pending',
+          permissions: {},
+          clientId: null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert('Registration successful! Your account is pending approval. You will be redirected to the CRM.');
+        window.location.href = '/WA-Dual-CRM/';
+      } catch (err) { alert(err.message); }
+    });
+  }
 
   // ========== LOGIN ==========
-  document.getElementById('loginBtn').addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    if (!email || !password) return alert('Please enter email and password.');
-    try {
-      await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) { alert(err.message); }
-  });
+  if (loginBtn) {
+    loginBtn.addEventListener('click', async () => {
+      const emailEl = document.getElementById('loginEmail');
+      const passwordEl = document.getElementById('loginPassword');
+      if (!emailEl || !passwordEl) return;
+      
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+      if (!email || !password) return alert('Please enter email and password.');
+      
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+      } catch (err) { alert(err.message); }
+    });
+  }
 
   // ========== AUTH STATE CHANGE — MAIN ENTRY POINT ==========
   auth.onAuthStateChanged(async (user) => {
     console.log('Auth state changed', user ? 'logged in' : 'logged out');
+    
     if (user) {
+      // ====== FETCH USER DATA ======
       let userData = null;
       try {
         const doc = await db.collection('users').doc(user.uid).get();
@@ -204,7 +246,7 @@ if (formId) {
         userData = { name: user.email, email: user.email, role: 'admin', status: 'approved', permissions: {}, clientId: null };
       }
 
-      // Set global currentUser object
+      // ====== SET GLOBAL CURRENT USER ======
       window.currentUser = {
         uid: user.uid,
         name: userData.name || user.email,
@@ -219,8 +261,8 @@ if (formId) {
 
       // ====== PENDING APPROVAL CHECK ======
       if (userData.status === 'pending') {
-        loginScreen.style.display = 'none';
-        appMain.style.display = 'block';
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (appMain) appMain.style.display = 'block';
         const ca = document.getElementById('contentArea');
         if (ca) ca.innerHTML = `
           <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
@@ -231,7 +273,7 @@ if (formId) {
               <div style="background:#fef3c7;padding:12px;border-radius:10px;margin-top:16px;">
                 <small style="color:#92400e;"><i class="fas fa-info-circle me-1"></i> If this is urgent, please contact your platform administrator.</small>
               </div>
-              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+              <button onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';" style="margin-top:20px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;">← Back to Home</button>
             </div>
           </div>`;
         return;
@@ -239,8 +281,8 @@ if (formId) {
 
       // ====== REJECTED CHECK ======
       if (userData.status === 'rejected') {
-        loginScreen.style.display = 'none';
-        appMain.style.display = 'block';
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (appMain) appMain.style.display = 'block';
         const ca = document.getElementById('contentArea');
         if (ca) ca.innerHTML = `
           <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
@@ -248,7 +290,7 @@ if (formId) {
               <i class="fas fa-times-circle fa-4x" style="color:#ef4444;margin-bottom:20px;"></i>
               <h3 style="font-weight:800;color:#0f172a;">Account Rejected</h3>
               <p style="color:#64748b;margin:12px 0;">Your account registration has been rejected by the platform administrator. Please contact support for more information.</p>
-              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+              <button onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';" style="margin-top:20px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;">← Back to Home</button>
             </div>
           </div>`;
         return;
@@ -256,8 +298,8 @@ if (formId) {
 
       // ====== SUSPENDED CHECK ======
       if (userData.status === 'suspended') {
-        loginScreen.style.display = 'none';
-        appMain.style.display = 'block';
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (appMain) appMain.style.display = 'block';
         const ca = document.getElementById('contentArea');
         if (ca) ca.innerHTML = `
           <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
@@ -265,7 +307,7 @@ if (formId) {
               <i class="fas fa-ban fa-4x" style="color:#f59e0b;margin-bottom:20px;"></i>
               <h3 style="font-weight:800;color:#0f172a;">Account Suspended</h3>
               <p style="color:#64748b;margin:12px 0;">Your account has been temporarily suspended. Please contact your platform administrator for assistance.</p>
-              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+              <button onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';" style="margin-top:20px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;">← Back to Home</button>
             </div>
           </div>`;
         return;
@@ -273,8 +315,8 @@ if (formId) {
 
       // ====== INACTIVE CHECK ======
       if (userData.status === 'inactive') {
-        loginScreen.style.display = 'none';
-        appMain.style.display = 'block';
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (appMain) appMain.style.display = 'block';
         const ca = document.getElementById('contentArea');
         if (ca) ca.innerHTML = `
           <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
@@ -282,13 +324,13 @@ if (formId) {
               <i class="fas fa-user-slash fa-4x" style="color:#94a3b8;margin-bottom:20px;"></i>
               <h3 style="font-weight:800;color:#0f172a;">Account Inactive</h3>
               <p style="color:#64748b;margin:12px 0;">Your account is currently inactive. Please contact your platform administrator to reactivate it.</p>
-              <button onclick="auth.signOut();window.location.reload();" style="margin-top:20px;padding:8px 24px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">← Back to Login</button>
+              <button onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';" style="margin-top:20px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;">← Back to Home</button>
             </div>
           </div>`;
         return;
       }
 
-      // 🔐 Load permissions BEFORE initApp
+      // ====== LOAD PERMISSIONS ======
       try {
         const perms = await Permissions.getEffectivePermissions();
         window.__currentPermissions = perms;
@@ -297,30 +339,36 @@ if (formId) {
         window.__currentPermissions = { modules: {}, isPlatformRole: false, level: 99 };
       }
 
-      // 🌐 Load user language preference
+      // ====== LOAD I18N ======
       if (typeof I18n !== 'undefined' && I18n.init) {
         I18n.init();
       }
 
-      // Update last login timestamp
+      // ====== UPDATE LAST LOGIN ======
       try {
         await db.collection('users').doc(user.uid).update({
           lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch(e) { /* silent */ }
 
-      // Show the app
-      loginScreen.style.display = 'none';
-      appMain.style.display = 'block';
+      // ====== SHOW APP ======
+      if (loginScreen) loginScreen.style.display = 'none';
+      if (appMain) appMain.style.display = 'block';
       initApp(userData.role);
       const roleBadge = document.getElementById('userRoleBadge');
       if (roleBadge) roleBadge.textContent = '(' + (userData.role || 'admin') + ')';
+
     } else {
-      // User logged out
+      // ====== USER LOGGED OUT ======
       window.currentUser = null;
       window.__currentPermissions = null;
-      loginScreen.style.display = 'flex';
-      appMain.style.display = 'none';
+      if (loginScreen) loginScreen.style.display = 'flex';
+      if (appMain) appMain.style.display = 'none';
+      
+      // Redirect to home page if not already there
+      if (!window.location.href.includes('home.html')) {
+        window.location.href = '/WA-Dual-CRM/home.html';
+      }
     }
   });
 }
