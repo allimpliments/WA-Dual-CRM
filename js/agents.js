@@ -22,7 +22,16 @@ const Agents = {
     let totalLeads = 0, totalContacts = 0;
     try {
       let query = db.collection('users');
-      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      
+      // ✅ NEW: Platform admin — सिर्फ platform roles दिखाओ (client_owner नहीं)
+      if (isPlatformAdmin()) {
+        query = query.where('role', 'in', ['platform_owner', 'platform_super_admin', 'admin']);
+      } 
+      // ✅ NEW: Client user — अपनी company के users दिखाओ
+      else if (window.currentUser.clientId) {
+        query = query.where('clientId', '==', window.currentUser.clientId);
+      }
+      
       const snap = await query.orderBy('createdAt', 'desc').get();
       users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -442,7 +451,11 @@ const Agents = {
     let users = [];
     try {
       let query = db.collection('users');
-      if (shouldFilterByClient()) query = query.where('clientId', '==', window.currentUser.clientId);
+      if (isPlatformAdmin()) {
+        query = query.where('role', 'in', ['platform_owner', 'platform_super_admin', 'admin']);
+      } else if (window.currentUser.clientId) {
+        query = query.where('clientId', '==', window.currentUser.clientId);
+      }
       const snap = await query.get();
       users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch(e) {}
@@ -478,3 +491,10 @@ const Agents = {
     contentArea.innerHTML = html;
   }
 };
+
+// Helper function for agents.js
+function isPlatformAdmin() {
+  const user = window.currentUser;
+  if (!user) return false;
+  return user.role === 'platform_owner' || user.role === 'platform_super_admin' || user.role === 'admin';
+}
