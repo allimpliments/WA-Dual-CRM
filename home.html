@@ -403,10 +403,115 @@ nav a:hover::after,nav a.active::after{width:100%}
 .faq-answer{max-height:0;overflow:hidden;padding:0 22px;color:var(--muted);line-height:1.7;transition:all .4s ease}
 .faq-item.active .faq-answer{max-height:400px;padding:0 22px 18px}
 
-/* Contact Form */
-.contact-form{max-width:700px;margin:auto;display:grid;gap:16px}
-.contact-form input,.contact-form select,.contact-form textarea{background:rgba(255,255,255,.04);border:1px solid var(--border);padding:18px 20px;border-radius:18px;color:#fff;font-size:16px;width:100%}
-.contact-form textarea{height:180px;resize:none}
+/* ===== CONTACT FORM DROPDOWN FIX ===== */
+.contact-form {
+  max-width: 700px;
+  margin: auto;
+  display: grid;
+  gap: 16px;
+}
+
+.contact-form input,
+.contact-form select,
+.contact-form textarea {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  padding: 18px 20px;
+  border-radius: 18px;
+  color: #fff;
+  font-size: 16px;
+  width: 100%;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.contact-form input:focus,
+.contact-form select:focus,
+.contact-form textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(200,168,78,.08);
+  background: rgba(255,255,255,.06);
+}
+
+.contact-form input::placeholder,
+.contact-form textarea::placeholder {
+  color: rgba(255,255,255,.3);
+}
+
+/* Select Custom Arrow */
+.contact-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c8a84e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  background-size: 12px;
+  cursor: pointer;
+  padding-right: 48px;
+}
+
+/* 🔥 FIX: Dropdown OPTION text color — AB DIKHEGA! */
+.contact-form select option {
+  background: #111620 !important;
+  color: #f0f0f0 !important;
+  padding: 12px 20px;
+  font-size: 15px;
+}
+
+/* Optional: Hover effect on options */
+.contact-form select option:hover,
+.contact-form select option:focus,
+.contact-form select option:checked {
+  background: rgba(200,168,78,.2) !important;
+  color: var(--gold) !important;
+}
+
+/* Focus state for accessibility */
+.contact-form select:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(200,168,78,.1);
+}
+
+.contact-form textarea {
+  height: 180px;
+  resize: vertical;
+  min-height: 120px;
+}
+
+/* 🌐 GLOBAL FIX: Modal Dropdowns */
+.modal-content select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c8a84e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 10px;
+  cursor: pointer;
+  padding-right: 40px;
+}
+
+.modal-content select option {
+  background: #111620 !important;
+  color: #f0f0f0 !important;
+  padding: 10px;
+}
+
+.modal-content select option:hover,
+.modal-content select option:checked {
+  background: rgba(200,168,78,.2) !important;
+  color: var(--gold) !important;
+}
+
+/* Global Select Option Fix (Fallback) */
+select option {
+  background-color: #111620 !important;
+  color: #f0f0f0 !important;
+}
 
 /* CTA */
 .final-cta{text-align:center;padding:80px 0}
@@ -930,7 +1035,7 @@ nav a:hover::after,nav a.active::after{width:100%}
 <div id="videoModal" class="modal">
   <div class="modal-content video-modal-content">
     <button class="modal-close" onclick="closeModal('videoModal')">&times;</button>
-    <div class="video-wrapper"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Product Tour" frameborder="0" allowfullscreen></iframe></div>
+    <div class="video-wrapper"><iframe src="https://www.youtube.com/" title="Product Tour" frameborder="0" allowfullscreen></iframe></div>
   </div>
 </div>
 
