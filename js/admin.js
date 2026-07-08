@@ -231,7 +231,10 @@ const Admin = {
       const currentModules = client.modules || [];
       const allModules = ['dashboard','leads','contacts','chats','campaigns','templates','flows','social','forms','kanban','knowledge','chatbot','ecommerce','appointments','analytics','tickets','integrations','agents','clients','marketing','setup','reports'];
 
-      let moduleChecks = allModules.map(mod => '<div class="perm-item"><input type="checkbox" value="'+mod+'" class="approval-module" '+(currentModules.includes(mod)?'checked':'')+'> '+mod+'</div>').join('');
+      let moduleChecks = allModules.map(mod => {
+        const checked = (plan.modules || []).includes(mod) ? 'checked' : '';
+        return '<div class="perm-item"><input type="checkbox" value="' + mod + '" ' + checked + '> ' + mod + '</div>';
+      }).join('');
 
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
