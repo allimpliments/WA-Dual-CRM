@@ -250,34 +250,95 @@ const Admin = {
   async approveWithModules(clientId) {
     const selectedModules = Array.from(document.querySelectorAll('.approval-module:checked')).map(cb => cb.value);
     
-    // ✅ FIX: अगर प्लेटफ़ॉर्म ओनर ने कोई मॉड्यूल सेलेक्ट नहीं किया, तो कम से कम dashboard दे दो
+    // ✅ FIX: Minimum dashboard module
     if (selectedModules.length === 0) {
         selectedModules.push('dashboard');
     }
     
+    // ✅ CRUD permissions for each module
     const permissions = {};
-    selectedModules.forEach(mod => { permissions[mod] = { read: true, write: true }; });
+    selectedModules.forEach(mod => { 
+      permissions[mod] = { create: true, read: true, update: true, delete: true }; 
+    });
 
     try {
+      // ✅ 1. Update CLIENT status + modules + permissions
       await db.collection('clients').doc(clientId).update({
-        status: 'approved', modules: selectedModules, permissions: permissions,
-        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        status: 'approved',
+        modules: selectedModules,
+        permissions: permissions,
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedBy: window.currentUser?.uid || 'admin'
       });
 
+      // ✅ 2. Update ALL USERS of this client — activate + assign modules + permissions
       const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
       const batch = db.batch();
+      
       usersSnap.forEach(userDoc => { 
         batch.update(userDoc.ref, { 
-          status: 'approved', 
-          permissions: permissions 
+          status: 'approved',
+          permissions: permissions,
+          modules: selectedModules,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }); 
       });
+      
       await batch.commit();
 
+      // ✅ 3. Create default roles for this client company
+      const defaultClientRoles = {
+        'client_admin': {
+          name: 'Client Admin',
+          level: 3,
+          isPlatformRole: false,
+          modules: permissions
+        },
+        'manager': {
+          name: 'Manager',
+          level: 4,
+          isPlatformRole: false,
+          modules: Object.fromEntries(
+            ['dashboard','leads','contacts','chats','kanban','appointments','tickets','knowledge']
+              .filter(m => selectedModules.includes(m))
+              .map(m => [m, { create: true, read: true, update: true, delete: true }])
+          )
+        },
+        'executive': {
+          name: 'Executive',
+          level: 5,
+          isPlatformRole: false,
+          modules: Object.fromEntries(
+            ['dashboard','leads','contacts','chats']
+              .filter(m => selectedModules.includes(m))
+              .map(m => [m, { create: true, read: true, update: true, delete: true }])
+          )
+        },
+        'viewer': {
+          name: 'Viewer',
+          level: 6,
+          isPlatformRole: false,
+          modules: Object.fromEntries(
+            ['dashboard','leads','contacts']
+              .filter(m => selectedModules.includes(m))
+              .map(m => [m, { read: true, write: false, create: false, delete: false }])
+          )
+        }
+      };
+      
+      const rolesBatch = db.batch();
+      Object.entries(defaultClientRoles).forEach(([roleId, roleData]) => {
+        const ref = db.collection('clients').doc(clientId).collection('roles').doc(roleId);
+        rolesBatch.set(ref, roleData);
+      });
+      await rolesBatch.commit();
+
       document.querySelector('.modal-overlay')?.remove();
-      alert('✅ Client approved with ' + selectedModules.length + ' modules!');
+      alert('✅ Client approved with ' + selectedModules.length + ' modules! ' + usersSnap.size + ' users activated.');
       this.render();
+      
     } catch (err) { 
+      console.error('Approval error:', err);
       alert('Error: ' + err.message); 
     }
   },
@@ -336,17 +397,34 @@ const Admin = {
 
   async updateClientModules(clientId) {
     const selectedModules = Array.from(document.querySelectorAll('.edit-client-module:checked')).map(cb => cb.value);
+    
+    if (selectedModules.length === 0) {
+      selectedModules.push('dashboard');
+    }
+    
     const permissions = {};
-    selectedModules.forEach(mod => { permissions[mod] = { read: true, write: true }; });
+    selectedModules.forEach(mod => { permissions[mod] = { create: true, read: true, update: true, delete: true }; });
 
     try {
-      await db.collection('clients').doc(clientId).update({ modules: selectedModules, permissions: permissions });
+      await db.collection('clients').doc(clientId).update({ 
+        modules: selectedModules, 
+        permissions: permissions,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
       const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
       const batch = db.batch();
-      usersSnap.forEach(userDoc => { batch.update(userDoc.ref, { permissions: permissions }); });
+      usersSnap.forEach(userDoc => { 
+        batch.update(userDoc.ref, { 
+          permissions: permissions,
+          modules: selectedModules,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }); 
+      });
       await batch.commit();
+      
       document.querySelector('.modal-overlay')?.remove();
-      alert('✅ Modules updated successfully!');
+      alert('✅ Modules updated for client and ' + usersSnap.size + ' users!');
       this.render();
     } catch (err) { alert('Error: ' + err.message); }
   },
