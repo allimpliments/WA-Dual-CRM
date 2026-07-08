@@ -1,33 +1,21 @@
-// js/knowledge.js — World-Class Knowledge & Monetization Engine for Global SaaS Platform
-// ============================================================
-// FOLDER STRUCTURE (All cards are independent modules):
-// knowledge/
-//   ├── knowledge.js          (Main Hub — this file)
-//   ├── guides.js             (Platform & Business Guides)
-//   ├── courses.js            (Paid Courses & Live Sessions)
-//   ├── webinars.js           (Live & Recorded Webinars)
-//   ├── tools.js              (Digital Tools & Software)
-//   ├── community.js          (WhatsApp Groups, Channels, Community)
-//   ├── blog.js               (Blog & Articles)
-//   ├── roiCalculator.js      (ROI Calculator Tool)
-//   ├── healthScore.js        (Business Health Score)
-//   ├── playbooks.js          (Business Playbooks)
-//   ├── industry.js           (Industry-Specific Insights)
-//   ├── platform.js           (Platform Documentation)
-//   └── templates.js          (Business Templates)
-// ============================================================
-
+// js/knowledge.js — World-Class Knowledge & Monetization Engine (Updated)
 const Knowledge = {
   currentTab: 'hub',
   currentSubTab: null,
   searchQuery: '',
   filterCategory: 'all',
-  filterLevel: 'all',
   filterType: 'all',
   userProgress: {},
 
-  // All knowledge cards — each points to its own module
+  // Platform Docs — FIRST & HIGHLIGHTED
   knowledgeCards: [
+    { 
+      id: 'platform', title: '📖 Platform Documentation', icon: 'fa-book', color: '#f59e0b', 
+      gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', 
+      desc: 'Complete guide to use every feature of the CRM — from setup to advanced automation', 
+      count: 'Full Docs', level: 'All Levels', type: 'free', module: 'Platform', category: 'docs',
+      highlighted: true, featured: true
+    },
     { id: 'guides', title: 'Business Guides', icon: 'fa-book-open', color: '#6366f1', gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)', desc: 'Step-by-step guides to grow your business from zero to global brand', count: '24+ Guides', level: 'All Levels', type: 'free', module: 'Guides', category: 'learning' },
     { id: 'courses', title: 'Courses & Training', icon: 'fa-graduation-cap', color: '#f59e0b', gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', desc: 'Premium courses on WhatsApp marketing, CRM automation, AI chatbots', count: '12 Courses', level: 'Beginner to Pro', type: 'paid', module: 'Courses', category: 'learning' },
     { id: 'webinars', title: 'Live Webinars', icon: 'fa-video', color: '#ef4444', gradient: 'linear-gradient(135deg,#ef4444,#dc2626)', desc: 'Live sessions with industry experts. Watch recordings anytime.', count: '8 Upcoming', level: 'All Levels', type: 'free+paid', module: 'Webinars', category: 'learning' },
@@ -38,7 +26,6 @@ const Knowledge = {
     { id: 'health', title: 'Business Health Score', icon: 'fa-heartbeat', color: '#f43f5e', gradient: 'linear-gradient(135deg,#f43f5e,#e11d48)', desc: 'Get your business health score & personalized growth recommendations', count: 'Assessment', level: 'All Levels', type: 'free', module: 'HealthScore', category: 'tools' },
     { id: 'playbooks', title: 'Business Playbooks', icon: 'fa-play', color: '#14b8a6', gradient: 'linear-gradient(135deg,#14b8a6,#0d9488)', desc: 'Ready-to-execute playbooks for sales, marketing & customer success', count: '18 Playbooks', level: 'Pro', type: 'paid', module: 'Playbooks', category: 'learning' },
     { id: 'industry', title: 'Industry Insights', icon: 'fa-chart-bar', color: '#0ea5e9', gradient: 'linear-gradient(135deg,#0ea5e9,#0284c7)', desc: 'Industry-specific strategies for real estate, healthcare, education & more', count: '12 Industries', level: 'All Levels', type: 'free', module: 'Industry', category: 'content' },
-    { id: 'platform', title: 'Platform Docs', icon: 'fa-book', color: '#64748b', gradient: 'linear-gradient(135deg,#64748b,#475569)', desc: 'Complete documentation for the CRM platform — APIs, setup, guides', count: 'Full Docs', level: 'All Levels', type: 'free', module: 'Platform', category: 'docs' },
     { id: 'templates', title: 'Business Templates', icon: 'fa-file-alt', color: '#a855f7', gradient: 'linear-gradient(135deg,#a855f7,#9333ea)', desc: 'Ready-to-use templates for proposals, invoices, contracts & more', count: '30+ Templates', level: 'All Levels', type: 'free+paid', module: 'Templates', category: 'tools' },
   ],
 
@@ -46,19 +33,11 @@ const Knowledge = {
     contentArea.style.paddingTop = '60px';
     contentArea.style.background = '#f8fafc';
 
-    // Route to sub-module if selected
-    if (this.currentSubTab) {
-      await this.renderSubModule(this.currentSubTab);
-      return;
-    }
-
-    // Load user progress
+    if (this.currentSubTab) { await this.renderSubModule(this.currentSubTab); return; }
     await this.loadUserProgress();
-
     await this.renderHub();
   },
 
-  // ==================== MAIN HUB ====================
   async renderHub() {
     const filtered = this.knowledgeCards.filter(card => {
       if (this.searchQuery) {
@@ -71,7 +50,7 @@ const Knowledge = {
     });
 
     const categories = [...new Set(this.knowledgeCards.map(c => c.category))];
-    const catLabels = { learning: '📚 Learning', tools: '🛠️ Tools', community: '👥 Community', content: '📝 Content', docs: '📖 Docs' };
+    const catLabels = { docs:'📖 Docs', learning:'📚 Learning', tools:'🛠️ Tools', community:'👥 Community', content:'📝 Content' };
 
     let html = `
       <style>
@@ -93,8 +72,13 @@ const Knowledge = {
         .kn-card { background: #fff; border-radius: 20px; padding: 28px 24px; border: 1px solid #f1f5f9; transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden; height: 100%; display: flex; flex-direction: column; }
         .kn-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(0,0,0,0.1); border-color: #6366f1; }
         .kn-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--card-gradient); }
+        .kn-card.featured { grid-column: 1 / -1; border: 2px solid #f59e0b; box-shadow: 0 8px 30px rgba(245,158,11,0.15); background: linear-gradient(135deg, #fff 0%, #fffbeb 100%); }
+        .kn-card.featured::before { height: 6px; background: linear-gradient(90deg, #f59e0b, #d97706, #f59e0b); }
+        .kn-card.featured::after { content: '⭐ START HERE'; position: absolute; top: 16px; right: 16px; background: #f59e0b; color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
         .kn-card-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; margin-bottom: 16px; }
+        .kn-card.featured .kn-card-icon { width: 70px; height: 70px; font-size: 30px; }
         .kn-card h6 { font-weight: 700; font-size: 16px; margin-bottom: 6px; color: #0f172a; }
+        .kn-card.featured h6 { font-size: 20px; }
         .kn-card p { font-size: 13px; color: #64748b; margin: 0; flex: 1; }
         .kn-card-meta { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
         .kn-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
@@ -111,11 +95,10 @@ const Knowledge = {
         .kn-btn-success:hover { background: #059669; }
         .kn-btn-warning { background: #f59e0b; color: #fff; }
         .kn-btn-warning:hover { background: #d97706; }
-        @media (max-width: 768px) { .kn-hero { padding: 24px; } .kn-hero h3 { font-size: 22px; } }
+        @media (max-width: 768px) { .kn-hero { padding: 24px; } .kn-hero h3 { font-size: 22px; } .kn-card.featured { grid-column: span 1; } }
       </style>
 
       <div class="kn-wrap">
-        <!-- HERO -->
         <div class="kn-hero">
           <h3>🚀 Knowledge & Growth Hub</h3>
           <p>Everything you need to scale your business — guides, courses, tools, community & expert insights. Turn your knowledge into revenue.</p>
@@ -127,7 +110,6 @@ const Knowledge = {
           </div>
         </div>
 
-        <!-- Filters -->
         <div class="kn-filters">
           <input type="text" class="kn-search" placeholder="🔍 Search knowledge base..." id="knSearch" value="${this.searchQuery}" oninput="Knowledge.searchQuery=this.value;Knowledge.render();">
           <button class="kn-filter-btn ${this.filterCategory==='all'?'active':''}" onclick="Knowledge.filterCategory='all';Knowledge.render();">All</button>
@@ -140,13 +122,12 @@ const Knowledge = {
           </select>
         </div>
 
-        <!-- Knowledge Cards Grid -->
         <div class="row g-4">
           ${filtered.map(card => {
             const progress = this.userProgress[card.id] || 0;
             return `
-            <div class="col-lg-4 col-md-6">
-              <div class="kn-card" style="--card-gradient:${card.gradient};" onclick="Knowledge.openCard('${card.id}')">
+            <div class="${card.featured ? 'col-12' : 'col-lg-4 col-md-6'}">
+              <div class="kn-card ${card.featured ? 'featured' : ''}" style="--card-gradient:${card.gradient};" onclick="Knowledge.openCard('${card.id}')">
                 <div class="kn-card-icon" style="background:${card.gradient};"><i class="fas ${card.icon}"></i></div>
                 <h6>${card.title}</h6>
                 <p>${card.desc}</p>
@@ -161,7 +142,6 @@ const Knowledge = {
           }).join('')}
         </div>
 
-        <!-- CTA Section -->
         <div class="kn-cta-section">
           <h5>🎯 Ready to Scale Your Business?</h5>
           <p class="text-muted">Join our premium community and get access to all paid courses, tools, playbooks & live sessions.</p>
@@ -180,8 +160,6 @@ const Knowledge = {
   async openCard(cardId) {
     const card = this.knowledgeCards.find(c => c.id === cardId);
     if (!card) return;
-
-    // Route to sub-module
     this.currentSubTab = cardId;
     this.render();
   },
@@ -190,8 +168,8 @@ const Knowledge = {
     const card = this.knowledgeCards.find(c => c.id === cardId);
     if (!card) { this.currentSubTab = null; this.render(); return; }
 
-    // Dynamically load the sub-module
     switch(cardId) {
+      case 'platform': await this.renderPlatform(); break;
       case 'guides': await this.renderGuides(); break;
       case 'courses': await this.renderCourses(); break;
       case 'webinars': await this.renderWebinars(); break;
@@ -202,14 +180,64 @@ const Knowledge = {
       case 'health': await this.renderHealthScore(); break;
       case 'playbooks': await this.renderPlaybooks(); break;
       case 'industry': await this.renderIndustry(); break;
-      case 'platform': await this.renderPlatform(); break;
       case 'templates': await this.renderTemplates(); break;
       default: this.currentSubTab = null; this.render();
     }
   },
 
-  // ==================== SUB-MODULES ====================
+  // ==================== PLATFORM DOCS (HIGHLIGHTED) ====================
+  async renderPlatform() {
+    const guides = [
+      { title:'Getting Started Guide', desc:'Complete walkthrough of the CRM — from login to first campaign', icon:'fa-rocket', section:'dashboard' },
+      { title:'Dashboard Overview', desc:'Understand your dashboard, KPIs, and quick actions', icon:'fa-tachometer-alt', section:'dashboard' },
+      { title:'Managing Leads', desc:'How to capture, track, and convert leads effectively', icon:'fa-funnel-dollar', section:'leads' },
+      { title:'Contacts Management', desc:'Import, organize, and segment your contacts', icon:'fa-users', section:'contacts' },
+      { title:'WhatsApp Chat Setup', desc:'Connect WhatsApp API and start live chatting', icon:'fa-whatsapp', section:'chats' },
+      { title:'Campaign Creation', desc:'Bulk & drip campaigns — step by step', icon:'fa-rocket', section:'campaigns' },
+      { title:'Templates & Flows', desc:'Create message templates and automation flows', icon:'fa-sitemap', section:'flows' },
+      { title:'Kanban Pipeline', desc:'Visual sales pipeline management', icon:'fa-tasks', section:'kanban' },
+      { title:'Social Media Connect', desc:'Connect & manage all social platforms', icon:'fa-globe', section:'social' },
+      { title:'Form Builder', desc:'Create lead capture forms with drag & drop', icon:'fa-wpforms', section:'forms' },
+      { title:'AI Chatbot Setup', desc:'Configure AI auto-replies for 24/7 support', icon:'fa-robot', section:'chatbot' },
+      { title:'E‑commerce Integration', desc:'Connect Shopify, WooCommerce & more', icon:'fa-store', section:'ecommerce' },
+      { title:'Appointment System', desc:'Book & manage appointments with staff', icon:'fa-calendar-check', section:'appointments' },
+      { title:'Analytics & Reports', desc:'Track performance with detailed analytics', icon:'fa-chart-bar', section:'analytics' },
+      { title:'Integrations Hub', desc:'Connect 30+ third-party tools', icon:'fa-plug', section:'integrations' },
+      { title:'Team & Agent Management', desc:'Invite team members and assign roles', icon:'fa-user-tie', section:'agents' },
+      { title:'Client Management', desc:'Onboard and manage multiple clients', icon:'fa-building', section:'clients' },
+      { title:'Ticket System', desc:'Manage customer support tickets', icon:'fa-ticket-alt', section:'tickets' },
+      { title:'Settings & Profile', desc:'Company profile, pipeline stages, preferences', icon:'fa-cog', section:'setup' },
+      { title:'Subscription & Plans', desc:'Upgrade your plan for more features', icon:'fa-credit-card', section:'plan' },
+    ];
 
+    let html = `
+      <div class="kn-wrap">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <button class="kn-btn kn-btn-outline btn-sm" onclick="Knowledge.currentSubTab=null;Knowledge.render();"><i class="fas fa-arrow-left"></i> Back</button>
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;"><i class="fas fa-book"></i></div>
+          <div><h4 style="font-weight:800;margin:0;">📖 Platform Documentation</h4><small class="text-muted">Complete guide to every feature — ${guides.length} guides</small></div>
+        </div>
+        <div class="row g-3">
+          ${guides.map(g => `
+            <div class="col-md-6 col-lg-4">
+              <div style="background:#fff;border-radius:16px;padding:20px;border:1px solid #f1f5f9;transition:0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 8px 25px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none';this.style.transform='none';" onclick="loadSection('${g.section}')">
+                <div class="d-flex gap-3 align-items-start">
+                  <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;color:#f59e0b;font-size:16px;flex-shrink:0;"><i class="fas ${g.icon}"></i></div>
+                  <div>
+                    <h6 style="font-weight:700;font-size:14px;margin:0;">${g.title}</h6>
+                    <p style="font-size:12px;color:#64748b;margin:4px 0 0;">${g.desc}</p>
+                    <span style="font-size:11px;color:#f59e0b;font-weight:600;">Open Module →</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    contentArea.innerHTML = html;
+  },
+
+  // ==================== OTHER SUB-MODULES ====================
   async renderGuides() {
     const guides = [
       { title:'WhatsApp Marketing Mastery', desc:'Complete guide to WhatsApp Business API, automation & campaigns', level:'Beginner', type:'free', progress:80 },
@@ -265,7 +293,6 @@ const Knowledge = {
   async renderHealthScore() { this.renderGenericPage('health', '💚 Business Health Score', 'Assess your business health', 'Business health assessment tool coming soon.'); },
   async renderPlaybooks() { this.renderGenericPage('playbooks', '▶️ Business Playbooks', 'Ready-to-execute strategies', 'Playbook library coming soon.'); },
   async renderIndustry() { this.renderGenericPage('industry', '🏭 Industry Insights', 'Industry-specific strategies', 'Industry insights coming soon.'); },
-  async renderPlatform() { this.renderGenericPage('platform', '📖 Platform Documentation', 'Complete CRM documentation', 'Platform documentation coming soon.'); },
   async renderTemplates() { this.renderGenericPage('templates', '📄 Business Templates', 'Ready-to-use templates', 'Template library coming soon.'); },
 
   // ==================== REUSABLE SUB-PAGE RENDERER ====================
@@ -318,7 +345,6 @@ const Knowledge = {
     contentArea.innerHTML = html;
   },
 
-  // ==================== HELPERS ====================
   async loadUserProgress() {
     try {
       const doc = await db.collection('user_progress').doc(window.currentUser?.uid || 'guest').get();
