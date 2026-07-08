@@ -288,7 +288,7 @@ if (formId) {
         name: userData.name || user.email,
         email: userData.email || user.email,
         role: userData.role || 'client_owner',
-        status: userData.status || 'pending',
+        status: userData.status || (['platform_owner','platform_super_admin','admin'].includes(userData.role) ? 'approved' : 'pending'),
         clientId: userData.clientId || null,
         permissions: userData.permissions || {},
         modules: userData.modules || [],
