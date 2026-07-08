@@ -1,4 +1,4 @@
-// auth.js — Multi-User Auth with Home Page Redirect, Permissions, Pending Approval, clientId, SaaS Ready
+// js/auth.js — Multi-User Auth with Home Page Redirect, Permissions, Pending Approval, clientId, SaaS Ready
 const loginScreen = document.getElementById('loginScreen');
 const appMain = document.getElementById('appMain');
 const loginFormDiv = document.getElementById('loginForm');
