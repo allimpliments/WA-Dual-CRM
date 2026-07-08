@@ -660,7 +660,7 @@ const Admin = {
       let plan = { name: '', price: 0, modules: [], maxUsers: 10 };
       if (editId) { const doc = await db.collection('plans').doc(editId).get(); if (doc.exists) plan = doc.data(); }
       const allModules = Object.keys(DEFAULT_ROLES.platform_owner.modules);
-      let moduleChecks = allModules.map(mod => '<div class="perm-item"><input type="checkbox" value="'+mod+'" '+(plan.modules||[]).includes(mod)?'checked':''+'> '+mod+'</div>').join('');
+      let moduleChecks = allModules.map(mod => '<div class="perm-item"><input type="checkbox" value="'+mod+'" '+(plan.modules||[]).includes(mod)?'checked':'')+'> '+mod+'</div>').join('');
 
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
