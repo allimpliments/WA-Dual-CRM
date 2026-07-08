@@ -11,6 +11,31 @@ const Dashboard = {
     const isPlatformAdmin = user.role === 'platform_owner' || user.role === 'platform_super_admin' || user.role === 'admin';
     const isClientUser = !!user.clientId && !isPlatformAdmin;
     const clientId = user.clientId;
+    const userPerms = window.__currentPermissions || {};
+    const userModules = userPerms.modules || {};
+    
+    // ✅ CHECK: Agar user pending hai ya no modules — empty dashboard dikhao
+    if (user.status === 'pending' || (isClientUser && Object.keys(userModules).length === 0)) {
+      contentArea.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:80vh;text-align:center;">
+          <div>
+            <i class="fas fa-clock fa-4x" style="color:#f59e0b;margin-bottom:20px;"></i>
+            <h3 style="font-weight:700;color:#0f172a;">⏳ Awaiting Module Assignment</h3>
+            <p style="color:#64748b;max-width:400px;margin:12px auto;">Your account is approved but no modules have been assigned yet. Please wait for the admin to assign modules, or contact support.</p>
+            <button onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';" style="margin-top:16px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;">← Back to Home</button>
+          </div>
+        </div>`;
+      return;
+    }
+
+    // ✅ Only fetch data for modules user has access to
+    const canAccessLeads = Permissions.canAccess('leads', 'read') || isPlatformAdmin;
+    const canAccessContacts = Permissions.canAccess('contacts', 'read') || isPlatformAdmin;
+    const canAccessCampaigns = Permissions.canAccess('campaigns', 'read') || isPlatformAdmin;
+    const canAccessChats = Permissions.canAccess('chats', 'read') || isPlatformAdmin;
+    const canAccessTickets = Permissions.canAccess('tickets', 'read') || isPlatformAdmin;
+    const canAccessAppointments = Permissions.canAccess('appointments', 'read') || isPlatformAdmin;
+    const canAccessKanban = Permissions.canAccess('kanban', 'read') || isPlatformAdmin;
 
     // ========== DATA FETCHING (All clientId isolated) ==========
     let totalLeads = 0, totalContacts = 0, totalCampaigns = 0, totalMessages = 0, totalTickets = 0, totalAppointments = 0;
@@ -20,56 +45,66 @@ const Dashboard = {
     let waConnected = false, campaignStats = { sent: 0, delivered: 0, failed: 0 };
 
     try {
-      // Leads
-      let lQuery = db.collection('leads');
-      if (shouldFilterByClient()) lQuery = lQuery.where('clientId', '==', clientId);
-      const leadsSnap = await lQuery.get();
-      totalLeads = leadsSnap.size;
-      leadsSnap.forEach(d => {
-        const l = d.data();
-        if (l.status === 'won') { wonLeads++; wonValue += parseInt(l.value) || 0; }
-        if (l.status === 'lost') lostLeads++;
-        totalValue += parseInt(l.value) || 0;
-        const s = l.source || 'Unknown'; leadSources[s] = (leadSources[s] || 0) + 1;
-        const st = l.status || 'new'; leadStatuses[st] = (leadStatuses[st] || 0) + 1;
-        const created = l.createdAt?.toDate();
-        if (created && created.getMonth() === new Date().getMonth() && created.getFullYear() === new Date().getFullYear()) newLeadsThisMonth++;
-      });
-      recentLeads = leadsSnap.docs.sort((a,b) => (b.data().createdAt?.toMillis()||0) - (a.data().createdAt?.toMillis()||0)).slice(0, 8).map(d => ({ id: d.id, ...d.data() }));
+      // Leads — only if user has access
+      if (canAccessLeads) {
+        let lQuery = db.collection('leads');
+        if (shouldFilterByClient()) lQuery = lQuery.where('clientId', '==', clientId);
+        const leadsSnap = await lQuery.get();
+        totalLeads = leadsSnap.size;
+        leadsSnap.forEach(d => {
+          const l = d.data();
+          if (l.status === 'won') { wonLeads++; wonValue += parseInt(l.value) || 0; }
+          if (l.status === 'lost') lostLeads++;
+          totalValue += parseInt(l.value) || 0;
+          const s = l.source || 'Unknown'; leadSources[s] = (leadSources[s] || 0) + 1;
+          const st = l.status || 'new'; leadStatuses[st] = (leadStatuses[st] || 0) + 1;
+          const created = l.createdAt?.toDate();
+          if (created && created.getMonth() === new Date().getMonth() && created.getFullYear() === new Date().getFullYear()) newLeadsThisMonth++;
+        });
+        recentLeads = leadsSnap.docs.sort((a,b) => (b.data().createdAt?.toMillis()||0) - (a.data().createdAt?.toMillis()||0)).slice(0, 8).map(d => ({ id: d.id, ...d.data() }));
+        leadsByMonth = this.getMonthlyLeads(leadsSnap);
+      }
 
-      // Monthly lead trend (last 6 months)
-      leadsByMonth = this.getMonthlyLeads(leadsSnap);
+      // Contacts — only if user has access
+      if (canAccessContacts) {
+        let cQuery = db.collection('contacts');
+        if (shouldFilterByClient()) cQuery = cQuery.where('clientId', '==', clientId);
+        totalContacts = (await cQuery.get()).size;
+      }
 
-      // Contacts
-      let cQuery = db.collection('contacts');
-      if (shouldFilterByClient()) cQuery = cQuery.where('clientId', '==', clientId);
-      totalContacts = (await cQuery.get()).size;
+      // Campaigns — only if user has access
+      if (canAccessCampaigns) {
+        let campQuery = db.collection('campaigns');
+        if (shouldFilterByClient()) campQuery = campQuery.where('clientId', '==', clientId);
+        const campSnap = await campQuery.get();
+        totalCampaigns = campSnap.size;
+        campSnap.forEach(d => { const c = d.data(); campaignStats.sent += c.sent||0; campaignStats.delivered += c.delivered||0; campaignStats.failed += c.failed||0; });
+      }
 
-      // Campaigns
-      let campQuery = db.collection('campaigns');
-      if (shouldFilterByClient()) campQuery = campQuery.where('clientId', '==', clientId);
-      const campSnap = await campQuery.get();
-      totalCampaigns = campSnap.size;
-      campSnap.forEach(d => { const c = d.data(); campaignStats.sent += c.sent||0; campaignStats.delivered += c.delivered||0; campaignStats.failed += c.failed||0; });
+      // Messages — only if user has access
+      if (canAccessChats) {
+        let mQuery = db.collection('messages');
+        if (shouldFilterByClient()) mQuery = mQuery.where('clientId', '==', clientId);
+        totalMessages = (await mQuery.get()).size;
+      }
 
-      // Messages
-      let mQuery = db.collection('messages');
-      if (shouldFilterByClient()) mQuery = mQuery.where('clientId', '==', clientId);
-      totalMessages = (await mQuery.get()).size;
+      // Tickets — only if user has access
+      if (canAccessTickets) {
+        let tQuery = db.collection('tickets');
+        if (shouldFilterByClient()) tQuery = tQuery.where('clientId', '==', clientId);
+        const ticketSnap = await tQuery.orderBy('createdAt','desc').limit(5).get();
+        totalTickets = ticketSnap.size;
+        activeTickets = ticketSnap.docs.filter(d => d.data().status !== 'closed').map(d => ({ id: d.id, ...d.data() }));
+      }
 
-      // Tickets
-      let tQuery = db.collection('tickets');
-      if (shouldFilterByClient()) tQuery = tQuery.where('clientId', '==', clientId);
-      const ticketSnap = await tQuery.orderBy('createdAt','desc').limit(5).get();
-      totalTickets = ticketSnap.size;
-      activeTickets = ticketSnap.docs.filter(d => d.data().status !== 'closed').map(d => ({ id: d.id, ...d.data() }));
-
-      // Appointments
-      let aQuery = db.collection('appointments');
-      if (shouldFilterByClient()) aQuery = aQuery.where('clientId', '==', clientId);
-      const apptSnap = await aQuery.where('date', '>=', new Date().toISOString().split('T')[0]).orderBy('date').limit(5).get();
-      totalAppointments = apptSnap.size;
-      upcomingAppointments = apptSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Appointments — only if user has access
+      if (canAccessAppointments) {
+        let aQuery = db.collection('appointments');
+        if (shouldFilterByClient()) aQuery = aQuery.where('clientId', '==', clientId);
+        const apptSnap = await aQuery.where('date', '>=', new Date().toISOString().split('T')[0]).orderBy('date').limit(5).get();
+        totalAppointments = apptSnap.size;
+        upcomingAppointments = apptSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
 
       // WhatsApp status
       const waDoc = await db.collection('settings').doc('whatsapp').get();
@@ -79,10 +114,12 @@ const Dashboard = {
       if (isClientUser) {
         const teamSnap = await db.collection('users').where('clientId','==',clientId).get();
         teamPerformance = teamSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        for (let tm of teamPerformance) {
-          const tmLeads = leadsSnap.docs.filter(d => d.data().assignedTo === tm.id);
-          tm.leadCount = tmLeads.length;
-          tm.wonCount = tmLeads.filter(d => d.data().status === 'won').length;
+        if (canAccessLeads) {
+          for (let tm of teamPerformance) {
+            const tmLeads = (await db.collection('leads').where('assignedTo','==',tm.id).where('clientId','==',clientId).get()).docs;
+            tm.leadCount = tmLeads.length;
+            tm.wonCount = tmLeads.filter(d => d.data().status === 'won').length;
+          }
         }
         teamPerformance.sort((a,b) => (b.leadCount||0) - (a.leadCount||0));
       }
@@ -173,42 +210,47 @@ const Dashboard = {
 
         <!-- KPI ROW -->
         <div class="dash-kpi-grid">
+          ${canAccessLeads ? `
           <div class="dash-kpi" onclick="Leads.render()">
             <div class="dash-kpi-icon" style="background:#eef2ff;"><i class="fas fa-user-plus" style="color:#6366f1;"></i></div>
             <div class="dash-kpi-info"><div class="num">${totalLeads}</div><div class="lbl">Total Leads</div><div class="sub" style="color:#10b981;">↑ ${newLeadsThisMonth} this month</div></div>
-          </div>
+          </div>` : ''}
+          ${canAccessContacts ? `
           <div class="dash-kpi" onclick="Contacts.render()">
             <div class="dash-kpi-icon" style="background:#ecfdf5;"><i class="fas fa-users" style="color:#10b981;"></i></div>
             <div class="dash-kpi-info"><div class="num">${totalContacts}</div><div class="lbl">Contacts</div></div>
-          </div>
+          </div>` : ''}
+          ${canAccessKanban || canAccessLeads ? `
           <div class="dash-kpi" onclick="Kanban.render()">
             <div class="dash-kpi-icon" style="background:#fef3c7;"><i class="fas fa-trophy" style="color:#f59e0b;"></i></div>
             <div class="dash-kpi-info"><div class="num">${wonLeads}</div><div class="lbl">Won Deals</div><div class="sub" style="color:#6366f1;">₹${wonValue.toLocaleString()}</div></div>
-          </div>
+          </div>` : ''}
           <div class="dash-kpi">
             <div class="dash-kpi-icon" style="background:#fce7f3;"><i class="fas fa-rupee-sign" style="color:#ec4899;"></i></div>
             <div class="dash-kpi-info"><div class="num">₹${totalValue >= 100000 ? (totalValue/100000).toFixed(1)+'L' : totalValue.toLocaleString()}</div><div class="lbl">Pipeline Value</div></div>
           </div>
+          ${canAccessCampaigns ? `
           <div class="dash-kpi" onclick="Campaigns.render()">
             <div class="dash-kpi-icon" style="background:#f0fdf4;"><i class="fas fa-rocket" style="color:#22c55e;"></i></div>
             <div class="dash-kpi-info"><div class="num">${totalCampaigns}</div><div class="lbl">Campaigns</div><div class="sub" style="color:#f59e0b;">${deliveryRate}% delivery</div></div>
-          </div>
+          </div>` : ''}
+          ${canAccessChats ? `
           <div class="dash-kpi" onclick="Chats.render()">
             <div class="dash-kpi-icon" style="background:#e0f2fe;"><i class="fas fa-comments" style="color:#0ea5e9;"></i></div>
             <div class="dash-kpi-info"><div class="num">${totalMessages}</div><div class="lbl">Messages</div></div>
-          </div>
+          </div>` : ''}
         </div>
 
         <div class="dash-grid">
           <!-- LEFT COLUMN -->
           <div>
-            <!-- Lead Trend Chart -->
+            ${canAccessLeads ? `
             <div class="dash-card" style="margin-bottom:16px;">
               <h5><i class="fas fa-chart-line"></i> Lead Trend (Last 6 Months)</h5>
               <div class="dash-chart-box"><canvas id="leadTrendChart"></canvas></div>
-            </div>
+            </div>` : ''}
 
-            <!-- Recent Leads Table -->
+            ${canAccessLeads ? `
             <div class="dash-card" style="margin-bottom:16px;">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 style="margin:0;"><i class="fas fa-clock"></i> Recent Leads</h5>
@@ -226,10 +268,9 @@ const Dashboard = {
                   </div>
                 </div>
               `).join('')}
-            </div>
+            </div>` : ''}
 
-            <!-- Campaign Delivery Stats -->
-            ${totalCampaigns > 0 ? `
+            ${canAccessCampaigns && totalCampaigns > 0 ? `
             <div class="dash-card">
               <h5><i class="fas fa-paper-plane"></i> Campaign Delivery</h5>
               <div class="dash-bar-row">
@@ -259,7 +300,7 @@ const Dashboard = {
               <div class="dash-ai-insight"><span class="icon">🚀</span><strong>Growth:</strong> ${totalContacts > 0 ? `You have <strong>${totalContacts}</strong> contacts. Use campaigns to engage them!` : 'Start building your contact list to unlock campaign features.'}</div>
             </div>
 
-            <!-- Lead Status Breakdown -->
+            ${canAccessLeads ? `
             <div class="dash-card" style="margin-bottom:16px;">
               <h5><i class="fas fa-chart-pie"></i> Lead Status</h5>
               ${Object.keys(leadStatuses).length === 0 ? '<p class="text-muted text-center py-2">No data</p>' : Object.entries(leadStatuses).map(([k,v]) => {
@@ -270,10 +311,9 @@ const Dashboard = {
                   <div class="dash-bar"><div class="dash-bar-fill" style="width:${pct}%;background:${colors[k]||'#6366f1'};"></div></div>
                 </div>`;
               }).join('')}
-            </div>
+            </div>` : ''}
 
-            <!-- Upcoming Appointments -->
-            ${upcomingAppointments.length > 0 ? `
+            ${canAccessAppointments && upcomingAppointments.length > 0 ? `
             <div class="dash-card" style="margin-bottom:16px;">
               <h5><i class="fas fa-calendar-check" style="color:#f59e0b;"></i> Upcoming Appointments</h5>
               ${upcomingAppointments.map(a => `
@@ -287,7 +327,6 @@ const Dashboard = {
               `).join('')}
             </div>` : ''}
 
-            <!-- Team Performance (Client Users) -->
             ${isClientUser && teamPerformance.length > 0 ? `
             <div class="dash-card">
               <h5><i class="fas fa-users" style="color:#8b5cf6;"></i> Team Performance</h5>
@@ -307,9 +346,9 @@ const Dashboard = {
 
         <!-- QUICK ACTIONS -->
         <div class="dash-grid-3">
-          <button class="dash-btn dash-btn-primary" style="justify-content:center;padding:14px;" onclick="Leads.showAddForm()"><i class="fas fa-plus-circle"></i> Add New Lead</button>
-          <button class="dash-btn dash-btn-outline" style="justify-content:center;padding:14px;" onclick="Contacts.showAddForm()"><i class="fas fa-user-plus"></i> Add Contact</button>
-          <button class="dash-btn dash-btn-outline" style="justify-content:center;padding:14px;" onclick="Kanban.render()"><i class="fas fa-tasks"></i> Open Pipeline</button>
+          ${canAccessLeads ? `<button class="dash-btn dash-btn-primary" style="justify-content:center;padding:14px;" onclick="Leads.showAddForm()"><i class="fas fa-plus-circle"></i> Add New Lead</button>` : `<div></div>`}
+          ${canAccessContacts ? `<button class="dash-btn dash-btn-outline" style="justify-content:center;padding:14px;" onclick="Contacts.showAddForm()"><i class="fas fa-user-plus"></i> Add Contact</button>` : `<div></div>`}
+          ${canAccessKanban ? `<button class="dash-btn dash-btn-outline" style="justify-content:center;padding:14px;" onclick="Kanban.render()"><i class="fas fa-tasks"></i> Open Pipeline</button>` : `<div></div>`}
         </div>
       </div>
     `;
