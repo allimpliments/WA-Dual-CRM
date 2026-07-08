@@ -229,21 +229,18 @@ if (formId) {
         if (doc.exists) {
           userData = doc.data();
         } else {
-          // Auto-create user document if not exists (fallback)
-          userData = { name: user.email, email: user.email, role: 'admin', status: 'approved', permissions: {}, clientId: null };
-          await db.collection('users').doc(user.uid).set({
-            name: user.email,
-            email: user.email,
-            role: 'admin',
-            status: 'approved',
-            permissions: {},
-            clientId: null,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
+          // ✅ FIX: No auto-admin creation — redirect to home page
+          console.warn('User document not found for uid:', user.uid, '— redirecting to home');
+          await auth.signOut();
+          window.location.href = '/WA-Dual-CRM/home.html';
+          return;
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
-        userData = { name: user.email, email: user.email, role: 'admin', status: 'approved', permissions: {}, clientId: null };
+        // ✅ FIX: On error, redirect to home page instead of creating admin
+        await auth.signOut();
+        window.location.href = '/WA-Dual-CRM/home.html';
+        return;
       }
 
       // ====== SET GLOBAL CURRENT USER ======
@@ -251,8 +248,8 @@ if (formId) {
         uid: user.uid,
         name: userData.name || user.email,
         email: userData.email || user.email,
-        role: userData.role || 'admin',
-        status: userData.status || 'approved',
+        role: userData.role || 'client_owner',
+        status: userData.status || 'pending',
         clientId: userData.clientId || null,
         permissions: userData.permissions || {},
         plan: userData.plan || 'free',
