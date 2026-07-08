@@ -178,25 +178,66 @@ if (formId) {
       const nameEl = document.getElementById('regName');
       const emailEl = document.getElementById('regEmail');
       const passwordEl = document.getElementById('regPassword');
+      const companyEl = document.getElementById('regCompany');
+      const phoneEl = document.getElementById('regPhone');
+      
       if (!nameEl || !emailEl || !passwordEl) return;
       
       const name = nameEl.value.trim();
       const email = emailEl.value.trim();
       const password = passwordEl.value;
+      const company = companyEl?.value?.trim() || 'Default Company';
+      const phone = phoneEl?.value?.trim() || '';
+      
       if (!name || !email || password.length < 6) return alert('Please fill all fields correctly.');
       
       try {
         const userCred = await auth.createUserWithEmailAndPassword(email, password);
-        await db.collection('users').doc(userCred.user.uid).set({
-          name, email, role: 'client_owner', plan: 'free',
+        const uid = userCred.user.uid;
+        
+        // ✅ Create CLIENT first with PENDING status
+        const clientRef = await db.collection('clients').add({
+          companyName: company,
+          contactName: name,
+          email: email,
+          phone: phone,
+          planId: 'free',
+          businessType: 'other',
           status: 'pending',
+          modules: [],
           permissions: {},
-          clientId: null,
+          ownerUid: uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        const clientId = clientRef.id;
+        
+        // ✅ Create USER with clientId — PENDING
+        await db.collection('users').doc(uid).set({
+          name: name,
+          email: email,
+          phone: phone,
+          role: 'client_owner',
+          status: 'pending',
+          clientId: clientId,
+          permissions: {},
+          modules: [],
+          plan: 'free',
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert('Registration successful! Your account is pending approval. You will be redirected to the CRM.');
+        
+        // ✅ Link user to client
+        await db.collection('clients').doc(clientId).update({
+          users: firebase.firestore.FieldValue.arrayUnion(uid)
+        });
+        
+        alert('Registration successful! Your account is pending approval. You will be notified once approved.');
         window.location.href = '/WA-Dual-CRM/';
-      } catch (err) { alert(err.message); }
+      } catch (err) { 
+        console.error('Registration error:', err);
+        alert(err.message); 
+      }
     });
   }
 
@@ -229,7 +270,6 @@ if (formId) {
         if (doc.exists) {
           userData = doc.data();
         } else {
-          // ✅ FIX: No auto-admin creation — redirect to home page
           console.warn('User document not found for uid:', user.uid, '— redirecting to home');
           await auth.signOut();
           window.location.href = '/WA-Dual-CRM/home.html';
@@ -237,7 +277,6 @@ if (formId) {
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
-        // ✅ FIX: On error, redirect to home page instead of creating admin
         await auth.signOut();
         window.location.href = '/WA-Dual-CRM/home.html';
         return;
@@ -252,6 +291,7 @@ if (formId) {
         status: userData.status || 'pending',
         clientId: userData.clientId || null,
         permissions: userData.permissions || {},
+        modules: userData.modules || [],
         plan: userData.plan || 'free',
         phone: userData.phone || ''
       };
@@ -263,12 +303,18 @@ if (formId) {
         const ca = document.getElementById('contentArea');
         if (ca) ca.innerHTML = `
           <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;">
-            <div style="text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+            <div style="text-align:center;max-width:550px;padding:40px;background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
               <i class="fas fa-clock fa-4x" style="color:#f59e0b;margin-bottom:20px;"></i>
-              <h3 style="font-weight:800;color:#0f172a;">Account Pending Approval</h3>
-              <p style="color:#64748b;margin:12px 0;">Your account is currently under review by the platform administrator. You will receive access once approved.</p>
-              <div style="background:#fef3c7;padding:12px;border-radius:10px;margin-top:16px;">
-                <small style="color:#92400e;"><i class="fas fa-info-circle me-1"></i> If this is urgent, please contact your platform administrator.</small>
+              <h3 style="font-weight:800;color:#0f172a;">⏳ Account Pending Approval</h3>
+              <p style="color:#64748b;margin:12px 0;">Your account is under review by the platform administrator.</p>
+              <div style="background:#fef3c7;padding:16px;border-radius:12px;margin-top:16px;text-align:left;">
+                <strong style="color:#92400e;display:block;margin-bottom:6px;">📋 Your Details:</strong>
+                <small style="color:#92400e;">Name: <strong>${userData.name || 'N/A'}</strong></small><br>
+                <small style="color:#92400e;">Email: <strong>${userData.email || 'N/A'}</strong></small><br>
+                <small style="color:#92400e;">Company: <strong>${userData.clientId ? 'Registered' : 'Pending'}</strong></small><br>
+                <small style="color:#92400e;">Plan: <strong>${userData.plan || 'Free'}</strong></small><br>
+                <small style="color:#92400e;">Status: <strong>Awaiting Admin Approval</strong></small><br>
+                <small style="color:#92400e;">Modules: <strong>Will be assigned after approval</strong></small>
               </div>
               <button onclick="auth.signOut();window.location.href='/WA-Dual-CRM/home.html';" style="margin-top:20px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;">← Back to Home</button>
             </div>
@@ -331,6 +377,11 @@ if (formId) {
       try {
         const perms = await Permissions.getEffectivePermissions();
         window.__currentPermissions = perms;
+        Logger.info('Permissions loaded for ' + userData.email, { 
+          role: userData.role, 
+          modules: Object.keys(perms.modules || {}).length,
+          status: userData.status 
+        });
       } catch (e) {
         console.error('Permissions load error:', e);
         window.__currentPermissions = { modules: {}, isPlatformRole: false, level: 99 };
