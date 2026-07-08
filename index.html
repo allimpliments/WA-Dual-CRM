@@ -1,68 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-  <script>
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user) window.location.href = '/';
-  });
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>11 Avatar Digital Hub CRM</title>
+  <meta name="description" content="AI Powered WhatsApp CRM Platform — Manage Leads, Campaigns, Chats, Automation & More">
+  <meta name="theme-color" content="#6366f1">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
+  
   <style>
-    /* Emergency fix – login screen should never show when app is visible */
-    body.app-visible #loginScreen {
-      display: none !important;
-      height: 0 !important;
-      min-height: 0 !important;
-      overflow: hidden !important;
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+    
+    .app-loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; width: 100%; background: #f8fafc;
+      position: fixed; top: 0; left: 0; z-index: 99999;
     }
+    .app-loading .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen" style="display:flex; align-items:center; justify-content:center; height:100vh; width:100%;">
-    <div class="card p-4 shadow" style="max-width: 400px; width:100%">
-      <h3 class="text-center mb-3"><i class="fab fa-whatsapp text-success"></i> 11 Avatar WA CRM</h3>
-      <div id="loginForm">
-        <div class="mb-3">
-          <input type="email" id="loginEmail" class="form-control" placeholder="Email">
-        </div>
-        <div class="mb-3">
-          <input type="password" id="loginPassword" class="form-control" placeholder="Password">
-        </div>
-        <button id="loginBtn" class="btn btn-dark w-100">Login</button>
-        <p class="mt-2 text-center"><small>No account? <a href="#" id="showRegister">Register</a></small></p>
-      </div>
-      <div id="registerForm" style="display:none">
-        <div class="mb-3">
-          <input type="text" id="regName" class="form-control" placeholder="Full Name">
-        </div>
-        <div class="mb-3">
-          <input type="email" id="regEmail" class="form-control" placeholder="Email">
-        </div>
-        <div class="mb-3">
-          <input type="password" id="regPassword" class="form-control" placeholder="Password (min 6)">
-        </div>
-        <button id="registerBtn" class="btn btn-success w-100">Register</button>
-        <p class="mt-2 text-center"><small>Already have account? <a href="#" id="showLogin">Login</a></small></p>
-      </div>
-    </div>
+  <!-- Loading -->
+  <div class="app-loading" id="appLoading">
+    <div class="spinner"></div>
   </div>
 
   <!-- MAIN APP -->
-  <div id="appMain" style="display:none">
+  <div id="appMain" style="display:none;">
     <aside class="sidebar" id="sidebar">
       <div class="brand"><i class="fab fa-whatsapp text-success fs-3"></i> Panel</div>
     </aside>
@@ -82,7 +63,7 @@
     </div>
   </div>
 
-  <!-- Firebase Compat SDKs -->
+  <!-- SCRIPTS -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -90,6 +71,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  
   <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/permissions.js"></script>
@@ -101,66 +83,34 @@
   <script src="js/contacts.js"></script>
   <script src="js/forms.js"></script>
   <script src="js/campaigns.js"></script>
-  <script src="js/setup.js"></script>
   <script src="js/chats.js"></script>
   <script src="js/templates.js"></script>
   <script src="js/flows.js"></script>
-  <script src="js/ecommerce.js"></script>
-  <script src="js/chatbot.js"></script>
-  <script src="js/integrations.js"></script>
-  <script src="js/agents.js"></script>
-  <script src="js/clients.js"></script>
-  <script src="js/kanban.js"></script>
   <script src="js/social.js"></script>
   <script src="js/marketing.js"></script>
   <script src="js/social/composer.js"></script>
-  <script src="js/plan.js"></script>
-  <script src="js/knowledge.js"></script>
-  <script src="js/analytics.js"></script>
-  <script src="js/reports.js"></script>
+  <script src="js/kanban.js"></script>
+  <script src="js/ecommerce.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script src="js/integrations.js"></script>
+  <script src="js/setup.js"></script>
+  <script src="js/agents.js"></script>
+  <script src="js/clients.js"></script>
   <script src="js/tickets.js"></script>
   <script src="js/appointments.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/knowledge.js"></script>
+  <script src="js/plan.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/admin.js"></script>
   
-<div id="google_translate_element" style="display:none;"></div>
-<script type="text/javascript">
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'en',
-    includedLanguages: 'hi,bn,te,mr,ta,ur,gu,kn,ml,or,pa,as,mai,en',
-    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-    autoDisplay: false
-  }, 'google_translate_element');
-}
-
-// 🌐 हर सेक्शन लोड के बाद ट्रांसलेशन रीफ़्रेश करने वाला फ़ंक्शन
-function refreshGoogleTranslate() {
-  // 1. पुराने ट्रांसलेशन के निशान हटाएँ
-  document.querySelectorAll('font[style*="vertical-align: inherit;"]').forEach(el => {
-    el.style.verticalAlign = '';
-    el.innerHTML = el.textContent; // original text restore
-  });
-  document.querySelectorAll('.goog-te-banner-frame').forEach(el => el.remove());
-  document.body.classList.remove('translated-ltr', 'translated-rtl');
-
-  // 2. Google Translate ड्रॉपडाउन से चुनी हुई भाषा पकड़ें
-  const combo = document.querySelector('.goog-te-combo');
-  if (!combo) return; // अगर गूगल ट्रांसलेट ने अभी तक ड्रॉपडाउन नहीं बनाया
-
-  const selectedLang = combo.value;
-  if (selectedLang === 'en') return; // अंग्रेज़ी से कोई ट्रांसलेशन नहीं
-
-  // 3. भाषा बदलने का नाटक करें ताकि गूगल नए कंटेंट को दोबारा ट्रांसलेट करे
-  combo.value = 'en';
-  combo.dispatchEvent(new Event('change'));
-  setTimeout(() => {
-    combo.value = selectedLang;
-    combo.dispatchEvent(new Event('change'));
-  }, 300);
-}
-</script>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js"></script>
-
+  <script>
+    // Hide loader when app is ready or redirect to home if not logged in
+    setTimeout(() => {
+      const loader = document.getElementById('appLoading');
+      if (loader) { loader.style.opacity = '0'; loader.style.transition = '0.3s'; setTimeout(() => loader.remove(), 300); }
+    }, 4000);
+  </script>
 </body>
-</html> 
+</html>
