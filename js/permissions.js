@@ -323,9 +323,10 @@ window.Permissions = {
 
         const clientModules = clientData.modules || [];
 
-        // If client has specific modules assigned, intersect with role modules
+        // ✅ FIX: ALWAYS intersect with client modules
+        // Even if empty, result should be empty (only dashboard)
+        const allowedModules = {};
         if (clientModules.length > 0) {
-          const allowedModules = {};
           let restrictedCount = 0;
           
           Object.keys(role.modules).forEach(mod => {
@@ -339,11 +340,14 @@ window.Permissions = {
           role.modules = allowedModules;
           Logger.info(`Client module filter: ${Object.keys(allowedModules).length} allowed, ${restrictedCount} restricted`);
         } else {
-          Logger.info('No client modules specified, using full role permissions');
+          // ✅ FIX: No client modules assigned → give ONLY dashboard
+          Logger.info('No client modules assigned — restricting to dashboard only');
+          role.modules = { dashboard: { read: true } };
         }
       } catch (e) {
         Logger.error('Error fetching client plan for permission filtering', e);
-        // On error, use role permissions as-is (fail open for safety)
+        // ✅ FIX: On error, give minimal access
+        role.modules = { dashboard: { read: true } };
       }
     }
 
