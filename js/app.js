@@ -1,3 +1,4 @@
+// js/app.js — Main Application Shell with Full Role-Based Navigation
 const sidebar = document.getElementById('sidebar');
 const contentArea = document.getElementById('contentArea');
 const menuToggle = document.getElementById('menuToggle');
@@ -5,55 +6,55 @@ const currentSectionTitle = document.getElementById('currentSectionTitle');
 
 const navSections = [
   { title: 'Main', items: [
-    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client'] }
+    { name: 'Dashboard', icon: 'fa-tachometer-alt', section: 'dashboard', roles: ['admin','team','client', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive', 'viewer'] }
   ]},
   { title: 'Setup', items: [
-    { name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin'] }
+    { name: 'Setup', icon: 'fa-cog', section: 'setup', roles: ['admin', 'platform_owner', 'platform_super_admin'] }
   ]},
   { title: 'Communication', items: [
-    { name: 'All Chats', icon: 'fa-comments', section: 'chats', roles: ['admin','team'] },
-    { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads', roles: ['admin','team'] },
-    { name: 'Contacts', icon: 'fa-users', section: 'contacts', roles: ['admin','team'] },
-    { name: 'Templates', icon: 'fa-layer-group', section: 'templates', roles: ['admin','team'] },
-    { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', roles: ['admin','team'] },
-    { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin','team'] }
+    { name: 'All Chats', icon: 'fa-comments', section: 'chats', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive'] },
+    { name: 'Leads', icon: 'fa-funnel-dollar', section: 'leads', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive', 'viewer'] },
+    { name: 'Contacts', icon: 'fa-users', section: 'contacts', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive', 'viewer'] },
+    { name: 'Templates', icon: 'fa-layer-group', section: 'templates', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] },
+    { name: 'Campaigns', icon: 'fa-rocket', section: 'campaigns', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] },
+    { name: 'Flows', icon: 'fa-sitemap', section: 'flows', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin'] }
   ]},
   { title: 'Social Media', items: [
-    { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin','team'] }
+    { name: 'All Platforms', icon: 'fa-globe', section: 'social', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] }
   ]},
   { title: 'Marketing', items: [
-    { name: 'Ads Manager', icon: 'fa-ad', section: 'marketing', roles: ['admin','team'] }
+    { name: 'Ads Manager', icon: 'fa-ad', section: 'marketing', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin'] }
   ]},
   { title: 'Forms', items: [
-    { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin','team'] }
+    { name: 'Form Builder', icon: 'fa-wpforms', section: 'forms', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] }
   ]},
   { title: 'E‑commerce', items: [
-    { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin'] }
+    { name: 'E‑commerce', icon: 'fa-store', section: 'ecommerce', roles: ['admin', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin'] }
   ]},
   { title: 'Automation', items: [
-    { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin','team'] },
-    { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin'] }
+    { name: 'Chatbot', icon: 'fa-robot', section: 'chatbot', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin'] },
+    { name: 'Integrations', icon: 'fa-plug', section: 'integrations', roles: ['admin', 'platform_owner', 'platform_super_admin', 'client_owner'] }
   ]},
   { title: 'Management', items: [
-    { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin'] },
-    { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin'] },
-    { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin','team'] }
+    { name: 'Agents', icon: 'fa-user-tie', section: 'agents', roles: ['admin', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin'] },
+    { name: 'Clients', icon: 'fa-building', section: 'clients', roles: ['admin', 'platform_owner', 'platform_super_admin'] },
+    { name: 'Kanban', icon: 'fa-tasks', section: 'kanban', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] }
   ]},
   { title: 'Support', items: [
-    { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets', roles: ['admin','team'] },
-    { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge', roles: ['admin','team'] }
+    { name: 'Tickets', icon: 'fa-ticket-alt', section: 'tickets', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive'] },
+    { name: 'Knowledge engine', icon: 'fa-book', section: 'knowledge', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive'] }
   ]},
   { title: 'Reports', items: [
-    { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics', roles: ['admin'] },
-    { name: 'Reports', icon: 'fa-file-alt', section: 'reports', roles: ['admin'] }
+    { name: 'Analytics', icon: 'fa-chart-bar', section: 'analytics', roles: ['admin', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] },
+    { name: 'Reports', icon: 'fa-file-alt', section: 'reports', roles: ['admin', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager'] }
   ]},
   { title: 'Services', items: [
-    { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments', roles: ['admin','team'] }
+    { name: 'Appointments', icon: 'fa-calendar-check', section: 'appointments', roles: ['admin','team', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive'] }
   ]},
   { title: 'Account', items: [
-    { name: 'My Profile', icon: 'fa-user-circle', section: 'profile', roles: ['admin','team','client'] },
-    { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client'] },
-    { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin','team','client'] }
+    { name: 'My Profile', icon: 'fa-user-circle', section: 'profile', roles: ['admin','team','client', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive', 'viewer'] },
+    { name: 'My Plan', icon: 'fa-wallet', section: 'plan', roles: ['admin','team','client', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive', 'viewer'] },
+    { name: 'Logout', icon: 'fa-sign-out-alt', action: 'logout', roles: ['admin','team','client', 'platform_owner', 'platform_super_admin', 'client_owner', 'client_admin', 'manager', 'executive', 'viewer'] }
   ]}
 ];
 
@@ -61,9 +62,7 @@ const navSections = [
 function shouldFilterByClient() {
   const user = window.currentUser;
   if (!user) return false;
-  // ✅ Platform Owner, Super Admin, Admin — all see everything
   if (user.role === 'platform_owner' || user.role === 'platform_super_admin' || user.role === 'admin') return false;
-  // Client users see only their company data
   return !!user.clientId;
 }
 
