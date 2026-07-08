@@ -15,7 +15,7 @@ const Dashboard = {
     const userModules = userPerms.modules || {};
     
     // ✅ CHECK: Agar user pending hai ya no modules — empty dashboard dikhao
-    if (user.status === 'pending' || (isClientUser && Object.keys(userModules).length === 0)) {
+    if (!isPlatformAdmin && (user.status === 'pending' || (isClientUser && Object.keys(userModules).length === 0))) {
       contentArea.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;height:80vh;text-align:center;">
           <div>
