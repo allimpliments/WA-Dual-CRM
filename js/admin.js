@@ -232,8 +232,8 @@ const Admin = {
       const allModules = ['dashboard','leads','contacts','chats','campaigns','templates','flows','social','forms','kanban','knowledge','chatbot','ecommerce','appointments','analytics','tickets','integrations','agents','clients','marketing','setup','reports'];
 
       let moduleChecks = allModules.map(mod => {
-        const checked = (plan.modules || []).includes(mod) ? 'checked' : '';
-        return '<div class="perm-item"><input type="checkbox" value="' + mod + '" ' + checked + '> ' + mod + '</div>';
+        const checked = currentModules.includes(mod) ? 'checked' : '';
+        return '<div class="perm-item"><input type="checkbox" value="' + mod + '" class="approval-module" ' + checked + '> ' + mod + '</div>';
       }).join('');
 
       const modal = document.createElement('div');
@@ -253,19 +253,16 @@ const Admin = {
   async approveWithModules(clientId) {
     const selectedModules = Array.from(document.querySelectorAll('.approval-module:checked')).map(cb => cb.value);
     
-    // ✅ FIX: Minimum dashboard module
     if (selectedModules.length === 0) {
         selectedModules.push('dashboard');
     }
     
-    // ✅ CRUD permissions for each module
     const permissions = {};
     selectedModules.forEach(mod => { 
       permissions[mod] = { create: true, read: true, update: true, delete: true }; 
     });
 
     try {
-      // ✅ 1. Update CLIENT status + modules + permissions
       await db.collection('clients').doc(clientId).update({
         status: 'approved',
         modules: selectedModules,
@@ -274,7 +271,6 @@ const Admin = {
         approvedBy: window.currentUser?.uid || 'admin'
       });
 
-      // ✅ 2. Update ALL USERS of this client — activate + assign modules + permissions
       const usersSnap = await db.collection('users').where('clientId', '==', clientId).get();
       const batch = db.batch();
       
@@ -289,7 +285,6 @@ const Admin = {
       
       await batch.commit();
 
-      // ✅ 3. Create default roles for this client company
       const defaultClientRoles = {
         'client_admin': {
           name: 'Client Admin',
@@ -457,7 +452,6 @@ const Admin = {
     try {
       let query = db.collection('users');
       
-      // ✅ FIX: Platform admin — सिर्फ platform roles वाले users
       if (isPlatform) {
         query = query.where('role', 'in', ['platform_owner', 'platform_super_admin', 'admin']);
       } else if (clientId) {
@@ -490,7 +484,6 @@ const Admin = {
       }
 
       let roles = [];
-      // ✅ FIX: Platform admin को सिर्फ platform roles
       if (Permissions.canAccess('admin','manage')) {
         roles = ['platform_super_admin', 'admin'];
       } else {
@@ -658,33 +651,33 @@ const Admin = {
       '<tbody>'+(rows||'<tr><td colspan="5" class="text-center text-muted py-4">No plans yet</td></tr>')+'</tbody></table></div></div>';
   },
 
-    showPlanForm(editId = null) {
-      const loadForm = async () => {
-        let plan = { name: '', price: 0, modules: [], maxUsers: 10 };
-        if (editId) { 
-          const doc = await db.collection('plans').doc(editId).get(); 
-          if (doc.exists) plan = doc.data(); 
-        }
-        const allModules = Object.keys(DEFAULT_ROLES.platform_owner.modules);
-        let moduleChecks = allModules.map(mod => {
-          const checked = (plan.modules || []).includes(mod) ? 'checked' : '';
-          return '<div class="perm-item"><input type="checkbox" value="' + mod + '" ' + checked + '> ' + mod + '</div>';
-        }).join('');
-  
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = '<div class="modal-box" onclick="event.stopPropagation()"><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">×</button>'+
-          '<h5 style="font-weight:700;">'+(editId?'Edit':'Create')+' Plan</h5>'+
-          '<input id="pName" class="form-control form-control-sm mb-2" placeholder="Plan Name" value="'+(plan.name||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">'+
-          '<input id="pPrice" type="number" class="form-control form-control-sm mb-2" placeholder="Price (₹)" value="'+(plan.price||0)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">'+
-          '<input id="pMaxUsers" type="number" class="form-control form-control-sm mb-2" placeholder="Max Users" value="'+(plan.maxUsers||10)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">'+
-          '<h6>Included Modules</h6><div class="perm-grid" style="max-height:300px;overflow-y:auto;">'+moduleChecks+'</div>'+
-          '<button class="admin-btn admin-btn-primary" style="width:100%;margin-top:16px;padding:10px;" onclick="Admin.savePlan(\''+(editId||'')+'\')">💾 Save Plan</button></div>';
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-        document.body.appendChild(modal);
-      };
-      loadForm();
-    },
+  showPlanForm(editId = null) {
+    const loadForm = async () => {
+      let plan = { name: '', price: 0, modules: [], maxUsers: 10 };
+      if (editId) { 
+        const doc = await db.collection('plans').doc(editId).get(); 
+        if (doc.exists) plan = doc.data(); 
+      }
+      const allModules = Object.keys(DEFAULT_ROLES.platform_owner.modules);
+      let moduleChecks = allModules.map(mod => {
+        const checked = (plan.modules || []).includes(mod) ? 'checked' : '';
+        return '<div class="perm-item"><input type="checkbox" value="' + mod + '" ' + checked + '> ' + mod + '</div>';
+      }).join('');
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = '<div class="modal-box" onclick="event.stopPropagation()"><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">×</button>'+
+        '<h5 style="font-weight:700;">'+(editId?'Edit':'Create')+' Plan</h5>'+
+        '<input id="pName" class="form-control form-control-sm mb-2" placeholder="Plan Name" value="'+(plan.name||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">'+
+        '<input id="pPrice" type="number" class="form-control form-control-sm mb-2" placeholder="Price (₹)" value="'+(plan.price||0)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">'+
+        '<input id="pMaxUsers" type="number" class="form-control form-control-sm mb-2" placeholder="Max Users" value="'+(plan.maxUsers||10)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">'+
+        '<h6>Included Modules</h6><div class="perm-grid" style="max-height:300px;overflow-y:auto;">'+moduleChecks+'</div>'+
+        '<button class="admin-btn admin-btn-primary" style="width:100%;margin-top:16px;padding:10px;" onclick="Admin.savePlan(\''+(editId||'')+'\')">💾 Save Plan</button></div>';
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    };
+    loadForm();
+  },
 
   async savePlan(editId) {
     const name = document.getElementById('pName')?.value?.trim();
