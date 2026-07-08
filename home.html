@@ -1186,31 +1186,58 @@ function closeAuthModal(){
   document.body.style.overflow='';
 }
 
-async function doRegister(){
-  const name=document.getElementById('regName')?.value?.trim();
-  const company=document.getElementById('regCompany')?.value?.trim();
-  const phone=document.getElementById('regPhone')?.value?.trim();
-  const email=document.getElementById('authEmail')?.value?.trim();
-  const password=document.getElementById('authPassword')?.value;
-  const plan=document.getElementById('regPlan')?.value;
-  if(!name||!email||!company||!phone||password.length<6){alert('Please fill all required fields correctly.');return;}
-  try{
-    const uc=await firebase.auth().createUserWithEmailAndPassword(email,password);
-    const uid=uc.user.uid;
-    const cr=await firebase.firestore().collection('clients').add({
-      companyName:company,contactName:name,phone,email,
-      planId:plan,modules:['dashboard','leads','contacts','campaigns','chats','chatbot'],
-      status:'pending',createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await firebase.firestore().collection('users').doc(uid).set({
-      name,email,phone,role:'client_owner',clientId:cr.id,
-      plan,status:'pending',permissions:{},
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    alert('✅ Registration successful! Your account is pending approval.');
-    closeAuthModal();
-  }catch(err){alert('Error: '+err.message);}
-}
+  async function doRegister(){
+    const name=document.getElementById('regName')?.value?.trim();
+    const company=document.getElementById('regCompany')?.value?.trim();
+    const phone=document.getElementById('regPhone')?.value?.trim();
+    const email=document.getElementById('authEmail')?.value?.trim();
+    const password=document.getElementById('authPassword')?.value;
+    const plan=document.getElementById('regPlan')?.value;
+    if(!name||!email||!company||!phone||password.length<6){alert('Please fill all required fields correctly.');return;}
+    try{
+      const uc=await firebase.auth().createUserWithEmailAndPassword(email,password);
+      const uid=uc.user.uid;
+      
+      // ✅ Create CLIENT with PENDING + EMPTY modules
+      const cr=await firebase.firestore().collection('clients').add({
+        companyName:company,
+        contactName:name,
+        phone:phone,
+        email:email,
+        planId:plan,
+        businessType:'other',
+        status:'pending',
+        modules:[],
+        permissions:{},
+        ownerUid:uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // ✅ Create USER linked to client
+      await firebase.firestore().collection('users').doc(uid).set({
+        name:name,
+        email:email,
+        phone:phone,
+        role:'client_owner',
+        clientId:cr.id,
+        plan:plan,
+        status:'pending',
+        permissions:{},
+        modules:[],
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // ✅ Link user to client
+      await firebase.firestore().collection('clients').doc(cr.id).update({
+        users:firebase.firestore.FieldValue.arrayUnion(uid)
+      });
+      
+      alert('✅ Registration successful! Your account is pending approval.');
+      closeAuthModal();
+      window.location.href='/WA-Dual-CRM/';
+    }catch(err){alert('Error: '+err.message);}
+  }
 
 async function doLogin(){
   const email=document.getElementById('authEmail')?.value?.trim();
