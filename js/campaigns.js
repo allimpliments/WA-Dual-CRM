@@ -1,4 +1,4 @@
-// js/campaigns.js — Advanced Bulk + Drip Campaigns with Full Template Sync + WhatsApp Number Selector
+// js/campaigns.js — Advanced Campaign Module with WhatsApp API Number Selection, Template Sync & Real Delivery
 const Campaigns = {
   currentTab: 'bulk',
   editingCampaign: null,
@@ -54,7 +54,7 @@ const Campaigns = {
     } catch(e) { this.whatsappNumbers = []; }
   },
 
-  // ==================== BULK CAMPAIGNS ====================
+  // ==================== BULK CAMPAIGNS RENDER ====================
   async renderBulk() {
     let campaigns = [];
     try {
@@ -66,7 +66,7 @@ const Campaigns = {
 
     let html = `
       <style>
-        .campaign-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .campaign-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
         .campaign-tab { padding: 10px 20px; border-radius: 24px; font-weight: 600; font-size: 13px; cursor: pointer; border: 2px solid #e2e8f0; background: #fff; transition: 0.2s; }
         .campaign-tab:hover { border-color: #6366f1; }
         .campaign-tab.active { background: #6366f1; color: #fff; border-color: #6366f1; }
@@ -197,7 +197,14 @@ const Campaigns = {
       gs.forEach(d => groups.push({ id: d.id, ...d.data() }));
     } catch(e) {}
 
-    const typeNames = { single: 'Compose Single WhatsApp', group: 'Compose Group WhatsApp', dynamic: 'Compose Dynamic WhatsApp', retargeting: 'Compose Retargeting WA', pdf: 'Compose Dynamic PDF WA', catalog: 'Compose Single Catalog WA' };
+    const typeNames = {
+      single: 'Compose Single WhatsApp',
+      group: 'Compose Group WhatsApp',
+      dynamic: 'Compose Dynamic WhatsApp',
+      retargeting: 'Compose Retargeting WA',
+      pdf: 'Compose Dynamic PDF WA',
+      catalog: 'Compose Single Catalog WA'
+    };
 
     let html = `
       <div class="card-widget mb-3 border-primary" style="border-left: 4px solid #6366f1;">
@@ -492,7 +499,8 @@ const Campaigns = {
     return sn.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  async sendOne(phone, message, media, campaignId, accessToken, phoneNumberId) {
+  // ✅ FIXED: sendOne with template support
+  async sendOne(phone, message, media, campaignId, accessToken, phoneNumberId, templateData) {
     if (!accessToken || !phoneNumberId) {
       return { ok: false, error: 'WhatsApp not configured', status: 'config_error' };
     }
@@ -501,39 +509,103 @@ const Campaigns = {
     if (!phone) return { ok: false, error: 'No phone', status: 'invalid_phone' };
 
     try {
-      let payload = {
-        messaging_product: 'whatsapp',
-        to: phone,
-        type: 'text',
-        text: { body: message.substring(0, 4096) }
-      };
-      
-      if (media) {
-        const mediaUrl = media.trim();
-        if (mediaUrl.match(/\.(mp4|mov)/i)) {
-          payload.type = 'video';
-          payload.video = { link: mediaUrl, caption: message.substring(0, 1024) };
-        } else if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
-          payload.type = 'image';
-          payload.image = { link: mediaUrl, caption: message.substring(0, 1024) };
-        } else if (mediaUrl.match(/\.pdf|\.doc|\.docx|\.xls|\.xlsx|\.ppt|\.pptx/i)) {
-          payload.type = 'document';
-          payload.document = { link: mediaUrl, caption: message.substring(0, 1024), filename: mediaUrl.split('/').pop() };
-        } else {
-          payload.type = 'image';
-          payload.image = { link: mediaUrl, caption: message.substring(0, 1024) };
+      let payload;
+
+      // ✅ Template message bhejo agar template data hai
+      if (templateData?.name) {
+        payload = {
+          messaging_product: 'whatsapp',
+          to: phone,
+          type: 'template',
+          template: {
+            name: templateData.name,
+            language: { code: templateData.language || 'en_US' }
+          }
+        };
+
+        // Template components (header media, body variables, button variables)
+        const components = templateData.components || [];
+        const header = components.find(c => c.type === 'HEADER');
+        const body = components.find(c => c.type === 'BODY');
+        const buttons = components.find(c => c.type === 'BUTTONS');
+        const templateComponents = [];
+
+        // Header media
+        if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
+          if (header.example?.header_handle?.length > 0) {
+            templateComponents.push({
+              type: 'header',
+              parameters: [{
+                type: header.format.toLowerCase(),
+                [header.format.toLowerCase()]: { link: header.example.header_handle[0] }
+              }]
+            });
+          }
+        }
+        // Header text variables
+        else if (header && header.format === 'TEXT' && header.text) {
+          const headerVars = header.text.match(/\{\{(\d+)\}\}/g);
+          if (headerVars) {
+            const params = headerVars.map(v => ({ type: 'text', text: message.split(' ')[0] || v }));
+            templateComponents.push({ type: 'header', parameters: params });
+          }
+        }
+
+        // Body variables
+        if (body && body.text) {
+          const bodyVars = body.text.match(/\{\{(\d+)\}\}/g);
+          if (bodyVars) {
+            const parts = message.split('|').map(s => s.trim());
+            const bodyParams = bodyVars.map((v, i) => ({ type: 'text', text: parts[i] || v }));
+            templateComponents.push({ type: 'body', parameters: bodyParams });
+          }
+        }
+
+        if (templateComponents.length > 0) {
+          payload.template.components = templateComponents;
+        }
+      } else {
+        // ✅ Regular text message
+        payload = {
+          messaging_product: 'whatsapp',
+          to: phone,
+          type: 'text',
+          text: { body: message.substring(0, 4096) }
+        };
+        
+        if (media) {
+          const mediaUrl = media.trim();
+          if (mediaUrl.match(/\.(mp4|mov)/i)) {
+            payload.type = 'video';
+            payload.video = { link: mediaUrl, caption: message.substring(0, 1024) };
+          } else if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
+            payload.type = 'image';
+            payload.image = { link: mediaUrl, caption: message.substring(0, 1024) };
+          } else if (mediaUrl.match(/\.pdf/i)) {
+            payload.type = 'document';
+            payload.document = { link: mediaUrl, caption: message.substring(0, 1024), filename: mediaUrl.split('/').pop() };
+          }
         }
       }
 
-      const res = await fetch(`https://graph.facebook.com/v22.0/${phoneNumberId}/messages`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      console.log('📤 Sending:', JSON.stringify(payload).substring(0, 300));
+
+      const res = await fetch(
+        `https://graph.facebook.com/v22.0/${phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+      
       const result = await res.json();
+      console.log('📥 Response:', result);
       
       if (!res.ok) {
-        console.error('Meta API Error:', result);
         await db.collection('message_logs').add({
           phone, campaignId, status: 'failed',
           error: result.error?.message || 'API Error',
@@ -541,7 +613,7 @@ const Campaigns = {
           clientId: getCurrentClientId(),
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        return { ok: false, error: result.error?.message || 'API Error', status: 'api_rejected' };
+        return { ok: false, error: result.error?.message, status: 'api_rejected' };
       }
 
       const waMessageId = result.messages?.[0]?.id;
@@ -553,8 +625,11 @@ const Campaigns = {
           clientId: getCurrentClientId()
         });
       }
+      
       return { ok: true, status: 'sent', messageId: waMessageId };
+      
     } catch(e) {
+      console.error('Send error:', e);
       return { ok: false, error: e.message, status: 'network_error' };
     }
   },
@@ -583,6 +658,17 @@ const Campaigns = {
 
     showToast(`Sending to ${contacts.length} contacts...`, 'info');
 
+    // ✅ Template data for campaign
+    const templateData = c.templateName ? {
+      name: c.templateName,
+      language: (c.templateComponents || []).find(cmp => cmp.type === 'BODY')?.language || 
+                (c.templateComponents || []).find(cmp => cmp.type === 'HEADER')?.language || 'en_US',
+      components: c.templateComponents || []
+    } : null;
+
+    let deliveredCount = 0;
+    let failedCount = 0;
+
     for (const ct of contacts) {
       const phone = ct.mobile || ct.phone || '';
       const msg = (c.message || '')
@@ -591,11 +677,22 @@ const Campaigns = {
         .replace(/\{phone\}/g, phone)
         .replace(/\{email\}/g, ct.email || '');
       
-      const result = await this.sendOne(phone, msg, c.media, id, c.whatsappToken, c.whatsappNumberId);
+      const result = await this.sendOne(
+        phone, msg, c.media, id, 
+        c.whatsappToken, c.whatsappNumberId,
+        templateData
+      );
+      
+      if (result.status === 'sent') {
+        deliveredCount++;
+      } else {
+        failedCount++;
+      }
       
       await db.collection('campaigns').doc(id).update({
         sent: firebase.firestore.FieldValue.increment(1),
-        [result.ok ? 'delivered' : 'failed']: firebase.firestore.FieldValue.increment(1)
+        delivered: result.status === 'sent' ? firebase.firestore.FieldValue.increment(1) : firebase.firestore.FieldValue.increment(0),
+        failed: result.status !== 'sent' ? firebase.firestore.FieldValue.increment(1) : firebase.firestore.FieldValue.increment(0)
       });
 
       await new Promise(r => setTimeout(r, 1000));
@@ -606,7 +703,7 @@ const Campaigns = {
       completedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     
-    showToast('✅ Campaign completed!', 'success');
+    showToast(`✅ Done! Sent: ${deliveredCount}, Failed: ${failedCount}`, 'success');
     this.render();
   },
 
@@ -680,7 +777,6 @@ const Campaigns = {
           <button class="btn btn-light btn-sm" onclick="Campaigns.currentTab='drip';Campaigns.render();">×</button>
         </div>
 
-        <!-- WhatsApp Number Selector -->
         <div class="wa-number-selector">
           <label class="form-label small fw-bold"><i class="fab fa-whatsapp text-success"></i> Select WhatsApp API Number *</label>
           <select id="dWhatsappNumber" class="form-select">
