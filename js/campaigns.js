@@ -1,14 +1,16 @@
-// js/campaigns.js — Advanced Bulk + Drip Campaigns with Full Template Sync
+// js/campaigns.js — Advanced Bulk + Drip Campaigns with Full Template Sync + WhatsApp Number Selector
 const Campaigns = {
   currentTab: 'bulk',
   editingCampaign: null,
   campaignTemplates: [],
   campaignContacts: [],
+  whatsappNumbers: [],
 
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading...</p>';
     await this.loadTemplates();
     await this.loadContacts();
+    await this.loadWhatsAppNumbers();
 
     if (this.currentTab === 'drip') { await this.renderDrip(); return; }
     if (this.currentTab === 'stats' && this.editingCampaign) { await this.renderStats(this.editingCampaign); return; }
@@ -31,6 +33,25 @@ const Campaigns = {
       const snap = await q.orderBy('firstName').get();
       this.campaignContacts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch(e) { this.campaignContacts = []; }
+  },
+
+  async loadWhatsAppNumbers() {
+    try {
+      this.whatsappNumbers = [];
+      const cfg = await db.collection('settings').doc('whatsapp').get();
+      if (cfg.exists) {
+        const data = cfg.data();
+        if (data.phoneNumberId && data.accessToken) {
+          this.whatsappNumbers.push({
+            id: data.phoneNumberId,
+            name: data.displayName || 'Primary WhatsApp Number',
+            token: data.accessToken,
+            businessId: data.businessId || '342354115627791',
+            isDefault: true
+          });
+        }
+      }
+    } catch(e) { this.whatsappNumbers = []; }
   },
 
   // ==================== BULK CAMPAIGNS ====================
@@ -66,21 +87,25 @@ const Campaigns = {
         .drip-step { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 10px; position: relative; }
         .drip-step .step-number { position: absolute; top: -10px; left: 12px; background: #6366f1; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
         .drip-arrow { text-align: center; color: #6366f1; font-size: 18px; margin: -5px 0; }
+        .wa-number-selector { background: linear-gradient(135deg, #eef2ff, #faf5ff); border: 2px solid #6366f1; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+        .campaign-type-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .campaign-type-btn:hover { border-color: #6366f1; background: #eef2ff; }
+        .campaign-type-btn i { font-size: 20px; color: #6366f1; }
       </style>
 
       <div class="campaign-tabs">
-        <div class="campaign-tab ${this.currentTab==='bulk'?'active':''}" onclick="Campaigns.currentTab='bulk';Campaigns.render();">📢 Bulk Campaigns</div>
-        <div class="campaign-tab ${this.currentTab==='drip'?'active':''}" onclick="Campaigns.currentTab='drip';Campaigns.render();">🔄 Drip Sequences</div>
+        <div class="campaign-tab ${this.currentTab==='bulk'?'active':''}" onclick="Campaigns.currentTab='bulk';Campaigns.render();">📢 Compose Campaign</div>
+        <div class="campaign-tab ${this.currentTab==='drip'?'active':''}" onclick="Campaigns.currentTab='drip';Campaigns.render();">🔄 Drip Campaigns</div>
       </div>
 
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fas fa-paper-plane text-primary me-2"></i>Bulk Campaigns</h4>
-        <button class="btn btn-primary" onclick="Campaigns.showBulkCreate()"><i class="fas fa-plus me-1"></i> New Bulk Campaign</button>
+        <h4 class="mb-0"><i class="fas fa-paper-plane text-primary me-2"></i>Compose Campaign</h4>
+        <button class="btn btn-primary" onclick="Campaigns.showComposeTypes()"><i class="fas fa-plus me-1"></i> New Campaign</button>
       </div>
       <div id="campaignFormContainer"></div>
 
       <div class="row g-3">
-        ${campaigns.length === 0 ? '<div class="col-12 text-center py-5 text-muted"><i class="fas fa-inbox fa-3x mb-3"></i><h5>No bulk campaigns yet</h5></div>' : campaigns.map(c => {
+        ${campaigns.length === 0 ? '<div class="col-12 text-center py-5 text-muted"><i class="fas fa-inbox fa-3x mb-3"></i><h5>No campaigns yet</h5></div>' : campaigns.map(c => {
           const p = c.total > 0 ? Math.round(((c.sent || 0) / c.total) * 100) : 0;
           const header = (c.templateComponents || []).find(cmp => cmp.type === 'HEADER');
           const body = (c.templateComponents || []).find(cmp => cmp.type === 'BODY');
@@ -90,7 +115,7 @@ const Campaigns = {
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
                   <h6 class="mb-0">${c.name || '-'}</h6>
-                  <small class="text-muted">${c.templateName || 'Custom Message'}</small>
+                  <small class="text-muted">${c.templateName || 'Custom Message'} · ${c.campaignType || 'single'}</small>
                 </div>
                 <span class="badge bg-${c.status==='running'?'success':c.status==='completed'?'primary':c.status==='paused'?'warning':'secondary'}">${c.status || 'draft'}</span>
               </div>
@@ -104,6 +129,7 @@ const Campaigns = {
               </div>` : ''}
               
               <div class="d-flex gap-2 text-muted small mb-2">
+                <span><i class="fab fa-whatsapp"></i> ${c.whatsappNumberName || 'N/A'}</span>
                 <span><i class="fas fa-users"></i> ${c.total || 0}</span>
                 <span><i class="fas fa-check-circle text-success"></i> ${c.delivered || 0}</span>
                 <span><i class="fas fa-times-circle text-danger"></i> ${c.failed || 0}</span>
@@ -114,9 +140,9 @@ const Campaigns = {
               </div>
               
               <div class="d-flex gap-2 mt-2">
-                ${c.status === 'draft' ? `<button class="btn btn-success btn-sm" onclick="Campaigns.executeBulk('${c.id}')"><i class="fas fa-play"></i> Run</button>` : ''}
-                ${c.status === 'running' ? `<button class="btn btn-warning btn-sm" onclick="Campaigns.pauseBulk('${c.id}')"><i class="fas fa-pause"></i> Pause</button>` : ''}
-                ${c.status === 'paused' ? `<button class="btn btn-success btn-sm" onclick="Campaigns.resumeBulk('${c.id}')"><i class="fas fa-play"></i> Resume</button>` : ''}
+                ${c.status === 'draft' ? `<button class="btn btn-success btn-sm" onclick="Campaigns.executeCampaign('${c.id}')"><i class="fas fa-play"></i> Run</button>` : ''}
+                ${c.status === 'running' ? `<button class="btn btn-warning btn-sm" onclick="Campaigns.pauseCampaign('${c.id}')"><i class="fas fa-pause"></i> Pause</button>` : ''}
+                ${c.status === 'paused' ? `<button class="btn btn-success btn-sm" onclick="Campaigns.resumeCampaign('${c.id}')"><i class="fas fa-play"></i> Resume</button>` : ''}
                 <button class="btn btn-outline-info btn-sm" onclick="Campaigns.currentTab='stats';Campaigns.editingCampaign='${c.id}';Campaigns.render();"><i class="fas fa-chart-bar"></i></button>
                 <button class="btn btn-outline-danger btn-sm" onclick="Campaigns.deleteCampaign('${c.id}')"><i class="fas fa-trash"></i></button>
               </div>
@@ -128,8 +154,41 @@ const Campaigns = {
     contentArea.innerHTML = html;
   },
 
+  // ==================== COMPOSE TYPE SELECTOR ====================
+  showComposeTypes() {
+    const types = [
+      { id: 'single', icon: 'fa-user', name: 'Compose Single WA', desc: 'Send to one number' },
+      { id: 'group', icon: 'fa-users', name: 'Compose Group WA', desc: 'Send to contact group' },
+      { id: 'dynamic', icon: 'fa-magic', name: 'Compose Dynamic WA', desc: 'Personalized with variables' },
+      { id: 'retargeting', icon: 'fa-bullseye', name: 'Compose Retargeting WA', desc: 'Based on user behavior' },
+      { id: 'pdf', icon: 'fa-file-pdf', name: 'Compose Dynamic PDF WA', desc: 'Auto-generated PDF' },
+      { id: 'catalog', icon: 'fa-shopping-cart', name: 'Compose Single Catalog WA', desc: 'Product catalog message' }
+    ];
+
+    document.getElementById('campaignFormContainer').innerHTML = `
+      <div class="card-widget mb-3">
+        <h5 class="mb-3">Select Campaign Type</h5>
+        <div class="row g-3">
+          ${types.map(t => `
+            <div class="col-md-4">
+              <div class="campaign-type-btn" onclick="Campaigns.showBulkCreate('${t.id}')">
+                <i class="fas ${t.icon}"></i>
+                <div>
+                  <div style="font-weight:600;font-size:13px;">${t.name}</div>
+                  <small class="text-muted">${t.desc}</small>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <button class="btn btn-light btn-sm mt-3" onclick="document.getElementById('campaignFormContainer').innerHTML=''">Cancel</button>
+      </div>
+    `;
+  },
+
   // ==================== BULK CREATE FORM ====================
-  async showBulkCreate() {
+  async showBulkCreate(campaignType = 'single') {
+    await this.loadWhatsAppNumbers();
     const groups = [];
     try {
       let gq = db.collection('contactGroups');
@@ -138,11 +197,25 @@ const Campaigns = {
       gs.forEach(d => groups.push({ id: d.id, ...d.data() }));
     } catch(e) {}
 
+    const typeNames = { single: 'Compose Single WhatsApp', group: 'Compose Group WhatsApp', dynamic: 'Compose Dynamic WhatsApp', retargeting: 'Compose Retargeting WA', pdf: 'Compose Dynamic PDF WA', catalog: 'Compose Single Catalog WA' };
+
     let html = `
       <div class="card-widget mb-3 border-primary" style="border-left: 4px solid #6366f1;">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0"><i class="fas fa-paper-plane text-primary me-2"></i>Create Bulk Campaign</h5>
+          <h5 class="mb-0"><i class="fas fa-paper-plane text-primary me-2"></i>${typeNames[campaignType] || 'Compose Campaign'}</h5>
           <button class="btn btn-light btn-sm" onclick="Campaigns.currentTab='bulk';Campaigns.render();">×</button>
+        </div>
+
+        <!-- WhatsApp Number Selector -->
+        <div class="wa-number-selector">
+          <label class="form-label small fw-bold"><i class="fab fa-whatsapp text-success"></i> Select WhatsApp API Number *</label>
+          <select id="bWhatsappNumber" class="form-select">
+            ${this.whatsappNumbers.length === 0 ? 
+              '<option value="">⚠️ No WhatsApp numbers configured — Setup required</option>' :
+              this.whatsappNumbers.map(n => `<option value="${n.id}" data-token="${n.token}">${n.name} (${n.id})</option>`).join('')
+            }
+          </select>
+          <small class="text-muted">All messages will be sent from this number</small>
         </div>
         
         <div class="row g-3">
@@ -151,14 +224,14 @@ const Campaigns = {
             <div class="row g-2">
               <div class="col-md-6">
                 <label class="form-label small fw-bold">Campaign Name *</label>
-                <input id="bName" class="form-control" placeholder="e.g., Diwali Offer">
+                <input id="bName" class="form-control" placeholder="e.g., Welcome Message">
               </div>
               <div class="col-md-6">
-                <label class="form-label small fw-bold">Contact Group</label>
-                <select id="bGroup" class="form-select">
-                  <option value="">All Contacts (${this.campaignContacts.length})</option>
-                  ${groups.map(g => `<option value="${g.id}">${g.name} (${(g.memberIds||[]).length})</option>`).join('')}
-                </select>
+                <label class="form-label small fw-bold">${campaignType === 'single' ? 'Phone Number *' : 'Contact Group'}</label>
+                ${campaignType === 'single' ? 
+                  '<input id="bSinglePhone" class="form-control" placeholder="+919810012345">' :
+                  `<select id="bGroup" class="form-select"><option value="">All Contacts (${this.campaignContacts.length})</option>${groups.map(g => `<option value="${g.id}">${g.name} (${(g.memberIds||[]).length})</option>`).join('')}</select>`
+                }
               </div>
             </div>
 
@@ -209,8 +282,8 @@ const Campaigns = {
             </div>
 
             <div class="d-flex gap-2 mt-3">
-              <button class="btn btn-success" onclick="Campaigns.saveBulk('send')"><i class="fas fa-paper-plane me-1"></i> Save & Send</button>
-              <button class="btn btn-outline-primary" onclick="Campaigns.saveBulk('draft')"><i class="fas fa-save me-1"></i> Draft</button>
+              <button class="btn btn-success" onclick="Campaigns.saveCampaign('send','${campaignType}')"><i class="fas fa-paper-plane me-1"></i> Save & Send</button>
+              <button class="btn btn-outline-primary" onclick="Campaigns.saveCampaign('draft','${campaignType}')"><i class="fas fa-save me-1"></i> Draft</button>
               <button class="btn btn-light" onclick="Campaigns.currentTab='bulk';Campaigns.render();">Cancel</button>
             </div>
           </div>
@@ -351,9 +424,16 @@ const Campaigns = {
     preview.innerHTML = html;
   },
 
-  async saveBulk(action) {
+  async saveCampaign(action, campaignType) {
     const name = document.getElementById('bName')?.value?.trim();
     if (!name) return alert('Campaign name required!');
+    
+    const waSelect = document.getElementById('bWhatsappNumber');
+    const waNumberId = waSelect?.value || '';
+    const waToken = waSelect?.selectedOptions[0]?.dataset?.token || '';
+    const waName = waSelect?.selectedOptions[0]?.text || '';
+    
+    if (!waNumberId) return alert('Please select a WhatsApp API Number!');
     
     const templateId = document.getElementById('bTemplate')?.value || '';
     const tpl = templateId ? this.campaignTemplates.find(t => t.id === templateId) : null;
@@ -361,13 +441,18 @@ const Campaigns = {
     const data = {
       name,
       type: 'bulk',
+      campaignType,
       groupId: document.getElementById('bGroup')?.value || '',
+      singlePhone: document.getElementById('bSinglePhone')?.value?.trim() || '',
       message: document.getElementById('bMessage')?.value?.trim() || '',
       media: document.getElementById('bMedia')?.value?.trim() || '',
       footer: document.getElementById('bFooter')?.value?.trim() || '',
       templateId: templateId || null,
       templateName: tpl?.name || null,
       templateComponents: tpl?.components || [],
+      whatsappNumberId: waNumberId,
+      whatsappToken: waToken,
+      whatsappNumberName: waName,
       status: action === 'send' ? (document.getElementById('bSchedule')?.value === 'later' ? 'scheduled' : 'running') : 'draft',
       scheduleDate: document.getElementById('bDate')?.value || null,
       scheduleTime: document.getElementById('bTime')?.value || null,
@@ -379,7 +464,7 @@ const Campaigns = {
     try {
       const ref = await db.collection('campaigns').add(data);
       if (data.status === 'running') {
-        this.executeBulk(ref.id);
+        this.executeCampaign(ref.id);
       } else if (data.status === 'scheduled') {
         alert('✅ Campaign scheduled!');
       } else {
@@ -407,48 +492,83 @@ const Campaigns = {
     return sn.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  async sendOne(phone, message, media) {
-    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
-    if (!cfg?.accessToken || !cfg?.phoneNumberId) return { ok: false, error: 'WhatsApp not configured' };
+  async sendOne(phone, message, media, campaignId, accessToken, phoneNumberId) {
+    if (!accessToken || !phoneNumberId) {
+      return { ok: false, error: 'WhatsApp not configured', status: 'config_error' };
+    }
     
     phone = phone.replace(/[^0-9]/g, '');
-    if (!phone) return { ok: false, error: 'No phone' };
+    if (!phone) return { ok: false, error: 'No phone', status: 'invalid_phone' };
 
     try {
-      let payload = { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: message } };
+      let payload = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'text',
+        text: { body: message.substring(0, 4096) }
+      };
       
       if (media) {
-        if (media.match(/\.(mp4|mov)/i)) {
+        const mediaUrl = media.trim();
+        if (mediaUrl.match(/\.(mp4|mov)/i)) {
           payload.type = 'video';
-          payload.video = { link: media, caption: message };
-        } else if (media.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
+          payload.video = { link: mediaUrl, caption: message.substring(0, 1024) };
+        } else if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
           payload.type = 'image';
-          payload.image = { link: media, caption: message };
-        } else if (media.match(/\.pdf|\.doc|\.docx|\.xls|\.xlsx|\.ppt|\.pptx/i)) {
+          payload.image = { link: mediaUrl, caption: message.substring(0, 1024) };
+        } else if (mediaUrl.match(/\.pdf|\.doc|\.docx|\.xls|\.xlsx|\.ppt|\.pptx/i)) {
           payload.type = 'document';
-          payload.document = { link: media, caption: message, filename: media.split('/').pop() };
+          payload.document = { link: mediaUrl, caption: message.substring(0, 1024), filename: mediaUrl.split('/').pop() };
         } else {
           payload.type = 'image';
-          payload.image = { link: media, caption: message };
+          payload.image = { link: mediaUrl, caption: message.substring(0, 1024) };
         }
       }
 
-      const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`, {
+      const res = await fetch(`https://graph.facebook.com/v22.0/${phoneNumberId}/messages`, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const result = await res.json();
-      return { ok: res.ok, error: result.error?.message };
+      
+      if (!res.ok) {
+        console.error('Meta API Error:', result);
+        await db.collection('message_logs').add({
+          phone, campaignId, status: 'failed',
+          error: result.error?.message || 'API Error',
+          metaCode: result.error?.code || 'unknown',
+          clientId: getCurrentClientId(),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return { ok: false, error: result.error?.message || 'API Error', status: 'api_rejected' };
+      }
+
+      const waMessageId = result.messages?.[0]?.id;
+      if (waMessageId && campaignId) {
+        await db.collection('message_tracking').add({
+          phone, messageId: waMessageId, campaignId,
+          status: 'sent',
+          sentAt: firebase.firestore.FieldValue.serverTimestamp(),
+          clientId: getCurrentClientId()
+        });
+      }
+      return { ok: true, status: 'sent', messageId: waMessageId };
     } catch(e) {
-      return { ok: false, error: e.message };
+      return { ok: false, error: e.message, status: 'network_error' };
     }
   },
 
-  async executeBulk(id) {
+  async executeCampaign(id) {
     const doc = await db.collection('campaigns').doc(id).get();
     const c = doc.data();
-    const contacts = await this.getContacts(c.groupId);
+    
+    let contacts = [];
+    if (c.campaignType === 'single' && c.singlePhone) {
+      contacts = [{ mobile: c.singlePhone, phone: c.singlePhone, firstName: '', lastName: '' }];
+    } else {
+      contacts = await this.getContacts(c.groupId);
+    }
     
     if (contacts.length === 0) {
       await db.collection('campaigns').doc(id).update({ status: 'draft' });
@@ -471,14 +591,14 @@ const Campaigns = {
         .replace(/\{phone\}/g, phone)
         .replace(/\{email\}/g, ct.email || '');
       
-      const result = await this.sendOne(phone, msg, c.media);
+      const result = await this.sendOne(phone, msg, c.media, id, c.whatsappToken, c.whatsappNumberId);
       
       await db.collection('campaigns').doc(id).update({
         sent: firebase.firestore.FieldValue.increment(1),
         [result.ok ? 'delivered' : 'failed']: firebase.firestore.FieldValue.increment(1)
       });
 
-      await new Promise(r => setTimeout(r, 500)); // Rate limit
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     await db.collection('campaigns').doc(id).update({ 
@@ -490,15 +610,15 @@ const Campaigns = {
     this.render();
   },
 
-  async pauseBulk(id) {
+  async pauseCampaign(id) {
     await db.collection('campaigns').doc(id).update({ status: 'paused' });
     showToast('⏸ Campaign paused', 'warning');
     this.render();
   },
 
-  async resumeBulk(id) {
+  async resumeCampaign(id) {
     await db.collection('campaigns').doc(id).update({ status: 'running' });
-    this.executeBulk(id);
+    this.executeCampaign(id);
   },
 
   // ==================== DRIP CAMPAIGNS ====================
@@ -513,23 +633,23 @@ const Campaigns = {
 
     let html = `
       <div class="campaign-tabs">
-        <div class="campaign-tab" onclick="Campaigns.currentTab='bulk';Campaigns.render();">📢 Bulk Campaigns</div>
-        <div class="campaign-tab active" onclick="Campaigns.currentTab='drip';Campaigns.render();">🔄 Drip Sequences</div>
+        <div class="campaign-tab" onclick="Campaigns.currentTab='bulk';Campaigns.render();">📢 Compose Campaign</div>
+        <div class="campaign-tab active" onclick="Campaigns.currentTab='drip';Campaigns.render();">🔄 Drip Campaigns</div>
       </div>
 
       <div class="d-flex justify-content-between mb-3">
-        <h4><i class="fas fa-clock text-warning me-2"></i>Drip Sequences</h4>
-        <button class="btn btn-warning" onclick="Campaigns.showDripCreate()"><i class="fas fa-plus me-1"></i> New Sequence</button>
+        <h4><i class="fas fa-clock text-warning me-2"></i>Drip Campaigns</h4>
+        <button class="btn btn-warning" onclick="Campaigns.showDripCreate()"><i class="fas fa-plus me-1"></i> New Drip</button>
       </div>
       <div id="dripFormContainer"></div>
 
       <div class="row g-3">
-        ${drips.length === 0 ? '<div class="col-12 text-center py-5 text-muted"><i class="fas fa-inbox fa-3x mb-3"></i><h5>No drip sequences yet</h5></div>' : drips.map(d => {
+        ${drips.length === 0 ? '<div class="col-12 text-center py-5 text-muted"><i class="fas fa-inbox fa-3x mb-3"></i><h5>No drip campaigns yet</h5></div>' : drips.map(d => {
           const steps = d.dripSteps || [];
           return `<div class="col-md-6 col-lg-4">
             <div class="campaign-card">
               <div class="d-flex justify-content-between"><h6>${d.name}</h6><span class="badge bg-${d.status==='running'?'success':d.status==='completed'?'primary':'secondary'}">${d.status}</span></div>
-              <small class="text-muted">${steps.length} steps · ${d.total||0} contacts</small>
+              <small class="text-muted">${steps.length} steps · ${d.total||0} contacts · ${d.whatsappNumberName || 'N/A'}</small>
               <div class="mt-2">
                 ${steps.map((s, i) => `
                   <div class="d-flex align-items-center gap-2 mb-1">
@@ -553,18 +673,22 @@ const Campaigns = {
   },
 
   showDripCreate() {
-    let groups = [];
-    try {
-      db.collection('contactGroups').get().then(sn => {
-        sn.forEach(d => groups.push({ id: d.id, ...d.data() }));
-      });
-    } catch(e) {}
-
     document.getElementById('dripFormContainer').innerHTML = `
       <div class="card-widget mb-3 border-warning" style="border-left: 4px solid #f59e0b;">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0"><i class="fas fa-clock text-warning me-2"></i>Create Drip Sequence</h5>
+          <h5 class="mb-0"><i class="fas fa-clock text-warning me-2"></i>Create Drip Campaign</h5>
           <button class="btn btn-light btn-sm" onclick="Campaigns.currentTab='drip';Campaigns.render();">×</button>
+        </div>
+
+        <!-- WhatsApp Number Selector -->
+        <div class="wa-number-selector">
+          <label class="form-label small fw-bold"><i class="fab fa-whatsapp text-success"></i> Select WhatsApp API Number *</label>
+          <select id="dWhatsappNumber" class="form-select">
+            ${this.whatsappNumbers.length === 0 ? 
+              '<option value="">⚠️ No WhatsApp numbers configured</option>' :
+              this.whatsappNumbers.map(n => `<option value="${n.id}" data-token="${n.token}">${n.name} (${n.id})</option>`).join('')
+            }
+          </select>
         </div>
 
         <div class="row g-2 mb-3">
@@ -575,7 +699,7 @@ const Campaigns = {
           <div class="col-md-6">
             <label class="form-label small fw-bold">Contact Group</label>
             <select id="dGroup" class="form-select">
-              <option value="">All Contacts</option>
+              <option value="">All Contacts (${this.campaignContacts.length})</option>
             </select>
           </div>
         </div>
@@ -646,8 +770,7 @@ const Campaigns = {
     newStep.className = 'drip-step';
     newStep.innerHTML = `
       <div class="step-number">${stepCount + 1}</div>
-      <div class="drip-arrow" style="margin-top:8px;">↓</div>
-      <div class="row g-2">
+      <div class="row g-2 mt-2">
         <div class="col-md-8">
           <select class="form-select form-select-sm drip-template-select" onchange="Campaigns.onDripTemplateSelect(this, ${stepCount})">
             <option value="">Custom Message</option>
@@ -673,6 +796,13 @@ const Campaigns = {
     const name = document.getElementById('dName')?.value?.trim();
     if (!name) return alert('Sequence name required!');
 
+    const waSelect = document.getElementById('dWhatsappNumber');
+    const waNumberId = waSelect?.value || '';
+    const waToken = waSelect?.selectedOptions[0]?.dataset?.token || '';
+    const waName = waSelect?.selectedOptions[0]?.text || '';
+
+    if (!waNumberId) return alert('Please select a WhatsApp API Number!');
+
     const steps = [];
     document.querySelectorAll('#dripStepsContainer .drip-step').forEach(step => {
       const message = step.querySelector('.drip-message')?.value?.trim();
@@ -688,6 +818,9 @@ const Campaigns = {
       type: 'drip',
       groupId: document.getElementById('dGroup')?.value || '',
       dripSteps: steps,
+      whatsappNumberId: waNumberId,
+      whatsappToken: waToken,
+      whatsappNumberName: waName,
       total: 0, sent: 0, delivered: 0, failed: 0,
       status: action === 'send' ? 'running' : 'draft',
       clientId: getCurrentClientId(),
@@ -734,7 +867,7 @@ const Campaigns = {
             .replace(/\{last_name\}/g, ct.lastName || '')
             .replace(/\{phone\}/g, phone);
           
-          await this.sendOne(phone, msg, step.media);
+          await this.sendOne(phone, msg, step.media, id, c.whatsappToken, c.whatsappNumberId);
           await new Promise(r => setTimeout(r, 500));
         }
         
@@ -773,6 +906,7 @@ const Campaigns = {
       <div class="card-widget">
         <button class="btn btn-light btn-sm mb-3" onclick="Campaigns.currentTab='${c.type||'bulk'}';Campaigns.render();">← Back</button>
         <h4>📊 ${c.name} — Stats</h4>
+        <small class="text-muted">WhatsApp: ${c.whatsappNumberName || 'N/A'} · Type: ${c.campaignType || c.type}</small>
         <div class="row g-3 mt-2">
           <div class="col-6 col-md-3"><div class="card text-center p-3"><h3>${c.total||0}</h3><small>Total</small></div></div>
           <div class="col-6 col-md-3"><div class="card text-center p-3"><h3 class="text-primary">${c.sent||0}</h3><small>Sent</small></div></div>
