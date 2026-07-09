@@ -1,3 +1,4 @@
+// js/templates.js — Advanced Meta WhatsApp Template Manager
 const Templates = {
   currentTab: 'all',
   currentFilter: '',
@@ -38,27 +39,46 @@ const Templates = {
         .tpl-row:hover { background: #f8fafc; }
         .tpl-row.active-row { background: #e8f0fe; border-left: 3px solid #1a73e8; }
         .insight-panel { max-height: 80vh; overflow-y: auto; }
-        .wa-preview-msg { background: #e5ddd5; border-radius: 8px; padding: 12px; max-width: 320px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .wa-preview-msg .wa-header-text { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #111b21; }
-        .wa-preview-msg .wa-body { font-size: 13px; color: #111b21; white-space: pre-wrap; line-height: 1.4; }
-        .wa-preview-msg .wa-footer { font-size: 11px; color: #667781; margin-top: 4px; }
-        .wa-preview-msg .wa-btn { display: block; text-align: center; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 4px; background: #fff; color: #008069; border: 1px solid #008069; }
+        .wa-preview { background: #e5ddd5; border-radius: 8px; padding: 12px; max-width: 320px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .wa-preview .wa-header-img { width: 100%; border-radius: 4px; margin-bottom: 6px; }
+        .wa-preview .wa-header-video { width: 100%; border-radius: 4px; margin-bottom: 6px; background: #000; padding: 20px; text-align: center; color: #fff; }
+        .wa-preview .wa-header-doc { background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .wa-preview .wa-header-text { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #111b21; }
+        .wa-preview .wa-body { font-size: 13px; color: #111b21; white-space: pre-wrap; line-height: 1.4; }
+        .wa-preview .wa-body .var { color: #1a73e8; font-weight: 500; }
+        .wa-preview .wa-footer { font-size: 11px; color: #667781; margin-top: 4px; }
+        .wa-preview .wa-btn { display: block; text-align: center; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 4px; background: #fff; color: #008069; border: 1px solid #008069; cursor: default; }
+        .wa-preview .wa-btn.quick-reply { display: inline-block; margin-right: 4px; border-radius: 16px; padding: 4px 12px; font-size: 11px; }
+        .wa-preview .wa-carousel { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+        .wa-preview .wa-carousel-card { min-width: 200px; background: #fff; border-radius: 8px; padding: 8px; }
+        .wa-preview .wa-carousel-card img { width: 100%; border-radius: 4px; margin-bottom: 4px; }
         .tab-btn { border: none; background: transparent; padding: 8px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; color: #5f6368; }
         .tab-btn.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
         .filter-chip { display: inline-block; padding: 4px 10px; border-radius: 16px; font-size: 11px; cursor: pointer; border: 1px solid #dadce0; margin: 2px; }
         .filter-chip.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .template-builder { background: #fff; border: 2px solid #1a73e8; border-radius: 16px; padding: 20px; margin-top: 16px; }
+        .template-builder h5 { color: #1a73e8; font-weight: 700; }
+        .header-type-btn { border: 2px solid #dadce0; background: #fff; padding: 12px 16px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.2s; }
+        .header-type-btn:hover { border-color: #1a73e8; }
+        .header-type-btn.active { border-color: #1a73e8; background: #e8f0fe; }
+        .header-type-btn i { font-size: 24px; display: block; margin-bottom: 4px; color: #1a73e8; }
+        .header-type-btn span { font-size: 11px; color: #5f6368; }
+        .media-upload-zone { border: 2px dashed #dadce0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .media-upload-zone:hover { border-color: #1a73e8; background: #f8f9fa; }
+        .media-upload-zone i { font-size: 32px; color: #1a73e8; }
+        .preview-panel { background: #f0f2f5; border-radius: 12px; padding: 16px; max-width: 360px; }
+        .button-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+        .button-row input, .button-row select { flex: 1; }
       </style>
 
       <div class="card-widget p-2">
-        <!-- Tabs -->
         <div class="d-flex gap-1 mb-2 flex-wrap">
-          <button class="tab-btn ${this.currentTab==='all'?'active':''}" onclick="Templates.setTab('all')">Templates</button>
+          <button class="tab-btn ${this.currentTab==='all'?'active':''}" onclick="Templates.setTab('all')">All</button>
           <button class="tab-btn ${this.currentTab==='active'?'active':''}" onclick="Templates.setTab('active')">Active</button>
           <button class="tab-btn ${this.currentTab==='pending'?'active':''}" onclick="Templates.setTab('pending')">Pending</button>
           <button class="tab-btn ${this.currentTab==='rejected'?'active':''}" onclick="Templates.setTab('rejected')">Rejected</button>
         </div>
 
-        <!-- Filters -->
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
           <select class="form-select form-select-sm" style="width:auto" onchange="Templates.setCategory(this.value)">
             <option value="">All Categories</option>
@@ -75,7 +95,6 @@ const Templates = {
           <button class="btn btn-primary btn-sm" onclick="Templates.showBuilder()"><i class="fas fa-plus me-1"></i> Create</button>
         </div>
 
-        <!-- Table + Insight Panel -->
         <div class="row g-2">
           <div class="col-md-7">
             <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
@@ -101,7 +120,7 @@ const Templates = {
           </div>
           <div class="col-md-5">
             <div class="insight-panel border rounded p-2 bg-light" id="insightPanel">
-              <p class="text-muted text-center mt-3">Select a template to view insights.</p>
+              <p class="text-muted text-center mt-3">Select a template to view preview.</p>
             </div>
           </div>
         </div>
@@ -124,11 +143,8 @@ const Templates = {
     const tpl = doc.data();
     if (!tpl) return;
 
-    const headerText = (tpl.components || []).find(c => c.type === 'HEADER')?.text || tpl.headerValue || '';
-    const bodyText = (tpl.components || []).find(c => c.type === 'BODY')?.text || tpl.body || '';
-    const footerText = (tpl.components || []).find(c => c.type === 'FOOTER')?.text || tpl.footer || '';
-    const buttons = (tpl.components || []).find(c => c.type === 'BUTTONS')?.buttons || [];
-
+    const preview = this.generatePreview(tpl);
+    
     document.getElementById('insightPanel').innerHTML = `
       <div class="text-end">
         <button class="btn btn-sm btn-outline-info me-1" onclick="Templates.showBuilder('${id}')"><i class="fas fa-edit"></i></button>
@@ -140,16 +156,62 @@ const Templates = {
       <span class="badge bg-secondary ms-1">${tpl.category || '-'}</span>
       <p class="text-muted small mt-1">Updated on ${tpl.updatedAt ? new Date(tpl.updatedAt.toDate()).toLocaleDateString() : '-'}</p>
       <hr>
-      <p class="small fw-bold">Your template</p>
-      <div class="wa-preview-msg">
-        ${headerText ? `<div class="wa-header-text">${headerText}</div>` : ''}
-        <div class="wa-body">${bodyText || 'No body.'}</div>
-        ${footerText ? `<div class="wa-footer">${footerText}</div>` : ''}
-        ${buttons.map(b => `<div class="wa-btn">${b.text || 'Button'}</div>`).join('')}
-      </div>
-      <hr>
-      <p class="small text-muted">Performance insights available on <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank">Meta Business Manager ↗</a></p>
+      <p class="small fw-bold">Preview</p>
+      ${preview}
     `;
+  },
+
+  generatePreview(tpl) {
+    const components = tpl.components || [];
+    const header = components.find(c => c.type === 'HEADER');
+    const body = components.find(c => c.type === 'BODY');
+    const footer = components.find(c => c.type === 'FOOTER');
+    const buttons = components.find(c => c.type === 'BUTTONS');
+    
+    let html = '<div class="wa-preview">';
+    
+    // Header
+    if (header) {
+      if (header.format === 'IMAGE' && header.example?.header_handle) {
+        html += `<img src="${header.example.header_handle[0]}" class="wa-header-img" alt="Header">`;
+      } else if (header.format === 'VIDEO' && header.example?.header_handle) {
+        html += `<div class="wa-header-video"><i class="fas fa-play-circle" style="font-size:32px;"></i><br><small>Video Preview</small></div>`;
+      } else if (header.format === 'DOCUMENT' && header.example?.header_handle) {
+        html += `<div class="wa-header-doc"><i class="fas fa-file-pdf" style="font-size:24px;color:#ef4444;"></i><small>Document</small></div>`;
+      } else if (header.format === 'LOCATION') {
+        html += `<div class="wa-header-doc"><i class="fas fa-map-marker-alt" style="font-size:24px;color:#ef4444;"></i><small>Location</small></div>`;
+      } else if (header.text) {
+        html += `<div class="wa-header-text">${header.text}</div>`;
+      }
+    }
+    
+    // Body
+    if (body) {
+      html += `<div class="wa-body">${(body.text || '').replace(/\{\{(\d+)\}\}/g, '<span class="var">{{$1}}</span>')}</div>`;
+    }
+    
+    // Footer
+    if (footer) {
+      html += `<div class="wa-footer">${footer.text}</div>`;
+    }
+    
+    // Buttons
+    if (buttons && buttons.buttons) {
+      buttons.buttons.forEach(b => {
+        if (b.type === 'QUICK_REPLY') {
+          html += `<span class="wa-btn quick-reply">${b.text}</span>`;
+        } else if (b.type === 'URL') {
+          html += `<div class="wa-btn">${b.text || 'Visit'}</div>`;
+        } else if (b.type === 'PHONE_NUMBER') {
+          html += `<div class="wa-btn">📞 ${b.text || 'Call'}</div>`;
+        } else if (b.type === 'COPY_CODE') {
+          html += `<div class="wa-btn">📋 ${b.text || 'Copy'}</div>`;
+        }
+      });
+    }
+    
+    html += '</div>';
+    return html;
   },
 
   async fetchFromMeta() {
@@ -180,88 +242,389 @@ const Templates = {
     } catch (err) { console.error('Sync error:', err); }
   },
 
+  // ==================== ADVANCED BUILDER ====================
   async showBuilder(editId = null) {
-    let tpl = { name: '', category: 'UTILITY', language: 'en_US', headerType: 'none', headerValue: '', body: '', footer: '', buttonType: 'none', buttonText: '', buttonUrl: '', buttonPhone: '', buttonPhone2: '', quickReply: false };
+    let tpl = {
+      name: '', category: 'UTILITY', language: 'en_US',
+      headerType: 'none', headerText: '', headerMediaUrl: '', headerMediaId: '',
+      body: '', footer: '',
+      buttons: [],
+      carouselCards: [],
+      clientId: getCurrentClientId()
+    };
+    
     if (editId) {
       const doc = await db.collection('templates').doc(editId).get();
-      if (doc.exists) tpl = { ...tpl, ...doc.data(), _id: editId };
+      if (doc.exists) {
+        const d = doc.data();
+        const header = (d.components || []).find(c => c.type === 'HEADER');
+        const body = (d.components || []).find(c => c.type === 'BODY');
+        const footer = (d.components || []).find(c => c.type === 'FOOTER');
+        const buttonsComp = (d.components || []).find(c => c.type === 'BUTTONS');
+        
+        tpl = {
+          ...tpl,
+          name: d.name, category: d.category, language: d.language,
+          headerType: header ? (header.format || 'text').toLowerCase() : 'none',
+          headerText: header?.text || '',
+          headerMediaUrl: header?.example?.header_handle?.[0] || '',
+          body: body?.text || '',
+          footer: footer?.text || '',
+          buttons: buttonsComp?.buttons || [],
+          _id: editId
+        };
+      }
     }
+
+    const headerTypes = [
+      { id: 'none', icon: 'fa-ban', label: 'None' },
+      { id: 'text', icon: 'fa-font', label: 'Text' },
+      { id: 'image', icon: 'fa-image', label: 'Image' },
+      { id: 'video', icon: 'fa-video', label: 'Video' },
+      { id: 'document', icon: 'fa-file-pdf', label: 'Document' },
+      { id: 'location', icon: 'fa-map-marker-alt', label: 'Location' }
+    ];
+
     const html = `
-      <div class="card border-info mt-3">
-        <div class="card-body p-3">
-          <h5>${editId ? 'Edit' : 'Create'} Template</h5>
-          <div class="row g-2">
-            <div class="col-md-6"><input id="tplName" class="form-control form-control-sm" value="${tpl.name}" placeholder="Name"></div>
-            <div class="col-md-3"><select id="tplCategory" class="form-select form-select-sm"><option value="UTILITY" ${tpl.category==='UTILITY'?'selected':''}>Utility</option><option value="MARKETING" ${tpl.category==='MARKETING'?'selected':''}>Marketing</option><option value="AUTHENTICATION" ${tpl.category==='AUTHENTICATION'?'selected':''}>Authentication</option></select></div>
-            <div class="col-md-3"><select id="tplLanguage" class="form-select form-select-sm"><option value="en_US" ${tpl.language==='en_US'?'selected':''}>English (US)</option><option value="hi" ${tpl.language==='hi'?'selected':''}>Hindi</option></select></div>
-            <div class="col-md-6">
-              <select id="tplHeaderType" class="form-select form-select-sm" onchange="Templates.toggleHeaderFields()">
-                <option value="none" ${tpl.headerType==='none'?'selected':''}>No Header</option>
-                <option value="text" ${tpl.headerType==='text'?'selected':''}>Text Header</option>
-              </select>
+      <div class="template-builder">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5>${editId ? 'Edit' : 'Create'} WhatsApp Template</h5>
+          <button class="btn btn-light btn-sm" onclick="Templates.render()">×</button>
+        </div>
+        
+        <div class="row g-3">
+          <!-- LEFT: Form -->
+          <div class="col-md-7">
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Template Name *</label>
+                <input id="tplName" class="form-control" value="${tpl.name}" placeholder="e.g., welcome_message">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-bold">Category</label>
+                <select id="tplCategory" class="form-select">
+                  <option value="UTILITY" ${tpl.category==='UTILITY'?'selected':''}>Utility</option>
+                  <option value="MARKETING" ${tpl.category==='MARKETING'?'selected':''}>Marketing</option>
+                  <option value="AUTHENTICATION" ${tpl.category==='AUTHENTICATION'?'selected':''}>Authentication</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-bold">Language</label>
+                <select id="tplLanguage" class="form-select">
+                  <option value="en_US" ${tpl.language==='en_US'?'selected':''}>English (US)</option>
+                  <option value="en_GB" ${tpl.language==='en_GB'?'selected':''}>English (UK)</option>
+                  <option value="hi" ${tpl.language==='hi'?'selected':''}>Hindi</option>
+                  <option value="bn" ${tpl.language==='bn'?'selected':''}>Bengali</option>
+                  <option value="te" ${tpl.language==='te'?'selected':''}>Telugu</option>
+                  <option value="mr" ${tpl.language==='mr'?'selected':''}>Marathi</option>
+                  <option value="ta" ${tpl.language==='ta'?'selected':''}>Tamil</option>
+                </select>
+              </div>
             </div>
-            <div class="col-md-6" id="headerTextField" style="display:${tpl.headerType==='text'?'block':'none'}">
-              <input id="tplHeaderValue" class="form-control form-control-sm" value="${tpl.headerValue||''}" placeholder="Header text">
+
+            <!-- HEADER TYPE -->
+            <label class="form-label small fw-bold">Header Type</label>
+            <div class="row g-2 mb-3" id="headerTypeSelector">
+              ${headerTypes.map(ht => `
+                <div class="col-4 col-md-2">
+                  <div class="header-type-btn ${tpl.headerType===ht.id?'active':''}" onclick="Templates.selectHeaderType('${ht.id}')" data-type="${ht.id}">
+                    <i class="fas ${ht.icon}"></i>
+                    <span>${ht.label}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Header Fields -->
+            <div id="headerFields" style="display:${tpl.headerType==='none'?'none':'block'}">
+              <div id="headerTextField" style="display:${tpl.headerType==='text'||tpl.headerType==='location'?'block':'none'}">
+                <input id="tplHeaderText" class="form-control mb-2" value="${tpl.headerText}" placeholder="${tpl.headerType==='location'?'Location name':'Header text'}">
+              </div>
+              <div id="headerMediaField" style="display:${['image','video','document'].includes(tpl.headerType)?'block':'none'}">
+                <label class="form-label small fw-bold">Media URL *</label>
+                <div class="input-group mb-2">
+                  <input id="tplHeaderMediaUrl" class="form-control" value="${tpl.headerMediaUrl}" placeholder="https://example.com/image.jpg">
+                  <button class="btn btn-outline-primary" onclick="document.getElementById('headerMediaUpload').click()"><i class="fas fa-upload"></i></button>
+                </div>
+                <input type="file" id="headerMediaUpload" style="display:none" accept="image/*,video/*,.pdf" onchange="Templates.uploadHeaderMedia(this)">
+                <div class="media-upload-zone mb-2" onclick="document.getElementById('headerMediaUpload').click()">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  <p class="small mt-2 mb-0">Click to upload ${tpl.headerType}</p>
+                </div>
+                <small class="text-muted">Supported: ${tpl.headerType==='image'?'JPG, PNG (max 5MB)':tpl.headerType==='video'?'MP4 (max 16MB)':'PDF (max 100MB)'}</small>
+              </div>
+            </div>
+
+            <!-- BODY -->
+            <label class="form-label small fw-bold mt-2">Body *</label>
+            <textarea id="tplBody" class="form-control mb-2" rows="5" placeholder="Enter your message. Use {{1}}, {{2}} for variables...">${tpl.body}</textarea>
+            <small class="text-muted">Variables: {'{{'}1{'}}'}, {'{{'}2{'}}'} etc. Example: Hi {'{{'}1{'}}'}, your order # {'{{'}2{'}}'} is confirmed.</small>
+
+            <!-- FOOTER -->
+            <label class="form-label small fw-bold mt-2">Footer (Optional)</label>
+            <input id="tplFooter" class="form-control mb-2" value="${tpl.footer}" placeholder="e.g., © 2026 Company Name">
+
+            <!-- BUTTONS -->
+            <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
+              <label class="form-label small fw-bold mb-0">Buttons</label>
+              <button class="btn btn-outline-primary btn-sm" onclick="Templates.addButton()"><i class="fas fa-plus"></i> Add Button</button>
+            </div>
+            <div id="buttonsContainer">
+              ${(tpl.buttons || []).map((b, i) => this.renderButtonRow(b, i)).join('')}
+            </div>
+            <small class="text-muted">Quick Reply: max 3 | URL/Phone: max 2 total</small>
+          </div>
+
+          <!-- RIGHT: Live Preview -->
+          <div class="col-md-5">
+            <label class="form-label small fw-bold">Live Preview</label>
+            <div class="preview-panel" id="livePreview">
+              <p class="text-muted text-center">Preview will update as you type...</p>
             </div>
           </div>
-          <textarea id="tplBody" class="form-control form-control-sm mt-2" rows="4" placeholder="Body">${tpl.body}</textarea>
-          <input id="tplFooter" class="form-control form-control-sm mt-1" value="${tpl.footer||''}" placeholder="Footer">
-          <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="tplQuickReply"><label class="form-check-label small">Quick Reply</label></div>
-          <div class="mt-1">
-            <select id="tplButtonType" class="form-select form-select-sm" onchange="Templates.toggleCTAFields()">
-              <option value="none" ${tpl.buttonType==='none'?'selected':''}>No CTA</option>
-              <option value="visit" ${tpl.buttonType==='visit'?'selected':''}>Visit Website</option>
-              <option value="call" ${tpl.buttonType==='call'?'selected':''}>Call</option>
-              <option value="both" ${tpl.buttonType==='both'?'selected':''}>Both</option>
-            </select>
-          </div>
-          <div id="ctaFields" style="display:${tpl.buttonType!=='none'?'block':'none'}">
-            <div class="row g-2 mt-1"><div class="col-6"><input id="tplButtonText" class="form-control form-control-sm" value="${tpl.buttonText||''}" placeholder="Btn Text"></div><div class="col-6"><input id="tplButtonUrl" class="form-control form-control-sm" value="${tpl.buttonUrl||''}" placeholder="URL"></div></div>
-            <div class="row g-2 mt-1"><div class="col-6"><input id="tplButtonPhone" class="form-control form-control-sm" value="${tpl.buttonPhone||''}" placeholder="Call Text"></div><div class="col-6"><input id="tplButtonPhone2" class="form-control form-control-sm" value="${tpl.buttonPhone2||''}" placeholder="+91..."></div></div>
-          </div>
-          <div class="mt-2">
-            <button class="btn btn-outline-secondary btn-sm" onclick="Templates.saveTemplate('${editId||''}')">Save Draft</button>
-            <button class="btn btn-warning btn-sm" onclick="Templates.submitToMeta('${editId||''}')">Submit to Meta</button>
-            <button class="btn btn-light btn-sm" onclick="Templates.render()">Cancel</button>
-          </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-primary" onclick="Templates.saveTemplate('${editId||''}')"><i class="fas fa-save me-1"></i> Save Draft</button>
+          <button class="btn btn-warning" onclick="Templates.submitToMeta('${editId||''}')"><i class="fas fa-paper-plane me-1"></i> Submit to Meta</button>
+          <button class="btn btn-light" onclick="Templates.render()">Cancel</button>
         </div>
       </div>
     `;
     document.getElementById('templateBuilderContainer').innerHTML = html;
+
+    // Attach live preview updater
+    setTimeout(() => this.attachPreviewListeners(), 200);
   },
 
-  toggleHeaderFields() {
-    const v = document.getElementById('tplHeaderType').value;
-    document.getElementById('headerTextField').style.display = v === 'text' ? 'block' : 'none';
+  renderButtonRow(button, index) {
+    const types = [
+      { id: 'QUICK_REPLY', label: 'Quick Reply' },
+      { id: 'URL', label: 'Visit Website' },
+      { id: 'PHONE_NUMBER', label: 'Call Phone' },
+      { id: 'COPY_CODE', label: 'Copy Code' }
+    ];
+    
+    return `
+      <div class="button-row border rounded p-2 mb-2" data-button-index="${index}">
+        <select class="form-select form-select-sm" style="width:120px" onchange="Templates.updateButtonType(this, ${index})">
+          ${types.map(t => `<option value="${t.id}" ${button.type===t.id?'selected':''}>${t.label}</option>`).join('')}
+        </select>
+        <input class="form-control form-control-sm" value="${button.text||''}" placeholder="Button text" onchange="Templates.updateButtonText(this, ${index})">
+        ${button.type === 'URL' ? `<input class="form-control form-control-sm" value="${button.url||''}" placeholder="https://..." onchange="Templates.updateButtonUrl(this, ${index})">` : ''}
+        ${button.type === 'PHONE_NUMBER' ? `<input class="form-control form-control-sm" value="${button.phone_number||''}" placeholder="+91..." onchange="Templates.updateButtonPhone(this, ${index})">` : ''}
+        ${button.type === 'COPY_CODE' ? `<input class="form-control form-control-sm" value="${button.example||''}" placeholder="Code to copy" onchange="Templates.updateButtonCode(this, ${index})">` : ''}
+        <button class="btn btn-outline-danger btn-sm" onclick="Templates.removeButton(${index})">×</button>
+      </div>
+    `;
   },
-  toggleCTAFields() {
-    const v = document.getElementById('tplButtonType').value;
-    document.getElementById('ctaFields').style.display = v !== 'none' ? 'block' : 'none';
+
+  selectHeaderType(type) {
+    document.querySelectorAll('.header-type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+    
+    document.getElementById('headerFields').style.display = type === 'none' ? 'none' : 'block';
+    document.getElementById('headerTextField').style.display = (type === 'text' || type === 'location') ? 'block' : 'none';
+    document.getElementById('headerMediaField').style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
+    
+    this.updatePreview();
+  },
+
+  async uploadHeaderMedia(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const headerType = document.querySelector('.header-type-btn.active')?.dataset?.type || 'image';
+    
+    // Upload to Firebase Storage
+    const path = `templates/headers/${Date.now()}_${file.name}`;
+    const ref = storage.ref(path);
+    try {
+      showToast('Uploading...', 'info');
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      document.getElementById('tplHeaderMediaUrl').value = url;
+      showToast('✅ Uploaded!', 'success');
+      this.updatePreview();
+    } catch(e) {
+      showToast('Upload failed: ' + e.message, 'error');
+    }
+  },
+
+  addButton() {
+    const container = document.getElementById('buttonsContainer');
+    const currentCount = container.querySelectorAll('.button-row').length;
+    if (currentCount >= 3) return alert('Max 3 buttons allowed!');
+    
+    const newButton = { type: 'QUICK_REPLY', text: '', url: '', phone_number: '', example: '' };
+    const html = this.renderButtonRow(newButton, currentCount);
+    container.insertAdjacentHTML('beforeend', html);
+    this.updatePreview();
+  },
+
+  removeButton(index) {
+    document.querySelector(`[data-button-index="${index}"]`)?.remove();
+    this.updatePreview();
+  },
+
+  updateButtonType(select, index) { this.updatePreview(); },
+  updateButtonText(input, index) { this.updatePreview(); },
+  updateButtonUrl(input, index) { this.updatePreview(); },
+  updateButtonPhone(input, index) { this.updatePreview(); },
+  updateButtonCode(input, index) { this.updatePreview(); },
+
+  attachPreviewListeners() {
+    const fields = ['tplHeaderText', 'tplHeaderMediaUrl', 'tplBody', 'tplFooter'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => this.updatePreview());
+    });
+    this.updatePreview();
+  },
+
+  updatePreview() {
+    const preview = document.getElementById('livePreview');
+    if (!preview) return;
+
+    const headerType = document.querySelector('.header-type-btn.active')?.dataset?.type || 'none';
+    const headerText = document.getElementById('tplHeaderText')?.value || '';
+    const headerMediaUrl = document.getElementById('tplHeaderMediaUrl')?.value || '';
+    const body = document.getElementById('tplBody')?.value || '';
+    const footer = document.getElementById('tplFooter')?.value || '';
+    
+    const buttonRows = document.querySelectorAll('#buttonsContainer .button-row');
+    const buttons = [];
+    buttonRows.forEach(row => {
+      const select = row.querySelector('select');
+      const inputs = row.querySelectorAll('input');
+      const type = select?.value || 'QUICK_REPLY';
+      const text = inputs[0]?.value || '';
+      if (!text) return;
+      
+      const btn = { type, text };
+      if (type === 'URL') btn.url = inputs[1]?.value || '';
+      if (type === 'PHONE_NUMBER') btn.phone_number = inputs[1]?.value || '';
+      if (type === 'COPY_CODE') btn.example = inputs[1]?.value || '';
+      buttons.push(btn);
+    });
+
+    // Build preview HTML
+    let html = '<div class="wa-preview">';
+    
+    // Header
+    if (headerType !== 'none') {
+      if (headerType === 'text') {
+        html += `<div class="wa-header-text">${headerText || 'Header Text'}</div>`;
+      } else if (headerType === 'image' && headerMediaUrl) {
+        html += `<img src="${headerMediaUrl}" class="wa-header-img" alt="Header">`;
+      } else if (headerType === 'video' && headerMediaUrl) {
+        html += `<div class="wa-header-video"><i class="fas fa-play-circle" style="font-size:32px;"></i><br><small>Video: ${headerMediaUrl.split('/').pop()}</small></div>`;
+      } else if (headerType === 'document' && headerMediaUrl) {
+        html += `<div class="wa-header-doc"><i class="fas fa-file-pdf" style="font-size:24px;color:#ef4444;"></i><small>${headerMediaUrl.split('/').pop()}</small></div>`;
+      } else if (headerType === 'location') {
+        html += `<div class="wa-header-doc"><i class="fas fa-map-marker-alt" style="font-size:24px;color:#ef4444;"></i><small>${headerText || 'Location'}</small></div>`;
+      } else {
+        html += `<div class="wa-header-text">${headerType.toUpperCase()} Header</div>`;
+      }
+    }
+    
+    // Body
+    html += `<div class="wa-body">${(body || 'Enter your message...').replace(/\{\{(\d+)\}\}/g, '<span class="var">{{$1}}</span>')}</div>`;
+    
+    // Footer
+    if (footer) {
+      html += `<div class="wa-footer">${footer}</div>`;
+    }
+    
+    // Buttons
+    buttons.forEach(b => {
+      if (b.type === 'QUICK_REPLY') {
+        html += `<span class="wa-btn quick-reply">${b.text}</span>`;
+      } else if (b.type === 'URL') {
+        html += `<div class="wa-btn">🌐 ${b.text}</div>`;
+      } else if (b.type === 'PHONE_NUMBER') {
+        html += `<div class="wa-btn">📞 ${b.text}</div>`;
+      } else if (b.type === 'COPY_CODE') {
+        html += `<div class="wa-btn">📋 ${b.text}</div>`;
+      }
+    });
+    
+    html += '</div>';
+    preview.innerHTML = html;
   },
 
   async saveTemplate(editId) {
+    const headerType = document.querySelector('.header-type-btn.active')?.dataset?.type || 'none';
+    
+    const components = [];
+    
+    // Header
+    if (headerType !== 'none') {
+      const headerComp = { type: 'HEADER' };
+      if (headerType === 'text' || headerType === 'location') {
+        headerComp.format = 'TEXT';
+        headerComp.text = document.getElementById('tplHeaderText')?.value || '';
+      } else if (['image','video','document'].includes(headerType)) {
+        headerComp.format = headerType.toUpperCase();
+        const mediaUrl = document.getElementById('tplHeaderMediaUrl')?.value || '';
+        headerComp.example = { header_handle: [mediaUrl] };
+      }
+      components.push(headerComp);
+    }
+    
+    // Body
+    const bodyText = document.getElementById('tplBody')?.value || '';
+    if (bodyText) {
+      components.push({ type: 'BODY', text: bodyText });
+    }
+    
+    // Footer
+    const footerText = document.getElementById('tplFooter')?.value || '';
+    if (footerText) {
+      components.push({ type: 'FOOTER', text: footerText });
+    }
+    
+    // Buttons
+    const buttonRows = document.querySelectorAll('#buttonsContainer .button-row');
+    const buttons = [];
+    buttonRows.forEach(row => {
+      const select = row.querySelector('select');
+      const inputs = row.querySelectorAll('input');
+      const type = select?.value || 'QUICK_REPLY';
+      const text = inputs[0]?.value || '';
+      if (!text) return;
+      
+      const btn = { type, text };
+      if (type === 'URL' && inputs[1]) btn.url = inputs[1].value;
+      if (type === 'PHONE_NUMBER' && inputs[1]) btn.phone_number = inputs[1].value;
+      if (type === 'COPY_CODE' && inputs[1]) btn.example = inputs[1].value;
+      buttons.push(btn);
+    });
+    
+    if (buttons.length > 0) {
+      components.push({ type: 'BUTTONS', buttons });
+    }
+
     const data = {
-      name: document.getElementById('tplName').value.trim(),
-      category: document.getElementById('tplCategory').value,
-      language: document.getElementById('tplLanguage').value,
-      headerType: document.getElementById('tplHeaderType').value,
-      headerValue: document.getElementById('tplHeaderValue')?.value?.trim() || '',
-      body: document.getElementById('tplBody').value.trim(),
-      footer: document.getElementById('tplFooter').value.trim(),
-      buttonType: document.getElementById('tplButtonType').value,
-      buttonText: document.getElementById('tplButtonText')?.value?.trim() || '',
-      buttonUrl: document.getElementById('tplButtonUrl')?.value?.trim() || '',
-      buttonPhone: document.getElementById('tplButtonPhone')?.value?.trim() || '',
-      buttonPhone2: document.getElementById('tplButtonPhone2')?.value?.trim() || '',
-      quickReply: document.getElementById('tplQuickReply')?.checked || false,
+      name: document.getElementById('tplName')?.value?.trim() || '',
+      category: document.getElementById('tplCategory')?.value || 'UTILITY',
+      language: document.getElementById('tplLanguage')?.value || 'en_US',
+      components,
       clientId: getCurrentClientId(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    if (!data.name || !data.body) return alert('Name & Body required!');
+    
+    if (!data.name || components.length === 0) return alert('Name and at least Body are required!');
+    
     try {
-      if (editId) await db.collection('templates').doc(editId).update(data);
-      else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection('templates').add(data); }
-      alert('✅ Saved!'); this.render();
+      if (editId) {
+        await db.collection('templates').doc(editId).update(data);
+      } else {
+        data.metaStatus = 'DRAFT';
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection('templates').add(data);
+      }
+      alert('✅ Saved!');
+      this.render();
     } catch (err) { alert('Error: ' + err.message); }
   },
 
@@ -272,20 +635,11 @@ const Templates = {
     const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
     if (!cfg?.accessToken) return alert('WhatsApp not configured.');
 
-    const components = [];
-    if (tpl.headerType === 'text' && tpl.headerValue) components.push({ type: 'HEADER', format: 'TEXT', text: tpl.headerValue });
-    components.push({ type: 'BODY', text: tpl.body });
-    if (tpl.footer) components.push({ type: 'FOOTER', text: tpl.footer });
-
-    const buttons = [];
-    if (tpl.quickReply) { buttons.push({ type: 'QUICK_REPLY', text: 'Yes' }, { type: 'QUICK_REPLY', text: 'No' }); }
-    if (tpl.buttonType === 'visit' || tpl.buttonType === 'both') buttons.push({ type: 'URL', text: tpl.buttonText || 'Visit', url: tpl.buttonUrl || 'https://example.com' });
-    if (tpl.buttonType === 'call' || tpl.buttonType === 'both') buttons.push({ type: 'PHONE_NUMBER', text: tpl.buttonPhone || 'Call', phone_number: tpl.buttonPhone2 || '+919999999999' });
-    if (buttons.length) components.push({ type: 'BUTTONS', buttons });
-
     const payload = {
-      name: tpl.name.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60),
-      category: tpl.category, language: tpl.language, components
+      name: (tpl.name || 'template').toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60),
+      category: tpl.category || 'UTILITY',
+      language: tpl.language || 'en_US',
+      components: tpl.components || []
     };
 
     try {
@@ -296,8 +650,14 @@ const Templates = {
       });
       const result = await res.json();
       if (res.ok && result.id) {
-        await db.collection('templates').doc(editId).update({ metaTemplateId: result.id, metaStatus: result.status || 'PENDING', submittedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        alert('✅ Submitted!'); await this.fetchFromMeta(); this.render();
+        await db.collection('templates').doc(editId).update({
+          metaTemplateId: result.id,
+          metaStatus: result.status || 'PENDING',
+          submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert('✅ Submitted!');
+        await this.fetchFromMeta();
+        this.render();
       } else {
         alert('❌ ' + JSON.stringify(result.error || result));
       }
@@ -305,16 +665,23 @@ const Templates = {
   },
 
   async sendTemplate(id) {
-    let phone = prompt('Enter phone number:'); if (!phone) return;
+    let phone = prompt('Enter phone number:');
+    if (!phone) return;
     phone = phone.replace(/[^0-9+]/g, '');
-    const doc = await db.collection('templates').doc(id).get(), tpl = doc.data();
+    const doc = await db.collection('templates').doc(id).get();
+    const tpl = doc.data();
     const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
     if (!cfg?.phoneNumberId) return alert('WhatsApp not configured.');
     try {
       const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name: tpl.name, language: { code: tpl.language || 'en' } } })
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: phone,
+          type: 'template',
+          template: { name: tpl.name, language: { code: tpl.language || 'en' } }
+        })
       });
       alert(res.ok ? '✅ Sent!' : '❌ ' + ((await res.json()).error?.message || 'Failed'));
     } catch (err) { alert('Error: ' + err.message); }
@@ -323,6 +690,7 @@ const Templates = {
   async deleteTemplate(id) {
     if (!confirm('Delete?')) return;
     await db.collection('templates').doc(id).delete();
-    alert('Deleted.'); this.render();
+    alert('Deleted.');
+    this.render();
   }
 };
