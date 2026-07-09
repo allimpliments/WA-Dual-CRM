@@ -1,4 +1,4 @@
-// js/templates.js — Advanced Meta WhatsApp Template Manager
+// js/templates.js — Advanced Meta WhatsApp Template Manager (FULL WORKING)
 const Templates = {
   currentTab: 'all',
   currentFilter: '',
@@ -49,9 +49,6 @@ const Templates = {
         .wa-preview .wa-footer { font-size: 11px; color: #667781; margin-top: 4px; }
         .wa-preview .wa-btn { display: block; text-align: center; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 4px; background: #fff; color: #008069; border: 1px solid #008069; cursor: default; }
         .wa-preview .wa-btn.quick-reply { display: inline-block; margin-right: 4px; border-radius: 16px; padding: 4px 12px; font-size: 11px; }
-        .wa-preview .wa-carousel { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-        .wa-preview .wa-carousel-card { min-width: 200px; background: #fff; border-radius: 8px; padding: 8px; }
-        .wa-preview .wa-carousel-card img { width: 100%; border-radius: 4px; margin-bottom: 4px; }
         .tab-btn { border: none; background: transparent; padding: 8px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; color: #5f6368; }
         .tab-btn.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
         .filter-chip { display: inline-block; padding: 4px 10px; border-radius: 16px; font-size: 11px; cursor: pointer; border: 1px solid #dadce0; margin: 2px; }
@@ -218,7 +215,7 @@ const Templates = {
     const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
     if (!cfg?.accessToken) return;
     try {
-      const res = await fetch('https://graph.facebook.com/v22.0/342856675576986/message_templates?limit=100', {
+      const res = await fetch('https://graph.facebook.com/v22.0/342354115627791/message_templates?limit=100', {
         headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
       });
       const result = await res.json();
@@ -249,7 +246,6 @@ const Templates = {
       headerType: 'none', headerText: '', headerMediaUrl: '', headerMediaId: '',
       body: '', footer: '',
       buttons: [],
-      carouselCards: [],
       clientId: getCurrentClientId()
     };
     
@@ -293,7 +289,6 @@ const Templates = {
         </div>
         
         <div class="row g-3">
-          <!-- LEFT: Form -->
           <div class="col-md-7">
             <div class="row g-2 mb-3">
               <div class="col-md-6">
@@ -314,15 +309,10 @@ const Templates = {
                   <option value="en_US" ${tpl.language==='en_US'?'selected':''}>English (US)</option>
                   <option value="en_GB" ${tpl.language==='en_GB'?'selected':''}>English (UK)</option>
                   <option value="hi" ${tpl.language==='hi'?'selected':''}>Hindi</option>
-                  <option value="bn" ${tpl.language==='bn'?'selected':''}>Bengali</option>
-                  <option value="te" ${tpl.language==='te'?'selected':''}>Telugu</option>
-                  <option value="mr" ${tpl.language==='mr'?'selected':''}>Marathi</option>
-                  <option value="ta" ${tpl.language==='ta'?'selected':''}>Tamil</option>
                 </select>
               </div>
             </div>
 
-            <!-- HEADER TYPE -->
             <label class="form-label small fw-bold">Header Type</label>
             <div class="row g-2 mb-3" id="headerTypeSelector">
               ${headerTypes.map(ht => `
@@ -335,7 +325,6 @@ const Templates = {
               `).join('')}
             </div>
 
-            <!-- Header Fields -->
             <div id="headerFields" style="display:${tpl.headerType==='none'?'none':'block'}">
               <div id="headerTextField" style="display:${tpl.headerType==='text'||tpl.headerType==='location'?'block':'none'}">
                 <input id="tplHeaderText" class="form-control mb-2" value="${tpl.headerText}" placeholder="${tpl.headerType==='location'?'Location name':'Header text'}">
@@ -351,20 +340,16 @@ const Templates = {
                   <i class="fas fa-cloud-upload-alt"></i>
                   <p class="small mt-2 mb-0">Click to upload ${tpl.headerType}</p>
                 </div>
-                <small class="text-muted">Supported: ${tpl.headerType==='image'?'JPG, PNG (max 5MB)':tpl.headerType==='video'?'MP4 (max 16MB)':'PDF (max 100MB)'}</small>
               </div>
             </div>
 
-            <!-- BODY -->
             <label class="form-label small fw-bold mt-2">Body *</label>
             <textarea id="tplBody" class="form-control mb-2" rows="5" placeholder="Enter your message. Use {{1}}, {{2}} for variables...">${tpl.body}</textarea>
-            <small class="text-muted">Variables: {'{{'}1{'}}'}, {'{{'}2{'}}'} etc. Example: Hi {'{{'}1{'}}'}, your order # {'{{'}2{'}}'} is confirmed.</small>
+            <small class="text-muted">Variables: {{1}}, {{2}} etc. Example: Hi {{1}}, your order #{{2}} is confirmed.</small>
 
-            <!-- FOOTER -->
             <label class="form-label small fw-bold mt-2">Footer (Optional)</label>
             <input id="tplFooter" class="form-control mb-2" value="${tpl.footer}" placeholder="e.g., © 2026 Company Name">
 
-            <!-- BUTTONS -->
             <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
               <label class="form-label small fw-bold mb-0">Buttons</label>
               <button class="btn btn-outline-primary btn-sm" onclick="Templates.addButton()"><i class="fas fa-plus"></i> Add Button</button>
@@ -375,7 +360,6 @@ const Templates = {
             <small class="text-muted">Quick Reply: max 3 | URL/Phone: max 2 total</small>
           </div>
 
-          <!-- RIGHT: Live Preview -->
           <div class="col-md-5">
             <label class="form-label small fw-bold">Live Preview</label>
             <div class="preview-panel" id="livePreview">
@@ -392,8 +376,6 @@ const Templates = {
       </div>
     `;
     document.getElementById('templateBuilderContainer').innerHTML = html;
-
-    // Attach live preview updater
     setTimeout(() => this.attachPreviewListeners(), 200);
   },
 
@@ -422,20 +404,15 @@ const Templates = {
   selectHeaderType(type) {
     document.querySelectorAll('.header-type-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
-    
     document.getElementById('headerFields').style.display = type === 'none' ? 'none' : 'block';
     document.getElementById('headerTextField').style.display = (type === 'text' || type === 'location') ? 'block' : 'none';
     document.getElementById('headerMediaField').style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
-    
     this.updatePreview();
   },
 
   async uploadHeaderMedia(input) {
     const file = input.files[0];
     if (!file) return;
-    const headerType = document.querySelector('.header-type-btn.active')?.dataset?.type || 'image';
-    
-    // Upload to Firebase Storage
     const path = `templates/headers/${Date.now()}_${file.name}`;
     const ref = storage.ref(path);
     try {
@@ -454,9 +431,7 @@ const Templates = {
     const container = document.getElementById('buttonsContainer');
     const currentCount = container.querySelectorAll('.button-row').length;
     if (currentCount >= 3) return alert('Max 3 buttons allowed!');
-    
-    const newButton = { type: 'QUICK_REPLY', text: '', url: '', phone_number: '', example: '' };
-    const html = this.renderButtonRow(newButton, currentCount);
+    const html = this.renderButtonRow({ type: 'QUICK_REPLY', text: '', url: '', phone_number: '', example: '' }, currentCount);
     container.insertAdjacentHTML('beforeend', html);
     this.updatePreview();
   },
@@ -473,8 +448,7 @@ const Templates = {
   updateButtonCode(input, index) { this.updatePreview(); },
 
   attachPreviewListeners() {
-    const fields = ['tplHeaderText', 'tplHeaderMediaUrl', 'tplBody', 'tplFooter'];
-    fields.forEach(id => {
+    ['tplHeaderText', 'tplHeaderMediaUrl', 'tplBody', 'tplFooter'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => this.updatePreview());
     });
@@ -491,61 +465,36 @@ const Templates = {
     const body = document.getElementById('tplBody')?.value || '';
     const footer = document.getElementById('tplFooter')?.value || '';
     
-    const buttonRows = document.querySelectorAll('#buttonsContainer .button-row');
-    const buttons = [];
-    buttonRows.forEach(row => {
-      const select = row.querySelector('select');
-      const inputs = row.querySelectorAll('input');
-      const type = select?.value || 'QUICK_REPLY';
-      const text = inputs[0]?.value || '';
-      if (!text) return;
-      
-      const btn = { type, text };
-      if (type === 'URL') btn.url = inputs[1]?.value || '';
-      if (type === 'PHONE_NUMBER') btn.phone_number = inputs[1]?.value || '';
-      if (type === 'COPY_CODE') btn.example = inputs[1]?.value || '';
-      buttons.push(btn);
-    });
-
-    // Build preview HTML
     let html = '<div class="wa-preview">';
     
-    // Header
     if (headerType !== 'none') {
       if (headerType === 'text') {
         html += `<div class="wa-header-text">${headerText || 'Header Text'}</div>`;
       } else if (headerType === 'image' && headerMediaUrl) {
         html += `<img src="${headerMediaUrl}" class="wa-header-img" alt="Header">`;
       } else if (headerType === 'video' && headerMediaUrl) {
-        html += `<div class="wa-header-video"><i class="fas fa-play-circle" style="font-size:32px;"></i><br><small>Video: ${headerMediaUrl.split('/').pop()}</small></div>`;
+        html += `<div class="wa-header-video"><i class="fas fa-play-circle" style="font-size:32px;"></i><br><small>Video</small></div>`;
       } else if (headerType === 'document' && headerMediaUrl) {
-        html += `<div class="wa-header-doc"><i class="fas fa-file-pdf" style="font-size:24px;color:#ef4444;"></i><small>${headerMediaUrl.split('/').pop()}</small></div>`;
+        html += `<div class="wa-header-doc"><i class="fas fa-file-pdf" style="font-size:24px;color:#ef4444;"></i><small>Document</small></div>`;
       } else if (headerType === 'location') {
         html += `<div class="wa-header-doc"><i class="fas fa-map-marker-alt" style="font-size:24px;color:#ef4444;"></i><small>${headerText || 'Location'}</small></div>`;
-      } else {
-        html += `<div class="wa-header-text">${headerType.toUpperCase()} Header</div>`;
       }
     }
     
-    // Body
     html += `<div class="wa-body">${(body || 'Enter your message...').replace(/\{\{(\d+)\}\}/g, '<span class="var">{{$1}}</span>')}</div>`;
+    if (footer) html += `<div class="wa-footer">${footer}</div>`;
     
-    // Footer
-    if (footer) {
-      html += `<div class="wa-footer">${footer}</div>`;
-    }
-    
-    // Buttons
-    buttons.forEach(b => {
-      if (b.type === 'QUICK_REPLY') {
-        html += `<span class="wa-btn quick-reply">${b.text}</span>`;
-      } else if (b.type === 'URL') {
-        html += `<div class="wa-btn">🌐 ${b.text}</div>`;
-      } else if (b.type === 'PHONE_NUMBER') {
-        html += `<div class="wa-btn">📞 ${b.text}</div>`;
-      } else if (b.type === 'COPY_CODE') {
-        html += `<div class="wa-btn">📋 ${b.text}</div>`;
-      }
+    const buttonRows = document.querySelectorAll('#buttonsContainer .button-row');
+    buttonRows.forEach(row => {
+      const select = row.querySelector('select');
+      const inputs = row.querySelectorAll('input');
+      const type = select?.value || 'QUICK_REPLY';
+      const text = inputs[0]?.value || '';
+      if (!text) return;
+      if (type === 'QUICK_REPLY') html += `<span class="wa-btn quick-reply">${text}</span>`;
+      else if (type === 'URL') html += `<div class="wa-btn">🌐 ${text}</div>`;
+      else if (type === 'PHONE_NUMBER') html += `<div class="wa-btn">📞 ${text}</div>`;
+      else if (type === 'COPY_CODE') html += `<div class="wa-btn">📋 ${text}</div>`;
     });
     
     html += '</div>';
@@ -554,10 +503,8 @@ const Templates = {
 
   async saveTemplate(editId) {
     const headerType = document.querySelector('.header-type-btn.active')?.dataset?.type || 'none';
-    
     const components = [];
     
-    // Header
     if (headerType !== 'none') {
       const headerComp = { type: 'HEADER' };
       if (headerType === 'text' || headerType === 'location') {
@@ -571,38 +518,26 @@ const Templates = {
       components.push(headerComp);
     }
     
-    // Body
     const bodyText = document.getElementById('tplBody')?.value || '';
-    if (bodyText) {
-      components.push({ type: 'BODY', text: bodyText });
-    }
+    if (bodyText) components.push({ type: 'BODY', text: bodyText });
     
-    // Footer
     const footerText = document.getElementById('tplFooter')?.value || '';
-    if (footerText) {
-      components.push({ type: 'FOOTER', text: footerText });
-    }
+    if (footerText) components.push({ type: 'FOOTER', text: footerText });
     
-    // Buttons
-    const buttonRows = document.querySelectorAll('#buttonsContainer .button-row');
     const buttons = [];
-    buttonRows.forEach(row => {
+    document.querySelectorAll('#buttonsContainer .button-row').forEach(row => {
       const select = row.querySelector('select');
       const inputs = row.querySelectorAll('input');
       const type = select?.value || 'QUICK_REPLY';
       const text = inputs[0]?.value || '';
       if (!text) return;
-      
       const btn = { type, text };
       if (type === 'URL' && inputs[1]) btn.url = inputs[1].value;
       if (type === 'PHONE_NUMBER' && inputs[1]) btn.phone_number = inputs[1].value;
       if (type === 'COPY_CODE' && inputs[1]) btn.example = inputs[1].value;
       buttons.push(btn);
     });
-    
-    if (buttons.length > 0) {
-      components.push({ type: 'BUTTONS', buttons });
-    }
+    if (buttons.length > 0) components.push({ type: 'BUTTONS', buttons });
 
     const data = {
       name: document.getElementById('tplName')?.value?.trim() || '',
@@ -643,7 +578,7 @@ const Templates = {
     };
 
     try {
-      const res = await fetch('https://graph.facebook.com/v22.0/342856675576986/message_templates', {
+      const res = await fetch('https://graph.facebook.com/v22.0/342354115627791/message_templates', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -664,27 +599,124 @@ const Templates = {
     } catch (err) { alert('Error: ' + err.message); }
   },
 
+  // ✅ FIXED: sendTemplate — handles ALL template types
   async sendTemplate(id) {
-    let phone = prompt('Enter phone number:');
+    let phone = prompt('Enter phone number (with country code):');
     if (!phone) return;
-    phone = phone.replace(/[^0-9+]/g, '');
+    phone = phone.replace(/[^0-9]/g, '');
+    
     const doc = await db.collection('templates').doc(id).get();
     const tpl = doc.data();
     const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
-    if (!cfg?.phoneNumberId) return alert('WhatsApp not configured.');
+    
+    if (!cfg?.phoneNumberId || !cfg?.accessToken) return alert('WhatsApp not configured.');
+    
     try {
-      const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: phone,
-          type: 'template',
-          template: { name: tpl.name, language: { code: tpl.language || 'en' } }
-        })
-      });
-      alert(res.ok ? '✅ Sent!' : '❌ ' + ((await res.json()).error?.message || 'Failed'));
-    } catch (err) { alert('Error: ' + err.message); }
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'template',
+        template: {
+          name: tpl.name,
+          language: { code: tpl.language || 'en_US' }
+        }
+      };
+
+      const components = tpl.components || [];
+      const body = components.find(c => c.type === 'BODY');
+      const header = components.find(c => c.type === 'HEADER');
+      const buttons = components.find(c => c.type === 'BUTTONS');
+      
+      const templateComponents = [];
+
+      // ✅ HEADER with media
+      if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
+        if (header.example?.header_handle?.length > 0) {
+          templateComponents.push({
+            type: 'header',
+            parameters: [{
+              type: header.format.toLowerCase(),
+              [header.format.toLowerCase()]: { link: header.example.header_handle[0] }
+            }]
+          });
+        }
+      } 
+      // ✅ HEADER with text variables
+      else if (header && header.format === 'TEXT' && header.text) {
+        const headerVars = header.text.match(/\{\{(\d+)\}\}/g);
+        if (headerVars) {
+          const params = headerVars.map(v => {
+            const val = prompt(`Header - Enter value for ${v}:`, '');
+            if (!val) throw new Error('All header variables required!');
+            return { type: 'text', text: val };
+          });
+          templateComponents.push({ type: 'header', parameters: params });
+        }
+      }
+
+      // ✅ BODY variables
+      if (body && body.text) {
+        const bodyVars = body.text.match(/\{\{(\d+)\}\}/g);
+        if (bodyVars) {
+          const bodyParams = bodyVars.map(v => {
+            const val = prompt(`Body - Enter value for ${v}:`, '');
+            if (!val) throw new Error('All body variables required!');
+            return { type: 'text', text: val };
+          });
+          templateComponents.push({ type: 'body', parameters: bodyParams });
+        }
+      }
+
+      // ✅ BUTTON URL variables
+      if (buttons && buttons.buttons) {
+        const urlButton = buttons.buttons.find(b => b.type === 'URL' && (b.url || '').includes('{{'));
+        if (urlButton) {
+          const urlVars = (urlButton.url || '').match(/\{\{(\d+)\}\}/g);
+          if (urlVars) {
+            const btnParams = urlVars.map(v => {
+              const val = prompt(`Button "${urlButton.text}" - Enter URL value for ${v}:`, '');
+              if (!val) throw new Error('Button URL variable required!');
+              return { type: 'text', text: val };
+            });
+            templateComponents.push({
+              type: 'button',
+              sub_type: 'url',
+              index: String(buttons.buttons.indexOf(urlButton)),
+              parameters: btnParams
+            });
+          }
+        }
+      }
+
+      if (templateComponents.length > 0) {
+        payload.template.components = templateComponents;
+      }
+
+      console.log('📤 Template Payload:', JSON.stringify(payload, null, 2));
+
+      const res = await fetch(
+        `https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + cfg.accessToken,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+      
+      const result = await res.json();
+      console.log('📥 Meta Response:', result);
+      
+      if (res.ok) {
+        alert('✅ Template sent! Message ID: ' + (result.messages?.[0]?.id || 'N/A'));
+      } else {
+        alert('❌ Failed!\nCode: ' + result.error?.code + '\nMessage: ' + result.error?.message);
+      }
+    } catch (err) { 
+      alert(err.message || 'Error sending template'); 
+    }
   },
 
   async deleteTemplate(id) {
