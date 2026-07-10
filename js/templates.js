@@ -367,6 +367,13 @@ const Templates = {
 
   // ==================== SYNC FROM META (FIXED - Dynamic WABA ID) ====================
   async fetchFromMeta() {
+    // ✅ ADD THIS:
+    try {
+        var test = db.collection('templates');
+    } catch(e) {
+        console.error('Firestore not ready');
+        return;
+    }
     const cfg = await this.getConfig();
     if (!cfg?.accessToken) {
       console.warn('WhatsApp not configured — no access token');
