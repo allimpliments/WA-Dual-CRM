@@ -1407,5 +1407,4 @@ const Templates = {
         showToast('❌ Error: ' + err.message, 'error');
     }
   }
-
 };
