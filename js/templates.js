@@ -1246,7 +1246,7 @@ const Templates = {
     }
   },
 
-  // ==================== SUBMIT TO META (FIXED) ====================
+    // ==================== SUBMIT TO META (FIXED - Working Format) ====================
   async submitToMeta(editId = null) {
     const id = editId || this.editingId;
     
@@ -1276,47 +1276,89 @@ const Templates = {
         return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
     }
 
-    let cleanComponents = [];
+    // ✅ Build components in Meta's EXACT expected format
+    let metaComponents = [];
     const components = tpl.components || [];
     
     for (const comp of components) {
-        const clean = { type: comp.type };
         
         if (comp.type === 'HEADER') {
-            clean.format = comp.format || 'TEXT';
+            const headerComp = { type: 'HEADER' };
             
-            if (comp.format === 'TEXT' || comp.format === 'LOCATION') {
-                if (comp.text) clean.text = comp.text;
-            } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)) {
+            if (comp.format === 'TEXT') {
+                headerComp.format = 'TEXT';
+                headerComp.text = comp.text || ' ';
+            } else if (comp.format === 'LOCATION') {
+                headerComp.format = 'LOCATION';
+            } else if (comp.format === 'IMAGE') {
+                headerComp.format = 'IMAGE';
                 if (comp.example?.header_handle?.length > 0) {
-                    const mediaUrl = comp.example.header_handle[0];
-                    if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
-                        clean.example = {
-                            header_handle: [mediaUrl]
-                        };
-                    }
+                    headerComp.example = {
+                        header_handle: [comp.example.header_handle[0]]
+                    };
+                }
+            } else if (comp.format === 'VIDEO') {
+                headerComp.format = 'VIDEO';
+                if (comp.example?.header_handle?.length > 0) {
+                    headerComp.example = {
+                        header_handle: [comp.example.header_handle[0]]
+                    };
+                }
+            } else if (comp.format === 'DOCUMENT') {
+                headerComp.format = 'DOCUMENT';
+                if (comp.example?.header_handle?.length > 0) {
+                    headerComp.example = {
+                        header_handle: [comp.example.header_handle[0]]
+                    };
                 }
             }
+            
+            metaComponents.push(headerComp);
+            
         } else if (comp.type === 'BODY') {
-            if (comp.text) clean.text = comp.text;
+            metaComponents.push({
+                type: 'BODY',
+                text: comp.text || ' '
+            });
+            
         } else if (comp.type === 'FOOTER') {
-            if (comp.text) clean.text = comp.text;
+            metaComponents.push({
+                type: 'FOOTER',
+                text: comp.text || ' '
+            });
+            
         } else if (comp.type === 'BUTTONS') {
             if (comp.buttons?.length > 0) {
-                clean.buttons = comp.buttons.map(b => {
-                    const btn = { type: b.type, text: b.text || '' };
-                    if (b.type === 'URL' && b.url) btn.url = b.url;
-                    if (b.type === 'PHONE_NUMBER' && b.phone_number) btn.phone_number = b.phone_number;
-                    if (b.type === 'COPY_CODE' && b.example) btn.example = b.example;
-                    return btn;
-                });
+                let validButtons = [];
+                
+                for (const b of comp.buttons) {
+                    if (!b.text || !b.text.trim()) continue;
+                    
+                    const btn = { type: b.type, text: b.text.trim() };
+                    
+                    if (b.type === 'URL') {
+                        btn.url = b.url || 'https://example.com';
+                    } else if (b.type === 'PHONE_NUMBER') {
+                        btn.phone_number = (b.phone_number || '+910000000000').replace(/[^0-9+]/g, '');
+                    } else if (b.type === 'COPY_CODE') {
+                        btn.example = b.example || 'demo-code';
+                    }
+                    
+                    validButtons.push(btn);
+                }
+                
+                if (validButtons.length > 0) {
+                    metaComponents.push({
+                        type: 'BUTTONS',
+                        buttons: validButtons
+                    });
+                }
             }
         }
-        
-        cleanComponents.push(clean);
     }
 
-    const hasBody = cleanComponents.some(c => c.type === 'BODY' && c.text?.trim());
+    // ✅ Validate: Body must exist
+    const hasBody = metaComponents.some(c => c.type === 'BODY' && c.text?.trim());
     if (!hasBody) {
         return showToast('❌ Template must have a body!', 'error');
     }
@@ -1325,7 +1367,7 @@ const Templates = {
         name: tpl.name,
         category: tpl.category || 'UTILITY',
         language: tpl.language || 'en_US',
-        components: cleanComponents
+        components: metaComponents
     };
 
     try {
@@ -1345,7 +1387,7 @@ const Templates = {
         );
         const result = await res.json();
         
-        console.log('📥 Meta Response:', result);
+        console.log('📥 Meta Response:', JSON.stringify(result, null, 2));
         
         if (res.ok && result.id) {
             await doc.ref.update({
@@ -1359,11 +1401,11 @@ const Templates = {
         } else {
             let errorMsg = result.error?.message || result.error?.error_user_msg || 'Unknown error';
             showToast('❌ Submission failed: ' + errorMsg, 'error');
-            console.error('Meta API Error:', result.error);
+            console.error('Meta API Full Error:', result.error);
         }
     } catch (err) { 
         showToast('❌ Error: ' + err.message, 'error');
     }
   }
 
-};  // ✅ Templates object close
+};
