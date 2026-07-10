@@ -1446,3 +1446,5 @@ async submitToMeta(editId = null) {
         showToast('❌ Error: ' + err.message, 'error');
     }
 }
+
+};  // ✅ Templates object close
