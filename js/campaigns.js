@@ -91,6 +91,9 @@ const Campaigns = {
         .campaign-type-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: 0.2s; }
         .campaign-type-btn:hover { border-color: #6366f1; background: #eef2ff; }
         .campaign-type-btn i { font-size: 20px; color: #6366f1; }
+        .media-upload-zone-campaign { border: 2px dashed #d1d5db; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; background: #fafbfc; margin-bottom: 8px; transition: 0.2s; }
+        .media-upload-zone-campaign:hover { border-color: #6366f1; background: #f8f9fa; }
+        .media-upload-zone-campaign i { font-size: 28px; color: #6366f1; }
       </style>
 
       <div class="campaign-tabs">
@@ -258,8 +261,17 @@ const Campaigns = {
             
             <!-- MEDIA URL (auto-filled from template) -->
             <div id="bMediaField" style="display:none;">
-              <label class="form-label small fw-bold">Media URL</label>
-              <input id="bMedia" class="form-control mb-2" placeholder="Image/Video/Document URL">
+              <label class="form-label small fw-bold">
+                <i class="fas fa-paperclip me-1"></i> Media Attachment 
+                <small class="text-muted">(Optional — Image, Video, Document)</small>
+              </label>
+              <div class="media-upload-zone-campaign" onclick="document.getElementById('campaignMediaUpload').click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p class="mt-2 mb-0" style="font-size:13px;">Click to upload media<br><small>JPG, PNG, MP4, PDF (Max 10MB)</small></p>
+              </div>
+              <input type="file" id="campaignMediaUpload" style="display:none" accept="image/*,video/*,.pdf" onchange="Campaigns.uploadCampaignMedia(this)">
+              <input id="bMedia" class="form-control mb-2" placeholder="Or paste Image/Video/Document URL" oninput="Campaigns.updateBulkPreview()">
+              <div id="bMediaPreview" style="display:none;" class="mb-2"></div>
             </div>
 
             <!-- FOOTER (auto-filled from template) -->
@@ -314,6 +326,61 @@ const Campaigns = {
     }, 200);
   },
 
+  // ✅ NEW: Upload campaign media
+  async uploadCampaignMedia(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showToast('❌ File too large. Max 10MB', 'error');
+      return;
+    }
+    try {
+      showToast('Uploading...', 'info');
+      const path = `campaigns/media/${getCurrentClientId() || 'system'}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const ref = storage.ref(path);
+      const snapshot = await ref.put(file, { contentType: file.type });
+      const url = await snapshot.ref.getDownloadURL();
+      document.getElementById('bMedia').value = url;
+      this.showCampaignMediaPreview(url, file.type);
+      showToast('✅ Media uploaded!', 'success');
+      this.updateBulkPreview();
+    } catch(e) {
+      showToast('❌ Upload failed: ' + e.message, 'error');
+    }
+  },
+
+  // ✅ NEW: Show campaign media preview
+  showCampaignMediaPreview(url, fileType) {
+    const preview = document.getElementById('bMediaPreview');
+    if (!preview) return;
+    preview.style.display = 'block';
+    if (fileType && fileType.startsWith('image/')) {
+      preview.innerHTML = `
+        <div style="position: relative; display: inline-block;">
+          <img src="${url}" style="max-width: 200px; max-height: 150px; border-radius: 8px;" alt="Preview">
+          <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
+                  style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
+        </div>`;
+    } else if (fileType && fileType.startsWith('video/')) {
+      preview.innerHTML = `
+        <div style="position: relative; display: inline-block;">
+          <video src="${url}" style="max-width: 200px; max-height: 150px; border-radius: 8px;" controls></video>
+          <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
+                  style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
+        </div>`;
+    } else {
+      preview.innerHTML = `
+        <div class="d-flex align-items-center gap-2 p-2 bg-light rounded" style="display: inline-flex;">
+          <i class="fas fa-file" style="font-size: 20px; color: #6366f1;"></i>
+          <span class="small">${url.split('/').pop().substring(0, 30)}</span>
+          <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
+                  style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
+        </div>`;
+    }
+  },
+
+  // ✅ FIXED: onTemplateSelect — ALWAYS shows media field for IMAGE/VIDEO/DOCUMENT headers
   onTemplateSelect(prefix) {
     const templateId = document.getElementById(prefix + 'Template')?.value;
     if (!templateId) {
@@ -335,35 +402,36 @@ const Campaigns = {
       document.getElementById(prefix + 'Message').value = body.text || '';
     }
 
-    // Fill Media
+    // ✅ FIXED: Always show media field for IMAGE/VIDEO/DOCUMENT headers
+    const mediaField = document.getElementById(prefix + 'MediaField');
+    const headerPreview = document.getElementById(prefix + 'HeaderPreview');
+
     if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
-      const mediaUrl = header.example?.header_handle?.[0] || '';
-      document.getElementById(prefix + 'MediaField').style.display = 'block';
-      document.getElementById(prefix + 'Media').value = mediaUrl;
-      
-      // Show header preview
-      const previewEl = document.getElementById(prefix + 'HeaderPreview');
-      if (previewEl) {
-        previewEl.style.display = 'block';
-        if (header.format === 'IMAGE') {
-          previewEl.innerHTML = `<img src="${mediaUrl}" style="max-width:200px;border-radius:8px;">`;
-        } else if (header.format === 'VIDEO') {
-          previewEl.innerHTML = `<div style="background:#000;padding:15px;border-radius:8px;text-align:center;color:#fff;"><i class="fas fa-play"></i> Video</div>`;
-        } else {
-          previewEl.innerHTML = `<div style="background:#fff;padding:10px;border-radius:8px;"><i class="fas fa-file"></i> Document</div>`;
-        }
+      if (mediaField) {
+        mediaField.style.display = 'block';
+        document.getElementById(prefix + 'Media').value = header.example?.header_handle?.[0] || '';
+        const mediaPreview = document.getElementById(prefix + 'MediaPreview');
+        if (mediaPreview) mediaPreview.style.display = 'none';
+      }
+      if (headerPreview) {
+        headerPreview.style.display = 'block';
+        const labels = { IMAGE: '📷 Image Header', VIDEO: '🎬 Video Header', DOCUMENT: '📄 Document Header' };
+        headerPreview.innerHTML = `
+          <div class="p-2 rounded mb-2" style="background:#eef2ff; border:1px solid #6366f1; font-size:12px;">
+            <i class="fas fa-info-circle text-primary me-1"></i>
+            <strong>${labels[header.format] || 'Media Header'}</strong>
+            <br><small class="text-muted">Upload your own media or use template default. Leave empty for default image.</small>
+          </div>`;
       }
     } else if (header && header.format === 'TEXT') {
-      document.getElementById(prefix + 'MediaField').style.display = 'none';
-      const previewEl = document.getElementById(prefix + 'HeaderPreview');
-      if (previewEl) {
-        previewEl.style.display = 'block';
-        previewEl.innerHTML = `<strong>${header.text || ''}</strong>`;
+      if (mediaField) mediaField.style.display = 'none';
+      if (headerPreview) {
+        headerPreview.style.display = 'block';
+        headerPreview.innerHTML = `<strong>${header.text || ''}</strong>`;
       }
     } else {
-      document.getElementById(prefix + 'MediaField').style.display = 'none';
-      const previewEl = document.getElementById(prefix + 'HeaderPreview');
-      if (previewEl) previewEl.style.display = 'none';
+      if (mediaField) mediaField.style.display = 'block';
+      if (headerPreview) headerPreview.style.display = 'none';
     }
 
     // Fill Footer
@@ -431,6 +499,7 @@ const Campaigns = {
     preview.innerHTML = html;
   },
 
+  // ✅ FIXED: saveCampaign — Template language save karo
   async saveCampaign(action, campaignType) {
     const name = document.getElementById('bName')?.value?.trim();
     if (!name) return alert('Campaign name required!');
@@ -456,6 +525,7 @@ const Campaigns = {
       footer: document.getElementById('bFooter')?.value?.trim() || '',
       templateId: templateId || null,
       templateName: tpl?.name || null,
+      templateLanguage: tpl?.language || 'en',  // ✅ FIXED: Save template language
       templateComponents: tpl?.components || [],
       whatsappNumberId: waNumberId,
       whatsappToken: waToken,
@@ -499,7 +569,7 @@ const Campaigns = {
     return sn.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  // ✅ FIXED: sendOne with template support
+  // ✅ FIXED: sendOne with template support + correct language fallback
   async sendOne(phone, message, media, campaignId, accessToken, phoneNumberId, templateData) {
     if (!accessToken || !phoneNumberId) {
       return { ok: false, error: 'WhatsApp not configured', status: 'config_error' };
@@ -519,7 +589,7 @@ const Campaigns = {
           type: 'template',
           template: {
             name: templateData.name,
-            language: { code: templateData.language || 'en_US' }
+            language: { code: templateData.language || 'en' }  // ✅ FIXED: 'en' instead of 'en_US'
           }
         };
 
@@ -530,14 +600,15 @@ const Campaigns = {
         const buttons = components.find(c => c.type === 'BUTTONS');
         const templateComponents = [];
 
-        // Header media
+        // Header media — campaign ki uploaded media use karo agar hai
         if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
-          if (header.example?.header_handle?.length > 0) {
+          const mediaUrl = media || header.example?.header_handle?.[0] || '';
+          if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
             templateComponents.push({
               type: 'header',
               parameters: [{
                 type: header.format.toLowerCase(),
-                [header.format.toLowerCase()]: { link: header.example.header_handle[0] }
+                [header.format.toLowerCase()]: { link: mediaUrl }
               }]
             });
           }
@@ -634,6 +705,7 @@ const Campaigns = {
     }
   },
 
+  // ✅ FIXED: executeCampaign — Template ki actual language use karo
   async executeCampaign(id) {
     const doc = await db.collection('campaigns').doc(id).get();
     const c = doc.data();
@@ -658,11 +730,10 @@ const Campaigns = {
 
     showToast(`Sending to ${contacts.length} contacts...`, 'info');
 
-    // ✅ Template data for campaign
+    // ✅ FIXED: Template data with actual template language
     const templateData = c.templateName ? {
       name: c.templateName,
-      language: (c.templateComponents || []).find(cmp => cmp.type === 'BODY')?.language || 
-                (c.templateComponents || []).find(cmp => cmp.type === 'HEADER')?.language || 'en_US',
+      language: c.templateLanguage || 'en',  // ✅ FIXED: Use saved template language
       components: c.templateComponents || []
     } : null;
 
