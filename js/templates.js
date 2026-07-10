@@ -1,28 +1,22 @@
 // ==========================================
-// js/templates.js — Complete WhatsApp Template Manager
-// FIXED: Meta API + Firebase Storage issues
+// js/templates.js — Advanced Meta WhatsApp Template Manager
+// COMPLETE UPGRADE - All existing features preserved
+// FIXED: Dynamic WABA ID for Meta Sync & Submission
 // ==========================================
 
 const Templates = {
-  // ==================== STATE ====================
   currentTab: 'all',
   currentFilter: '',
   currentCategory: '',
   currentLang: '',
-  editingId: null,
   
-  // Builder state - EXACT Meta format
+  // Builder state
+  editingId: null,
   headerType: 'none',
-  headerText: '',
-  headerMediaUrl: '',
   headerMediaFile: null,
-  headerMediaId: '',
-  bodyText: '',
-  footerText: '',
+  headerMediaUrl: '',
   buttons: [],
-  currentCategory: 'UTILITY',
   currentCatalogueFormat: 'catalogue',
-  customValidity: false,
 
   // ==================== GET CONFIG ====================
   async getConfig() {
@@ -30,7 +24,7 @@ const Templates = {
     return doc.data() || {};
   },
 
-  // ==================== RENDER - MAIN LIST ====================
+  // ==================== RENDER ====================
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading templates...</p>';
     await this.fetchFromMeta();
@@ -371,22 +365,26 @@ const Templates = {
     return div.innerHTML;
   },
 
-  // ==================== SYNC FROM META ====================
+  // ==================== SYNC FROM META (FIXED - Dynamic WABA ID) ====================
   async fetchFromMeta() {
     const cfg = await this.getConfig();
     if (!cfg?.accessToken) {
-      console.warn('WhatsApp not configured');
+      console.warn('WhatsApp not configured — no access token');
       return;
     }
     
-    // Get WhatsApp Business Account ID
-    const wabaId = cfg.wabaId || cfg.businessAccountId;
+    // ✅ Dynamic WABA ID — settings se lo, nahi to phoneNumberId se kaam chalao
+    const wabaId = cfg.wabaId || cfg.businessAccountId || cfg.phoneNumberId;
+    
     if (!wabaId) {
-      console.warn('WhatsApp Business Account ID not configured');
+      console.warn('No WABA ID or Phone Number ID configured');
+      showToast('❌ WhatsApp Business Account ID not found in settings', 'error');
       return;
     }
 
     try {
+      console.log('🔄 Syncing templates from Meta using ID:', wabaId);
+      
       const res = await fetch(
         `https://graph.facebook.com/v22.0/${wabaId}/message_templates?limit=100`,
         {
@@ -396,6 +394,7 @@ const Templates = {
       const result = await res.json();
       
       if (res.ok && result.data) {
+        let syncCount = 0;
         for (const mt of result.data) {
           const existing = await db.collection('templates').where('name', '==', mt.name).get();
           const data = {
@@ -414,10 +413,12 @@ const Templates = {
           } else {
             await existing.docs[0].ref.update(data);
           }
+          syncCount++;
         }
-        showToast('✅ Synced templates from Meta', 'success');
+        showToast(`✅ Synced ${syncCount} templates from Meta`, 'success');
+        console.log(`✅ ${syncCount} templates synced`);
       } else {
-        console.error('Sync error:', result);
+        console.error('❌ Sync failed:', result);
         if (result.error) {
           showToast('❌ Sync failed: ' + (result.error.message || 'Unknown error'), 'error');
         }
@@ -925,47 +926,54 @@ const Templates = {
     this.updatePreview();
   },
 
+  // ==================== UPLOAD HEADER MEDIA (FIXED) ====================
   async uploadHeaderMedia(input) {
     const file = input.files[0];
     if (!file) return;
     
-    // Check file size (max 5MB for images, 10MB for videos)
-    const maxSize = file.type.startsWith('video/') ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    // Check file size
+    const maxSize = file.type.startsWith('video/') ? 16 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
       showToast(`❌ File too large. Max ${maxSize/1024/1024}MB`, 'error');
+      return;
+    }
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/mov', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      showToast(`❌ Unsupported file type: ${file.type}`, 'error');
       return;
     }
 
     try {
       showToast('Uploading...', 'info');
       
-      // Upload to Firebase Storage with proper permissions
-      const path = `templates/headers/${Date.now()}_${file.name}`;
+      const path = `templates/headers/${getCurrentClientId() || 'system'}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const ref = storage.ref(path);
       
-      // Upload with metadata
-      const snapshot = await ref.put(file, {
+      const metadata = {
         contentType: file.type,
         customMetadata: {
           uploadedBy: getCurrentClientId() || 'system',
-          uploadedAt: new Date().toISOString()
+          uploadedAt: new Date().toISOString(),
+          originalName: file.name
         }
-      });
+      };
       
+      const snapshot = await ref.put(file, metadata);
       const url = await snapshot.ref.getDownloadURL();
       
-      // Update UI
       const urlInput = document.getElementById('tplHeaderMediaUrl');
       if (urlInput) urlInput.value = url;
       
       const preview = document.getElementById('headerMediaPreview');
       if (preview) {
         if (file.type.startsWith('image/')) {
-          preview.innerHTML = `<img src="${url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;">`;
+          preview.innerHTML = `<img src="${url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;" alt="Header preview">`;
         } else if (file.type.startsWith('video/')) {
           preview.innerHTML = `<video src="${url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;" controls></video>`;
         } else {
-          preview.innerHTML = `<div class="border rounded p-2 mt-2"><i class="fas fa-file me-2"></i> ${file.name}</div>`;
+          preview.innerHTML = `<div class="border rounded p-3 mt-2 bg-light"><i class="fas fa-file me-2"></i>${file.name}</div>`;
         }
       }
       
@@ -973,10 +981,11 @@ const Templates = {
       this.headerMediaFile = file;
       showToast('✅ Media uploaded successfully!', 'success');
       this.updatePreview();
+      
     } catch(e) {
       console.error('Upload error:', e);
       if (e.code === 'storage/unauthorized') {
-        showToast('❌ Permission denied. Please check Firebase Storage rules.', 'error');
+        showToast('❌ Permission denied. Check Firebase Storage rules.', 'error');
       } else {
         showToast('❌ Upload failed: ' + e.message, 'error');
       }
@@ -1230,7 +1239,8 @@ const Templates = {
   },
 
   // ==================== SAVE TEMPLATE ====================
-  async saveTemplate() {
+  async saveTemplate(editId = null) {
+    const id = editId || this.editingId;
     const name = document.getElementById('tplName')?.value?.trim();
     const body = document.getElementById('tplBody')?.value?.trim();
     
@@ -1279,7 +1289,7 @@ const Templates = {
     
     const data = {
       name: name.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60),
-      category: this.currentCategory,
+      category: this.currentCategory || document.getElementById('tplCategory')?.value || 'UTILITY',
       language: document.getElementById('tplLanguage')?.value || 'en',
       components,
       clientId: getCurrentClientId(),
@@ -1287,13 +1297,14 @@ const Templates = {
     };
     
     try {
-      if (this.editingId) {
-        await db.collection('templates').doc(this.editingId).update(data);
+      if (id) {
+        await db.collection('templates').doc(id).update(data);
         showToast('✅ Template updated!', 'success');
       } else {
         data.metaStatus = 'DRAFT';
         data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await db.collection('templates').add(data);
+        const ref = await db.collection('templates').add(data);
+        this.editingId = ref.id;
         showToast('✅ Template saved as draft!', 'success');
       }
       this.render();
@@ -1302,28 +1313,34 @@ const Templates = {
     }
   },
 
-  // ==================== SUBMIT TO META ====================
-  async submitToMeta() {
-    const name = document.getElementById('tplName')?.value?.trim();
-    if (!name) return showToast('❌ Template name is required!', 'error');
+  // ==================== SUBMIT TO META (FIXED - Dynamic WABA ID) ====================
+  async submitToMeta(editId = null) {
+    const id = editId || this.editingId;
     
-    // Save first
-    await this.saveTemplate();
+    if (!id) {
+      await this.saveTemplate();
+      if (!this.editingId) {
+        return showToast('❌ Please save the template first!', 'error');
+      }
+    }
     
-    // Find the template
-    const templateName = name.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60);
-    const doc = await db.collection('templates').where('name', '==', templateName).get();
-    if (doc.empty) return showToast('❌ Template not found. Please save first.', 'error');
+    const docId = id || this.editingId;
+    const doc = await db.collection('templates').doc(docId).get();
     
-    const tpl = doc.docs[0].data();
+    if (!doc.exists) {
+      return showToast('❌ Template not found. Please save first.', 'error');
+    }
+    
+    const tpl = doc.data();
     const cfg = await this.getConfig();
     
     if (!cfg?.accessToken) {
       return showToast('❌ WhatsApp not configured. Please set up WhatsApp settings.', 'error');
     }
     
-    // Get WhatsApp Business Account ID
-    const wabaId = cfg.wabaId || cfg.businessAccountId;
+    // ✅ Dynamic WABA ID
+    const wabaId = cfg.wabaId || cfg.businessAccountId || cfg.phoneNumberId;
+    
     if (!wabaId) {
       return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
     }
@@ -1331,12 +1348,13 @@ const Templates = {
     const payload = {
       name: tpl.name,
       category: tpl.category || 'UTILITY',
-      language: tpl.language || 'en',
+      language: tpl.language || 'en_US',
       components: tpl.components || []
     };
 
     try {
       showToast('⏳ Submitting to Meta...', 'info');
+      console.log('📤 Submitting to Meta:', { wabaId, name: payload.name });
       
       const res = await fetch(
         `https://graph.facebook.com/v22.0/${wabaId}/message_templates`,
@@ -1351,8 +1369,10 @@ const Templates = {
       );
       const result = await res.json();
       
+      console.log('📥 Meta Response:', result);
+      
       if (res.ok && result.id) {
-        await doc.docs[0].ref.update({
+        await doc.ref.update({
           metaTemplateId: result.id,
           metaStatus: result.status || 'PENDING',
           submittedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1367,6 +1387,7 @@ const Templates = {
       }
     } catch (err) { 
       showToast('❌ Error: ' + err.message, 'error');
+      console.error('Submission error:', err);
     }
   }
 };
