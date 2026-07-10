@@ -1313,81 +1313,129 @@ const Templates = {
     }
   },
 
-  // ==================== SUBMIT TO META (FIXED - Dynamic WABA ID) ====================
-  async submitToMeta(editId = null) {
+  /// ==================== SUBMIT TO META (FIXED - Media Support) ====================
+async submitToMeta(editId = null) {
     const id = editId || this.editingId;
     
     if (!id) {
-      await this.saveTemplate();
-      if (!this.editingId) {
-        return showToast('❌ Please save the template first!', 'error');
-      }
+        await this.saveTemplate();
+        if (!this.editingId) {
+            return showToast('❌ Please save the template first!', 'error');
+        }
     }
     
     const docId = id || this.editingId;
     const doc = await db.collection('templates').doc(docId).get();
     
     if (!doc.exists) {
-      return showToast('❌ Template not found. Please save first.', 'error');
+        return showToast('❌ Template not found. Please save first.', 'error');
     }
     
     const tpl = doc.data();
     const cfg = await this.getConfig();
     
     if (!cfg?.accessToken) {
-      return showToast('❌ WhatsApp not configured. Please set up WhatsApp settings.', 'error');
+        return showToast('❌ WhatsApp not configured.', 'error');
     }
     
-    // ✅ Dynamic WABA ID
     const wabaId = cfg.wabaId || cfg.businessAccountId || cfg.phoneNumberId;
-    
     if (!wabaId) {
-      return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
+        return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
+    }
+
+    // ✅ FIX: Clean components before sending to Meta
+    let cleanComponents = [];
+    const components = tpl.components || [];
+    
+    for (const comp of components) {
+        const clean = { type: comp.type };
+        
+        if (comp.type === 'HEADER') {
+            clean.format = comp.format || 'TEXT';
+            
+            if (comp.format === 'TEXT' || comp.format === 'LOCATION') {
+                // Text/Location header
+                if (comp.text) clean.text = comp.text;
+            } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)) {
+                // Media header — Meta needs example with publicly accessible URL
+                if (comp.example?.header_handle?.length > 0) {
+                    const mediaUrl = comp.example.header_handle[0];
+                    // Only include if it's a valid public URL (not WhatsApp CDN)
+                    if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
+                        clean.example = {
+                            header_handle: [mediaUrl],
+                            header_text: comp.text || ''
+                        };
+                    }
+                    // If CDN URL, omit example — Meta will use the original approved media
+                }
+            }
+        } else if (comp.type === 'BODY') {
+            if (comp.text) clean.text = comp.text;
+        } else if (comp.type === 'FOOTER') {
+            if (comp.text) clean.text = comp.text;
+        } else if (comp.type === 'BUTTONS') {
+            if (comp.buttons?.length > 0) {
+                clean.buttons = comp.buttons.map(b => {
+                    const btn = { type: b.type, text: b.text || '' };
+                    if (b.type === 'URL' && b.url) btn.url = b.url;
+                    if (b.type === 'PHONE_NUMBER' && b.phone_number) btn.phone_number = b.phone_number;
+                    if (b.type === 'COPY_CODE' && b.example) btn.example = b.example;
+                    return btn;
+                });
+            }
+        }
+        
+        cleanComponents.push(clean);
+    }
+
+    // ✅ Validate: Body must exist
+    const hasBody = cleanComponents.some(c => c.type === 'BODY' && c.text?.trim());
+    if (!hasBody) {
+        return showToast('❌ Template must have a body!', 'error');
     }
 
     const payload = {
-      name: tpl.name,
-      category: tpl.category || 'UTILITY',
-      language: tpl.language || 'en_US',
-      components: tpl.components || []
+        name: tpl.name,
+        category: tpl.category || 'UTILITY',
+        language: tpl.language || 'en_US',
+        components: cleanComponents
     };
 
     try {
-      showToast('⏳ Submitting to Meta...', 'info');
-      console.log('📤 Submitting to Meta:', { wabaId, name: payload.name });
-      
-      const res = await fetch(
-        `https://graph.facebook.com/v22.0/${wabaId}/message_templates`,
-        {
-          method: 'POST',
-          headers: { 
-            'Authorization': 'Bearer ' + cfg.accessToken, 
-            'Content-Type': 'application/json' 
-          },
-          body: JSON.stringify(payload)
+        showToast('⏳ Submitting to Meta...', 'info');
+        console.log('📤 Submitting:', JSON.stringify({ wabaId, payload }, null, 2));
+        
+        const res = await fetch(
+            `https://graph.facebook.com/v22.0/${wabaId}/message_templates`,
+            {
+                method: 'POST',
+                headers: { 
+                    'Authorization': 'Bearer ' + cfg.accessToken, 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+        const result = await res.json();
+        
+        console.log('📥 Meta Response:', result);
+        
+        if (res.ok && result.id) {
+            await doc.ref.update({
+                metaTemplateId: result.id,
+                metaStatus: result.status || 'PENDING',
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            showToast('✅ Template submitted for review!', 'success');
+            await this.fetchFromMeta();
+            this.render();
+        } else {
+            let errorMsg = result.error?.message || result.error?.error_user_msg || 'Unknown error';
+            showToast('❌ Submission failed: ' + errorMsg, 'error');
+            console.error('Meta API Error:', result.error);
         }
-      );
-      const result = await res.json();
-      
-      console.log('📥 Meta Response:', result);
-      
-      if (res.ok && result.id) {
-        await doc.ref.update({
-          metaTemplateId: result.id,
-          metaStatus: result.status || 'PENDING',
-          submittedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showToast('✅ Template submitted for review!', 'success');
-        await this.fetchFromMeta();
-        this.render();
-      } else {
-        const errorMsg = result.error?.message || JSON.stringify(result);
-        showToast('❌ Submission failed: ' + errorMsg, 'error');
-        console.error('Meta API Error:', result);
-      }
     } catch (err) { 
-      showToast('❌ Error: ' + err.message, 'error');
-      console.error('Submission error:', err);
+        showToast('❌ Error: ' + err.message, 'error');
     }
-  }
-};
+}
