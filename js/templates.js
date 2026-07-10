@@ -1364,19 +1364,16 @@ async submitToMeta(editId = null) {
                 // Text/Location header
                 if (comp.text) clean.text = comp.text;
             } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)) {
-                // Media header — Meta needs example with publicly accessible URL
-                if (comp.example?.header_handle?.length > 0) {
-                    const mediaUrl = comp.example.header_handle[0];
-                    // Only include if it's a valid public URL (not WhatsApp CDN)
-                    if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
-                        clean.example = {
-                            header_handle: [mediaUrl],
-                            header_text: comp.text || ''
-                        };
-                    }
-                    // If CDN URL, omit example — Meta will use the original approved media
+            if (comp.example?.header_handle?.length > 0) {
+                const mediaUrl = comp.example.header_handle[0];
+                if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
+                    // ✅ FIX: Sirf header_handle — header_text hatao
+                    clean.example = {
+                        header_handle: [mediaUrl]
+                    };
                 }
             }
+        }
         } else if (comp.type === 'BODY') {
             if (comp.text) clean.text = comp.text;
         } else if (comp.type === 'FOOTER') {
