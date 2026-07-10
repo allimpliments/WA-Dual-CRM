@@ -1,23 +1,36 @@
 // ==========================================
-// js/templates.js — Advanced Meta WhatsApp Template Manager
-// COMPLETE UPGRADE - All existing features preserved
+// js/templates.js — Complete WhatsApp Template Manager
+// FIXED: Meta API + Firebase Storage issues
 // ==========================================
 
 const Templates = {
+  // ==================== STATE ====================
   currentTab: 'all',
   currentFilter: '',
   currentCategory: '',
   currentLang: '',
-  
-  // Builder state
   editingId: null,
+  
+  // Builder state - EXACT Meta format
   headerType: 'none',
-  headerMediaFile: null,
+  headerText: '',
   headerMediaUrl: '',
+  headerMediaFile: null,
+  headerMediaId: '',
+  bodyText: '',
+  footerText: '',
   buttons: [],
+  currentCategory: 'UTILITY',
   currentCatalogueFormat: 'catalogue',
+  customValidity: false,
 
-  // ==================== RENDER ====================
+  // ==================== GET CONFIG ====================
+  async getConfig() {
+    const doc = await db.collection('settings').doc('whatsapp').get();
+    return doc.data() || {};
+  },
+
+  // ==================== RENDER - MAIN LIST ====================
   async render() {
     contentArea.innerHTML = '<p class="text-center py-5">Loading templates...</p>';
     await this.fetchFromMeta();
@@ -52,49 +65,146 @@ const Templates = {
         .tpl-row:hover { background: #f8fafc; }
         .tpl-row.active-row { background: #e8f0fe; border-left: 3px solid #1a73e8; }
         .insight-panel { max-height: 80vh; overflow-y: auto; }
-        .wa-preview { background: #e5ddd5; border-radius: 8px; padding: 12px; max-width: 320px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .wa-preview .wa-header-img { width: 100%; border-radius: 4px; margin-bottom: 6px; }
+        
+        .wa-preview { 
+          background: #e5ddd5; 
+          border-radius: 8px; 
+          padding: 12px; 
+          max-width: 320px; 
+          margin: 0 auto; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .wa-preview .wa-header-img { width: 100%; border-radius: 4px; margin-bottom: 6px; max-height: 200px; object-fit: cover; }
         .wa-preview .wa-header-video { width: 100%; border-radius: 4px; margin-bottom: 6px; background: #000; padding: 20px; text-align: center; color: #fff; }
-        .wa-preview .wa-header-doc { background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .wa-preview .wa-header-doc { background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; border: 1px solid #e4e7ec; }
         .wa-preview .wa-header-text { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #111b21; }
-        .wa-preview .wa-body { font-size: 13px; color: #111b21; white-space: pre-wrap; line-height: 1.4; }
-        .wa-preview .wa-body .var { color: #1a73e8; font-weight: 500; }
+        .wa-preview .wa-body { font-size: 13px; color: #111b21; white-space: pre-wrap; line-height: 1.4; word-break: break-word; }
+        .wa-preview .wa-body .var { color: #1a73e8; font-weight: 500; background: #e8f0fe; padding: 0 4px; border-radius: 3px; }
         .wa-preview .wa-footer { font-size: 11px; color: #667781; margin-top: 4px; }
-        .wa-preview .wa-btn { display: block; text-align: center; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 4px; background: #fff; color: #008069; border: 1px solid #008069; cursor: default; }
-        .wa-preview .wa-btn.quick-reply { display: inline-block; margin-right: 4px; border-radius: 16px; padding: 4px 12px; font-size: 11px; }
+        .wa-preview .wa-btn { 
+          display: block; 
+          text-align: center; 
+          padding: 8px 12px; 
+          border-radius: 20px; 
+          font-size: 12px; 
+          font-weight: 600; 
+          margin-top: 4px; 
+          background: #fff; 
+          color: #008069; 
+          border: 1px solid #008069; 
+          cursor: default;
+        }
+        .wa-preview .wa-btn.quick-reply { 
+          display: inline-block; 
+          margin-right: 4px; 
+          border-radius: 16px; 
+          padding: 4px 14px; 
+          font-size: 11px; 
+          background: #e8f0fe;
+          border: none;
+          color: #1a73e8;
+        }
+        .wa-preview .wa-time { font-size: 11px; color: #667781; text-align: right; margin-top: 4px; }
+        .wa-preview .wa-btn-group { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        
         .tab-btn { border: none; background: transparent; padding: 8px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; color: #5f6368; }
         .tab-btn.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
         .filter-chip { display: inline-block; padding: 4px 10px; border-radius: 16px; font-size: 11px; cursor: pointer; border: 1px solid #dadce0; margin: 2px; }
         .filter-chip.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
-        .template-builder { background: #fff; border: 2px solid #1a73e8; border-radius: 16px; padding: 20px; margin-top: 16px; max-height: 90vh; overflow-y: auto; }
-        .template-builder h5 { color: #1a73e8; font-weight: 700; }
-        .header-type-btn { border: 2px solid #dadce0; background: #fff; padding: 12px 16px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.2s; flex: 1; min-width: 60px; }
-        .header-type-btn:hover { border-color: #1a73e8; }
-        .header-type-btn.active { border-color: #1a73e8; background: #e8f0fe; }
-        .header-type-btn i { font-size: 24px; display: block; margin-bottom: 4px; color: #1a73e8; }
-        .header-type-btn span { font-size: 11px; color: #5f6368; }
-        .media-upload-zone { border: 2px dashed #dadce0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .media-upload-zone:hover { border-color: #1a73e8; background: #f8f9fa; }
-        .media-upload-zone i { font-size: 32px; color: #1a73e8; }
-        .preview-panel { background: #f0f2f5; border-radius: 12px; padding: 16px; max-width: 360px; }
-        .button-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
-        .button-row input, .button-row select { flex: 1; min-width: 100px; }
-        .header-type-grid { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
-        .meta-char-count { font-size: 12px; color: #5f6368; text-align: right; margin-top: 2px; }
-        .category-btn { transition: all 0.2s; }
-        .category-btn.active { border-color: #1a73e8 !important; background: #e8f0fe !important; }
-        .catalogue-format-card { border: 2px solid #dadce0; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; }
-        .catalogue-format-card:hover { border-color: #1a73e8; }
-        .catalogue-format-card.active { border-color: #1a73e8; background: #e8f0fe; }
-        .btn-remove { color: #d93025; background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 6px; }
-        .btn-remove:hover { color: #b31412; }
+        
         .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; display: inline-block; }
         .status-badge.approved { background: #e6f4ea; color: #1e7e34; }
         .status-badge.pending { background: #fef7e0; color: #b65c00; }
         .status-badge.rejected { background: #fce8e6; color: #c62828; }
-        .status-badge.draft { background: #f1f3f4; color: #5f6368; }
         .status-badge.paused { background: #fff3e0; color: #e65100; }
         .status-badge.disabled { background: #f5f5f5; color: #757575; }
+        .status-badge.draft { background: #f1f3f4; color: #5f6368; }
+        
+        .template-builder { 
+          background: #fff; 
+          border-radius: 16px; 
+          padding: 24px; 
+          margin-top: 16px; 
+          max-height: 90vh; 
+          overflow-y: auto;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .meta-label { display: block; font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
+        .meta-label small { font-weight: 400; color: #5f6368; }
+        .meta-input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+        .meta-input:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 3px rgba(26,115,232,0.15); }
+        .meta-textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; min-height: 100px; resize: vertical; font-family: inherit; }
+        .meta-textarea:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 3px rgba(26,115,232,0.15); }
+        .meta-select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; }
+        .meta-char-count { font-size: 12px; color: #5f6368; text-align: right; margin-top: 2px; }
+        .header-type-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 8px 0 12px 0; }
+        @media (max-width: 768px) { .header-type-grid { grid-template-columns: repeat(3, 1fr); } }
+        .header-type-btn { 
+          border: 2px solid #e4e7ec; 
+          background: #fff; 
+          padding: 10px 8px; 
+          border-radius: 10px; 
+          cursor: pointer; 
+          text-align: center; 
+          transition: all 0.2s;
+          min-height: 60px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+        .header-type-btn:hover { border-color: #1a73e8; background: #f8f9fa; }
+        .header-type-btn.active { border-color: #1a73e8; background: #e8f0fe; }
+        .header-type-btn i { font-size: 20px; color: #1a73e8; margin-bottom: 2px; }
+        .header-type-btn span { font-size: 10px; color: #5f6368; }
+        .media-upload-zone { 
+          border: 2px dashed #d1d5db; 
+          border-radius: 10px; 
+          padding: 24px; 
+          text-align: center; 
+          cursor: pointer; 
+          transition: all 0.2s;
+          background: #fafbfc;
+        }
+        .media-upload-zone:hover { border-color: #1a73e8; background: #f8f9fa; }
+        .media-upload-zone i { font-size: 32px; color: #1a73e8; }
+        .media-upload-zone p { margin: 4px 0 0 0; font-size: 13px; color: #5f6368; }
+        .button-row { 
+          display: flex; 
+          flex-wrap: wrap; 
+          gap: 8px; 
+          align-items: center; 
+          padding: 10px 12px; 
+          background: #f8f9fa; 
+          border-radius: 8px; 
+          margin-bottom: 8px; 
+          border: 1px solid #e4e7ec;
+        }
+        .button-row select, .button-row input { flex: 1; min-width: 100px; }
+        .btn-remove { color: #d93025; background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 6px; }
+        .btn-remove:hover { color: #b31412; }
+        .btn-meta-primary { background: #1a73e8; color: #fff; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-meta-primary:hover { background: #1557b0; }
+        .btn-meta-secondary { background: #f1f3f4; color: #1a1a2e; border: 1px solid #d1d5db; padding: 8px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-meta-secondary:hover { background: #e8eaed; }
+        .btn-meta-warning { background: #fbbc04; color: #1a1a2e; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-meta-warning:hover { background: #e5a800; }
+        .preview-panel { background: #f0f2f5; border-radius: 12px; padding: 16px; max-width: 360px; margin: 0 auto; }
+        .catalogue-format-card { 
+          border: 2px solid #e4e7ec; 
+          border-radius: 10px; 
+          padding: 12px; 
+          cursor: pointer; 
+          transition: all 0.2s;
+          background: #fff;
+        }
+        .catalogue-format-card:hover { border-color: #1a73e8; }
+        .catalogue-format-card.active { border-color: #1a73e8; background: #e8f0fe; }
+        .catalogue-format-card h6 { font-weight: 600; color: #1a1a2e; margin-bottom: 2px; }
+        .catalogue-format-card p { font-size: 13px; color: #5f6368; margin: 0; }
+        .category-btn { transition: all 0.2s; }
+        .category-btn.active { border-color: #1a73e8 !important; background: #e8f0fe !important; }
+        .meta-scroll { max-height: 70vh; overflow-y: auto; }
       </style>
 
       <div class="card-widget p-2">
@@ -117,13 +227,17 @@ const Templates = {
           <div class="d-flex flex-wrap gap-1">
             ${statuses.map(s => `<span class="filter-chip ${this.currentFilter===s?'active':''}" onclick="Templates.setFilter('${s}')">${s}</span>`).join('')}
           </div>
-          <button class="btn btn-outline-primary btn-sm ms-auto" onclick="Templates.fetchFromMeta().then(()=>Templates.render())"><i class="fas fa-sync-alt me-1"></i> Sync</button>
-          <button class="btn btn-primary btn-sm" onclick="Templates.showBuilder()"><i class="fas fa-plus me-1"></i> Create</button>
+          <button class="btn btn-outline-primary btn-sm ms-auto" onclick="Templates.fetchFromMeta().then(()=>Templates.render())">
+            <i class="fas fa-sync-alt me-1"></i> Sync
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="Templates.showBuilder()">
+            <i class="fas fa-plus me-1"></i> Create
+          </button>
         </div>
 
         <div class="row g-2">
           <div class="col-md-7">
-            <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
+            <div class="meta-scroll">
               <table class="table table-sm table-hover">
                 <thead class="table-light sticky-top">
                   <tr><th>Template Name</th><th>Category</th><th>Language</th><th>Status</th></tr>
@@ -207,51 +321,90 @@ const Templates = {
       } else if (header.format === 'LOCATION') {
         html += `<div class="wa-header-doc"><i class="fas fa-map-marker-alt" style="font-size:24px;color:#ef4444;"></i><small>Location</small></div>`;
       } else if (header.text) {
-        html += `<div class="wa-header-text">${header.text}</div>`;
+        html += `<div class="wa-header-text">${this.escapeHtml(header.text)}</div>`;
       }
     }
     
     if (body) {
-      html += `<div class="wa-body">${(body.text || '').replace(/\{\{(\d+)\}\}/g, '<span class="var">{{$1}}</span>')}</div>`;
+      html += `<div class="wa-body">${this.highlightVariables(body.text || '')}</div>`;
     }
     
     if (footer) {
-      html += `<div class="wa-footer">${footer.text}</div>`;
+      html += `<div class="wa-footer">${this.escapeHtml(footer.text)}</div>`;
     }
     
     if (buttons && buttons.buttons) {
-      buttons.buttons.forEach(b => {
-        if (b.type === 'QUICK_REPLY') {
-          html += `<span class="wa-btn quick-reply">${b.text}</span>`;
-        } else if (b.type === 'URL') {
-          html += `<div class="wa-btn">🌐 ${b.text || 'Visit'}</div>`;
-        } else if (b.type === 'PHONE_NUMBER') {
-          html += `<div class="wa-btn">📞 ${b.text || 'Call'}</div>`;
-        } else if (b.type === 'COPY_CODE') {
-          html += `<div class="wa-btn">📋 ${b.text || 'Copy'}</div>`;
-        }
-      });
+      const quickReplies = buttons.buttons.filter(b => b.type === 'QUICK_REPLY');
+      const actionButtons = buttons.buttons.filter(b => b.type !== 'QUICK_REPLY');
+      
+      if (quickReplies.length > 0) {
+        html += '<div class="wa-btn-group">';
+        quickReplies.forEach(b => {
+          html += `<span class="wa-btn quick-reply">${this.escapeHtml(b.text)}</span>`;
+        });
+        html += '</div>';
+      }
+      
+      if (actionButtons.length > 0) {
+        actionButtons.forEach(b => {
+          if (b.type === 'URL') html += `<div class="wa-btn">🌐 ${this.escapeHtml(b.text || 'Visit')}</div>`;
+          else if (b.type === 'PHONE_NUMBER') html += `<div class="wa-btn">📞 ${this.escapeHtml(b.text || 'Call')}</div>`;
+          else if (b.type === 'COPY_CODE') html += `<div class="wa-btn">📋 ${this.escapeHtml(b.text || 'Copy')}</div>`;
+          else html += `<div class="wa-btn">${this.escapeHtml(b.text)}</div>`;
+        });
+      }
     }
     
+    html += `<div class="wa-time">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>`;
     html += '</div>';
     return html;
   },
 
+  highlightVariables(text) {
+    return text.replace(/\{\{(\d+)\}\}/g, '<span class="var">{{$1}}</span>');
+  },
+
+  escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
+
   // ==================== SYNC FROM META ====================
   async fetchFromMeta() {
-    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
-    if (!cfg?.accessToken) return;
+    const cfg = await this.getConfig();
+    if (!cfg?.accessToken) {
+      console.warn('WhatsApp not configured');
+      return;
+    }
+    
+    // Get WhatsApp Business Account ID
+    const wabaId = cfg.wabaId || cfg.businessAccountId;
+    if (!wabaId) {
+      console.warn('WhatsApp Business Account ID not configured');
+      return;
+    }
+
     try {
-      const res = await fetch('https://graph.facebook.com/v22.0/342354115627791/message_templates?limit=100', {
-        headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
-      });
+      const res = await fetch(
+        `https://graph.facebook.com/v22.0/${wabaId}/message_templates?limit=100`,
+        {
+          headers: { 'Authorization': 'Bearer ' + cfg.accessToken }
+        }
+      );
       const result = await res.json();
+      
       if (res.ok && result.data) {
         for (const mt of result.data) {
           const existing = await db.collection('templates').where('name', '==', mt.name).get();
           const data = {
-            name: mt.name, category: mt.category, language: mt.language,
-            metaTemplateId: mt.id, metaStatus: mt.status, components: mt.components || [],
+            name: mt.name,
+            category: mt.category,
+            language: mt.language,
+            metaTemplateId: mt.id,
+            metaStatus: mt.status,
+            components: mt.components || [],
             clientId: getCurrentClientId(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           };
@@ -262,8 +415,17 @@ const Templates = {
             await existing.docs[0].ref.update(data);
           }
         }
+        showToast('✅ Synced templates from Meta', 'success');
+      } else {
+        console.error('Sync error:', result);
+        if (result.error) {
+          showToast('❌ Sync failed: ' + (result.error.message || 'Unknown error'), 'error');
+        }
       }
-    } catch (err) { console.error('Sync error:', err); }
+    } catch (err) { 
+      console.error('Sync error:', err);
+      showToast('❌ Sync failed: ' + err.message, 'error');
+    }
   },
 
   // ==================== SEND TEMPLATE ====================
@@ -274,9 +436,11 @@ const Templates = {
     
     const doc = await db.collection('templates').doc(id).get();
     const tpl = doc.data();
-    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
+    const cfg = await this.getConfig();
     
-    if (!cfg?.phoneNumberId || !cfg?.accessToken) return alert('WhatsApp not configured.');
+    if (!cfg?.phoneNumberId || !cfg?.accessToken) {
+      return alert('WhatsApp not configured. Please set up WhatsApp settings first.');
+    }
     
     try {
       const payload = {
@@ -377,34 +541,44 @@ const Templates = {
       console.log('📥 Meta Response:', result);
       
       if (res.ok) {
-        alert('✅ Template sent! Message ID: ' + (result.messages?.[0]?.id || 'N/A'));
+        showToast('✅ Template sent! Message ID: ' + (result.messages?.[0]?.id || 'N/A'), 'success');
       } else {
-        alert('❌ Failed!\nCode: ' + result.error?.code + '\nMessage: ' + result.error?.message);
+        const errorMsg = result.error?.message || 'Unknown error';
+        showToast('❌ Failed: ' + errorMsg, 'error');
+        console.error('Send error:', result);
       }
     } catch (err) { 
-      alert(err.message || 'Error sending template'); 
+      showToast('❌ Error: ' + err.message, 'error');
     }
   },
 
   // ==================== DELETE TEMPLATE ====================
   async deleteTemplate(id) {
-    if (!confirm('Delete?')) return;
+    if (!confirm('Are you sure you want to delete this template?')) return;
     await db.collection('templates').doc(id).delete();
-    alert('Deleted.');
+    showToast('✅ Template deleted.', 'success');
     this.render();
   },
 
-  // ==================== SHOW BUILDER (UPGRADED) ====================
+  // ==================== SHOW BUILDER ====================
   async showBuilder(editId = null) {
     this.editingId = editId;
     this.buttons = [];
     this.headerType = 'none';
+    this.headerText = '';
     this.headerMediaUrl = '';
+    this.bodyText = '';
+    this.footerText = '';
     
     let tpl = {
-      name: '', category: 'UTILITY', language: 'en_US',
-      headerType: 'none', headerText: '', headerMediaUrl: '',
-      body: '', footer: '',
+      name: '',
+      category: 'UTILITY',
+      language: 'en',
+      headerType: 'none',
+      headerText: '',
+      headerMediaUrl: '',
+      body: '',
+      footer: '',
       buttons: [],
       clientId: getCurrentClientId()
     };
@@ -420,7 +594,9 @@ const Templates = {
         
         tpl = {
           ...tpl,
-          name: d.name, category: d.category, language: d.language,
+          name: d.name,
+          category: d.category,
+          language: d.language,
           headerType: header ? (header.format || 'text').toLowerCase() : 'none',
           headerText: header?.text || '',
           headerMediaUrl: header?.example?.header_handle?.[0] || '',
@@ -432,6 +608,9 @@ const Templates = {
         this.buttons = tpl.buttons;
         this.headerType = tpl.headerType;
         this.headerMediaUrl = tpl.headerMediaUrl;
+        this.headerText = tpl.headerText;
+        this.bodyText = tpl.body;
+        this.footerText = tpl.footer;
       }
     }
 
@@ -447,138 +626,199 @@ const Templates = {
     const html = `
       <div class="template-builder">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5>${editId ? 'Edit' : 'Create'} WhatsApp Template</h5>
-          <button class="btn btn-light btn-sm" onclick="Templates.render()">×</button>
+          <h5>${editId ? 'Edit Template' : 'Create Template'}</h5>
+          <button class="btn btn-light btn-sm" onclick="Templates.render()">✕</button>
         </div>
         
-        <div class="row g-3">
+        <div class="row g-4">
+          <!-- LEFT: Form -->
           <div class="col-md-7">
             <!-- Template Name & Language -->
-            <div class="row g-2 mb-3">
-              <div class="col-md-6">
-                <label class="form-label small fw-bold">Template Name *</label>
-                <input id="tplName" class="form-control" value="${tpl.name}" placeholder="Enter a template name" oninput="Templates.updatePreview()">
-                <div class="meta-char-count"><span id="nameCount">${tpl.name.length}</span>/512</div>
+            <div class="mb-3">
+              <label class="meta-label">Template name and language</label>
+              <div class="row g-2">
+                <div class="col-md-8">
+                  <input id="tplName" class="meta-input" value="${this.escapeHtml(tpl.name)}" 
+                         placeholder="Enter a template name" oninput="Templates.updatePreview()">
+                  <div class="meta-char-count"><span id="nameCount">${tpl.name.length}</span>/512</div>
+                </div>
+                <div class="col-md-4">
+                  <select id="tplLanguage" class="meta-select" onchange="Templates.updatePreview()">
+                    <option value="en" ${tpl.language==='en'?'selected':''}>English</option>
+                    <option value="en_US" ${tpl.language==='en_US'?'selected':''}>English (US)</option>
+                    <option value="en_GB" ${tpl.language==='en_GB'?'selected':''}>English (UK)</option>
+                    <option value="hi" ${tpl.language==='hi'?'selected':''}>Hindi</option>
+                    <option value="es" ${tpl.language==='es'?'selected':''}>Spanish</option>
+                    <option value="fr" ${tpl.language==='fr'?'selected':''}>French</option>
+                    <option value="ar" ${tpl.language==='ar'?'selected':''}>Arabic</option>
+                    <option value="pt_BR" ${tpl.language==='pt_BR'?'selected':''}>Portuguese (BR)</option>
+                    <option value="de" ${tpl.language==='de'?'selected':''}>German</option>
+                    <option value="it" ${tpl.language==='it'?'selected':''}>Italian</option>
+                    <option value="ja" ${tpl.language==='ja'?'selected':''}>Japanese</option>
+                    <option value="ko" ${tpl.language==='ko'?'selected':''}>Korean</option>
+                    <option value="ru" ${tpl.language==='ru'?'selected':''}>Russian</option>
+                    <option value="zh_CN" ${tpl.language==='zh_CN'?'selected':''}>Chinese (Simplified)</option>
+                    <option value="zh_HK" ${tpl.language==='zh_HK'?'selected':''}>Chinese (Hong Kong)</option>
+                  </select>
+                </div>
               </div>
-              <div class="col-md-3">
-                <label class="form-label small fw-bold">Category</label>
-                <select id="tplCategory" class="form-select" onchange="Templates.setCategorySelect(this.value)">
-                  <option value="UTILITY" ${tpl.category==='UTILITY'?'selected':''}>Utility</option>
-                  <option value="MARKETING" ${tpl.category==='MARKETING'?'selected':''}>Marketing</option>
-                  <option value="AUTHENTICATION" ${tpl.category==='AUTHENTICATION'?'selected':''}>Authentication</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label small fw-bold">Language</label>
-                <select id="tplLanguage" class="form-select" onchange="Templates.updatePreview()">
-                  <option value="en" ${tpl.language==='en'?'selected':''}>English</option>
-                  <option value="en_US" ${tpl.language==='en_US'?'selected':''}>English (US)</option>
-                  <option value="en_GB" ${tpl.language==='en_GB'?'selected':''}>English (UK)</option>
-                  <option value="hi" ${tpl.language==='hi'?'selected':''}>Hindi</option>
-                  <option value="es" ${tpl.language==='es'?'selected':''}>Spanish</option>
-                  <option value="fr" ${tpl.language==='fr'?'selected':''}>French</option>
-                  <option value="ar" ${tpl.language==='ar'?'selected':''}>Arabic</option>
-                  <option value="pt_BR" ${tpl.language==='pt_BR'?'selected':''}>Portuguese (Brazil)</option>
-                  <option value="de" ${tpl.language==='de'?'selected':''}>German</option>
-                  <option value="it" ${tpl.language==='it'?'selected':''}>Italian</option>
-                  <option value="ja" ${tpl.language==='ja'?'selected':''}>Japanese</option>
-                  <option value="ko" ${tpl.language==='ko'?'selected':''}>Korean</option>
-                  <option value="ru" ${tpl.language==='ru'?'selected':''}>Russian</option>
-                  <option value="zh_CN" ${tpl.language==='zh_CN'?'selected':''}>Chinese (Simplified)</option>
-                  <option value="zh_HK" ${tpl.language==='zh_HK'?'selected':''}>Chinese (Hong Kong)</option>
-                </select>
+            </div>
+
+            <!-- Category -->
+            <div class="mb-3">
+              <label class="meta-label">Category</label>
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <button class="meta-select category-btn ${tpl.category==='UTILITY'?'active':''}" 
+                          style="text-align:left;padding:10px 12px;" 
+                          onclick="Templates.setCategorySelect('UTILITY')" data-cat="UTILITY">
+                    <i class="fas fa-tools me-2"></i> Utility
+                  </button>
+                </div>
+                <div class="col-md-4">
+                  <button class="meta-select category-btn ${tpl.category==='MARKETING'?'active':''}" 
+                          style="text-align:left;padding:10px 12px;" 
+                          onclick="Templates.setCategorySelect('MARKETING')" data-cat="MARKETING">
+                    <i class="fas fa-bullhorn me-2"></i> Marketing
+                  </button>
+                </div>
+                <div class="col-md-4">
+                  <button class="meta-select category-btn ${tpl.category==='AUTHENTICATION'?'active':''}" 
+                          style="text-align:left;padding:10px 12px;" 
+                          onclick="Templates.setCategorySelect('AUTHENTICATION')" data-cat="AUTHENTICATION">
+                    <i class="fas fa-shield-alt me-2"></i> Authentication
+                  </button>
+                </div>
               </div>
             </div>
 
             <!-- Catalogue Format (Marketing only) -->
             <div id="catalogueSection" style="display:${tpl.category==='MARKETING'?'block':'none'}" class="mb-3">
-              <label class="form-label small fw-bold">Catalogue format</label>
+              <label class="meta-label">Catalogue format</label>
               <div class="row g-2">
                 <div class="col-md-6">
-                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='catalogue'?'active':''}" onclick="Templates.setCatalogueFormat('catalogue')">
-                    <h6 class="mb-1"><i class="fas fa-th-list me-2"></i>Catalogue message</h6>
-                    <p class="small text-muted mb-0">Include the entire catalogue to give your users a comprehensive view of all of your products.</p>
+                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='catalogue'?'active':''}" 
+                       onclick="Templates.setCatalogueFormat('catalogue')">
+                    <h6><i class="fas fa-th-list me-2"></i> Catalogue message</h6>
+                    <p>Include the entire catalogue to give your users a comprehensive view of all of your products.</p>
                   </div>
                 </div>
                 <div class="col-md-6">
-                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='multi'?'active':''}" onclick="Templates.setCatalogueFormat('multi')">
-                    <h6 class="mb-1"><i class="fas fa-th me-2"></i>Multi-product message</h6>
-                    <p class="small text-muted mb-0">Include up to 30 products from the catalogue. Useful for showcasing new collection or a specific product category.</p>
+                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='multi'?'active':''}" 
+                       onclick="Templates.setCatalogueFormat('multi')">
+                    <h6><i class="fas fa-th me-2"></i> Multi-product message</h6>
+                    <p>Include up to 30 products from the catalogue. Useful for showcasing new collection or a specific product category.</p>
                   </div>
                 </div>
               </div>
-              <div id="catalogueSetup" class="mt-2 p-2 bg-light rounded" style="display:${tpl.category==='MARKETING'?'block':'none'}">
-                <p class="small text-muted mb-1"><i class="fas fa-info-circle me-1"></i>Connecting a catalogue will allow customers to view, message and send carts containing your products and services via WhatsApp.</p>
-                <button class="btn btn-outline-primary btn-sm" onclick="alert('Manage catalogue connection')"><i class="fas fa-link me-1"></i>Manage catalogue connection</button>
+              <div id="catalogueSetup" class="mt-2 p-3 bg-light rounded" style="display:${tpl.category==='MARKETING'?'block':'none'}">
+                <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i> Connecting a catalogue will allow customers to view, message and send carts containing your products and services via WhatsApp.</p>
+                <button class="btn btn-outline-primary btn-sm" onclick="alert('Manage catalogue connection')">
+                  <i class="fas fa-link me-1"></i> Manage catalogue connection
+                </button>
               </div>
             </div>
 
             <!-- Header -->
-            <label class="form-label small fw-bold">Header <small class="text-muted">· Optional</small></label>
-            <div class="header-type-grid">
-              ${headerTypes.map(ht => `
-                <div class="header-type-btn ${tpl.headerType===ht.id?'active':''}" onclick="Templates.selectHeaderType('${ht.id}')" data-type="${ht.id}">
-                  <i class="fas ${ht.icon}"></i>
-                  <span>${ht.label}</span>
-                </div>
-              `).join('')}
-            </div>
-
-            <div id="headerFields" style="display:${tpl.headerType!=='none'?'block':'none'}">
-              <div id="headerTextField" style="display:${(tpl.headerType==='text'||tpl.headerType==='location')?'block':'none'}">
-                <input id="tplHeaderText" class="form-control mb-2" value="${tpl.headerText}" placeholder="${tpl.headerType==='location'?'Location name':'Header text'}" oninput="Templates.updatePreview()">
-                <div class="meta-char-count"><span id="headerCount">${tpl.headerText.length}</span>/60</div>
-                <button class="btn btn-outline-secondary btn-sm mt-1" onclick="Templates.addVariable('header')"><i class="fas fa-plus"></i> Add variable</button>
+            <div class="mb-2">
+              <label class="meta-label">Header <small>· Optional</small></label>
+              <div class="header-type-grid">
+                ${headerTypes.map(ht => `
+                  <div class="header-type-btn ${tpl.headerType===ht.id?'active':''}" 
+                       onclick="Templates.selectHeaderType('${ht.id}')" data-type="${ht.id}">
+                    <i class="fas ${ht.icon}"></i>
+                    <span>${ht.label}</span>
+                  </div>
+                `).join('')}
               </div>
-              <div id="headerMediaField" style="display:${['image','video','document'].includes(tpl.headerType)?'block':'none'}">
-                <div class="media-upload-zone mb-2" onclick="document.getElementById('headerMediaUpload').click()">
-                  <i class="fas fa-cloud-upload-alt"></i>
-                  <p class="small mt-2 mb-0">Drag and drop to upload<br>Or choose files on your device</p>
+
+              <div id="headerFields" style="display:${tpl.headerType!=='none'?'block':'none'}">
+                <div id="headerTextField" style="display:${(tpl.headerType==='text'||tpl.headerType==='location')?'block':'none'}">
+                  <input id="tplHeaderText" class="meta-input" value="${this.escapeHtml(tpl.headerText)}" 
+                         placeholder="${tpl.headerType==='location'?'Location name':'Add a short line of text to the header of your message in English'}" 
+                         oninput="Templates.updatePreview()">
+                  <div class="meta-char-count"><span id="headerCount">${tpl.headerText.length}</span>/60</div>
+                  <button class="btn btn-outline-secondary btn-sm mt-1" onclick="Templates.addVariable('header')">
+                    <i class="fas fa-plus"></i> Add variable
+                  </button>
                 </div>
-                <input type="file" id="headerMediaUpload" style="display:none" accept="image/*,video/*,.pdf,.doc,.docx" onchange="Templates.uploadHeaderMedia(this)">
-                <input id="tplHeaderMediaUrl" class="form-control mb-2" value="${tpl.headerMediaUrl}" placeholder="Media URL" oninput="Templates.updatePreview()">
-                <div id="headerMediaPreview">${tpl.headerMediaUrl ? `<img src="${tpl.headerMediaUrl}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;">` : ''}</div>
+                <div id="headerMediaField" style="display:${['image','video','document'].includes(tpl.headerType)?'block':'none'}">
+                  <div class="media-upload-zone" onclick="document.getElementById('headerMediaUpload').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag and drop to upload<br>Or choose files on your device</p>
+                  </div>
+                  <input type="file" id="headerMediaUpload" style="display:none" 
+                         accept="image/*,video/*,.pdf,.doc,.docx" 
+                         onchange="Templates.uploadHeaderMedia(this)">
+                  <input id="tplHeaderMediaUrl" class="meta-input mt-2" value="${this.escapeHtml(tpl.headerMediaUrl)}" 
+                         placeholder="Media URL" oninput="Templates.updatePreview()">
+                  <div id="headerMediaPreview">${tpl.headerMediaUrl ? `<img src="${tpl.headerMediaUrl}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;">` : ''}</div>
+                </div>
               </div>
             </div>
 
             <!-- Body -->
-            <label class="form-label small fw-bold mt-2">Body</label>
-            <textarea id="tplBody" class="form-control mb-1" rows="5" placeholder="Enter text in English" oninput="Templates.updatePreview()">${tpl.body}</textarea>
-            <div class="meta-char-count"><span id="bodyCount">${tpl.body.length}</span>/1024</div>
-            <div class="d-flex gap-1 flex-wrap mt-1">
-              <button class="btn btn-outline-secondary btn-sm" onclick="Templates.addVariable('body')"><i class="fas fa-plus"></i> Add variable</button>
-              <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('bold')"><i class="fas fa-bold"></i></button>
-              <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('italic')"><i class="fas fa-italic"></i></button>
-              <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('strike')"><i class="fas fa-strikethrough"></i></button>
-              <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('monospace')"><i class="fas fa-code"></i></button>
-              <button class="btn btn-outline-secondary btn-sm" onclick="Templates.openEmojiPicker()"><i class="far fa-smile"></i></button>
+            <div class="mb-2">
+              <label class="meta-label">Body</label>
+              <textarea id="tplBody" class="meta-textarea" placeholder="Enter text in English" 
+                        oninput="Templates.updatePreview()">${this.escapeHtml(tpl.body)}</textarea>
+              <div class="meta-char-count"><span id="bodyCount">${tpl.body.length}</span>/1024</div>
+              <div class="d-flex gap-1 flex-wrap mt-1">
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.addVariable('body')">
+                  <i class="fas fa-plus"></i> Add variable
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('bold')">
+                  <i class="fas fa-bold"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('italic')">
+                  <i class="fas fa-italic"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('strike')">
+                  <i class="fas fa-strikethrough"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('monospace')">
+                  <i class="fas fa-code"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.openEmojiPicker()">
+                  <i class="far fa-smile"></i>
+                </button>
+              </div>
             </div>
 
             <!-- Footer -->
-            <label class="form-label small fw-bold mt-2">Footer <small class="text-muted">· Optional</small></label>
-            <input id="tplFooter" class="form-control" value="${tpl.footer}" placeholder="Add a short line of text to the bottom of your message in English" oninput="Templates.updatePreview()">
-            <div class="meta-char-count"><span id="footerCount">${tpl.footer.length}</span>/60</div>
+            <div class="mb-2">
+              <label class="meta-label">Footer <small>· Optional</small></label>
+              <input id="tplFooter" class="meta-input" value="${this.escapeHtml(tpl.footer)}" 
+                     placeholder="Add a short line of text to the bottom of your message in English" 
+                     oninput="Templates.updatePreview()">
+              <div class="meta-char-count"><span id="footerCount">${tpl.footer.length}</span>/60</div>
+            </div>
 
             <!-- Buttons -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <label class="form-label small fw-bold mb-0">Buttons <small class="text-muted">· Optional</small></label>
-              <button class="btn btn-outline-primary btn-sm" onclick="Templates.addButton()"><i class="fas fa-plus"></i> Add button</button>
-            </div>
-            <div class="small text-muted mb-2">Create buttons that let customers respond to your message or take action. You can add up to ten buttons. If you add more than three buttons, they will appear in a list.</div>
-            <div id="buttonsContainer">
-              ${this.buttons.map((b, i) => this.renderButtonRow(b, i)).join('')}
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <label class="meta-label mb-0">Buttons <small>· Optional</small></label>
+                <button class="btn btn-outline-primary btn-sm" onclick="Templates.addButton()">
+                  <i class="fas fa-plus"></i> Add button
+                </button>
+              </div>
+              <div class="small text-muted mb-2">Create buttons that let customers respond to your message or take action. You can add up to ten buttons. If you add more than three buttons, they will appear in a list.</div>
+              <div id="buttonsContainer">
+                ${this.buttons.map((b, i) => this.renderButtonRow(b, i)).join('')}
+                ${this.buttons.length === 0 ? '<div class="text-muted small py-2">No buttons added.</div>' : ''}
+              </div>
             </div>
 
             <!-- Validity Period -->
-            <div class="mt-3 p-2 bg-light rounded">
-              <label class="form-label small fw-bold">Message validity period</label>
+            <div class="mb-2 p-3 bg-light rounded">
+              <label class="meta-label">Message validity period</label>
               <div class="small text-muted mb-2">You can set a custom validity period that your message must be delivered by before it expires. If a message has not been delivered within this time frame, you will not be charged and your customer will not see the message.</div>
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="customValidity" onchange="Templates.toggleValidity()">
                 <label class="form-check-label small" for="customValidity">Set custom validity period for your message</label>
               </div>
               <div id="validityOptions" style="display:none;" class="mt-2">
-                <select class="form-select form-select-sm" style="width:auto;">
+                <select class="meta-select" style="width:auto;">
                   <option value="5">5 minutes</option>
                   <option value="10" selected>10 minutes</option>
                   <option value="30">30 minutes</option>
@@ -593,16 +833,22 @@ const Templates = {
             </div>
 
             <!-- Actions -->
-            <div class="mt-3 d-flex gap-2 flex-wrap">
-              <button class="btn btn-primary" onclick="Templates.saveTemplate()"><i class="fas fa-save me-1"></i> Save Draft</button>
-              <button class="btn btn-warning" onclick="Templates.submitToMeta()"><i class="fas fa-paper-plane me-1"></i> Submit for Review</button>
-              <button class="btn btn-light" onclick="Templates.render()">Cancel</button>
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+              <button class="btn btn-primary" onclick="Templates.saveTemplate()">
+                <i class="fas fa-save me-1"></i> Save Draft
+              </button>
+              <button class="btn btn-warning" onclick="Templates.submitToMeta()">
+                <i class="fas fa-paper-plane me-1"></i> Submit for Review
+              </button>
+              <button class="btn btn-light" onclick="Templates.render()">
+                <i class="fas fa-times me-1"></i> Cancel
+              </button>
             </div>
           </div>
 
-          <!-- Preview Column -->
+          <!-- RIGHT: Preview -->
           <div class="col-md-5">
-            <label class="form-label small fw-bold">Template Preview</label>
+            <label class="meta-label">Template preview</label>
             <div class="preview-panel" id="livePreview">
               ${this.generateLivePreview(tpl)}
             </div>
@@ -628,14 +874,18 @@ const Templates = {
     ];
     
     return `
-      <div class="button-row border rounded p-2 mb-2" data-button-index="${index}">
+      <div class="button-row" data-button-index="${index}">
         <select class="form-select form-select-sm" style="width:140px" onchange="Templates.updateButtonType(this, ${index})">
           ${types.map(t => `<option value="${t.id}" ${button.type===t.id?'selected':''}>${t.label}</option>`).join('')}
         </select>
-        <input class="form-control form-control-sm" value="${button.text||''}" placeholder="Button text" maxlength="40" onchange="Templates.updateButtonText(this, ${index})">
-        ${button.type === 'URL' ? `<input class="form-control form-control-sm" value="${button.url||''}" placeholder="https://example.com" onchange="Templates.updateButtonUrl(this, ${index})">` : ''}
-        ${button.type === 'PHONE_NUMBER' ? `<input class="form-control form-control-sm" value="${button.phone_number||''}" placeholder="+91 1234567890" onchange="Templates.updateButtonPhone(this, ${index})">` : ''}
-        ${button.type === 'COPY_CODE' ? `<input class="form-control form-control-sm" value="${button.example||''}" placeholder="Code to copy" onchange="Templates.updateButtonCode(this, ${index})">` : ''}
+        <input class="form-control form-control-sm" value="${this.escapeHtml(button.text||'')}" 
+               placeholder="Button text" maxlength="40" onchange="Templates.updateButtonText(this, ${index})">
+        ${button.type === 'URL' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.url||'')}" 
+               placeholder="https://example.com" onchange="Templates.updateButtonUrl(this, ${index})">` : ''}
+        ${button.type === 'PHONE_NUMBER' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.phone_number||'')}" 
+               placeholder="+91 1234567890" onchange="Templates.updateButtonPhone(this, ${index})">` : ''}
+        ${button.type === 'COPY_CODE' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.example||'')}" 
+               placeholder="Code to copy" onchange="Templates.updateButtonCode(this, ${index})">` : ''}
         <button class="btn-remove" onclick="Templates.removeButton(${index})">×</button>
       </div>
     `;
@@ -646,16 +896,24 @@ const Templates = {
     this.headerType = type;
     document.querySelectorAll('.header-type-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
-    document.getElementById('headerFields').style.display = type === 'none' ? 'none' : 'block';
-    document.getElementById('headerTextField').style.display = (type === 'text' || type === 'location') ? 'block' : 'none';
-    document.getElementById('headerMediaField').style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
+    const fields = document.getElementById('headerFields');
+    if (fields) fields.style.display = type === 'none' ? 'none' : 'block';
+    const textField = document.getElementById('headerTextField');
+    if (textField) textField.style.display = (type === 'text' || type === 'location') ? 'block' : 'none';
+    const mediaField = document.getElementById('headerMediaField');
+    if (mediaField) mediaField.style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
     this.updatePreview();
   },
 
   setCategorySelect(category) {
     this.currentCategory = category;
-    document.getElementById('catalogueSection').style.display = category === 'MARKETING' ? 'block' : 'none';
-    document.getElementById('catalogueSetup').style.display = category === 'MARKETING' ? 'block' : 'none';
+    document.querySelectorAll('.category-btn').forEach(el => {
+      el.classList.toggle('active', el.dataset.cat === category);
+    });
+    const section = document.getElementById('catalogueSection');
+    if (section) section.style.display = category === 'MARKETING' ? 'block' : 'none';
+    const setup = document.getElementById('catalogueSetup');
+    if (setup) setup.style.display = category === 'MARKETING' ? 'block' : 'none';
     this.updatePreview();
   },
 
@@ -670,19 +928,58 @@ const Templates = {
   async uploadHeaderMedia(input) {
     const file = input.files[0];
     if (!file) return;
-    const path = `templates/headers/${Date.now()}_${file.name}`;
-    const ref = storage.ref(path);
+    
+    // Check file size (max 5MB for images, 10MB for videos)
+    const maxSize = file.type.startsWith('video/') ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showToast(`❌ File too large. Max ${maxSize/1024/1024}MB`, 'error');
+      return;
+    }
+
     try {
       showToast('Uploading...', 'info');
-      await ref.put(file);
-      const url = await ref.getDownloadURL();
-      document.getElementById('tplHeaderMediaUrl').value = url;
-      document.getElementById('headerMediaPreview').innerHTML = `<img src="${url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;">`;
+      
+      // Upload to Firebase Storage with proper permissions
+      const path = `templates/headers/${Date.now()}_${file.name}`;
+      const ref = storage.ref(path);
+      
+      // Upload with metadata
+      const snapshot = await ref.put(file, {
+        contentType: file.type,
+        customMetadata: {
+          uploadedBy: getCurrentClientId() || 'system',
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      
+      const url = await snapshot.ref.getDownloadURL();
+      
+      // Update UI
+      const urlInput = document.getElementById('tplHeaderMediaUrl');
+      if (urlInput) urlInput.value = url;
+      
+      const preview = document.getElementById('headerMediaPreview');
+      if (preview) {
+        if (file.type.startsWith('image/')) {
+          preview.innerHTML = `<img src="${url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;">`;
+        } else if (file.type.startsWith('video/')) {
+          preview.innerHTML = `<video src="${url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;" controls></video>`;
+        } else {
+          preview.innerHTML = `<div class="border rounded p-2 mt-2"><i class="fas fa-file me-2"></i> ${file.name}</div>`;
+        }
+      }
+      
       this.headerMediaUrl = url;
-      showToast('✅ Uploaded!', 'success');
+      this.headerMediaFile = file;
+      showToast('✅ Media uploaded successfully!', 'success');
       this.updatePreview();
     } catch(e) {
-      showToast('Upload failed: ' + e.message, 'error');
+      console.error('Upload error:', e);
+      if (e.code === 'storage/unauthorized') {
+        showToast('❌ Permission denied. Please check Firebase Storage rules.', 'error');
+      } else {
+        showToast('❌ Upload failed: ' + e.message, 'error');
+      }
     }
   },
 
@@ -742,12 +1039,12 @@ const Templates = {
 
   addButton() {
     if (this.buttons.length >= 10) {
-      alert('Maximum 10 buttons allowed!');
+      showToast('❌ Maximum 10 buttons allowed!', 'error');
       return;
     }
     const quickReplies = this.buttons.filter(b => b.type === 'QUICK_REPLY').length;
     if (quickReplies >= 3) {
-      alert('Maximum 3 Quick Reply buttons allowed!');
+      showToast('❌ Maximum 3 Quick Reply buttons allowed!', 'error');
       return;
     }
     this.buttons.push({ type: 'QUICK_REPLY', text: '' });
@@ -794,7 +1091,7 @@ const Templates = {
     const container = document.getElementById('buttonsContainer');
     if (!container) return;
     if (this.buttons.length === 0) {
-      container.innerHTML = '<div class="text-muted small py-2">No buttons added. Click "Add button" to create one.</div>';
+      container.innerHTML = '<div class="text-muted small py-2">No buttons added.</div>';
       return;
     }
     container.innerHTML = this.buttons.map((b, i) => this.renderButtonRow(b, i)).join('');
@@ -802,7 +1099,8 @@ const Templates = {
 
   toggleValidity() {
     const checked = document.getElementById('customValidity')?.checked;
-    document.getElementById('validityOptions').style.display = checked ? 'block' : 'none';
+    const options = document.getElementById('validityOptions');
+    if (options) options.style.display = checked ? 'block' : 'none';
   },
 
   // ==================== PREVIEW ====================
@@ -818,8 +1116,6 @@ const Templates = {
     const preview = document.getElementById('livePreview');
     if (!preview) return;
 
-    const name = document.getElementById('tplName')?.value || '';
-    const language = document.getElementById('tplLanguage')?.value || 'en';
     const headerType = this.headerType;
     const headerText = document.getElementById('tplHeaderText')?.value || '';
     const headerMediaUrl = document.getElementById('tplHeaderMediaUrl')?.value || this.headerMediaUrl;
@@ -845,25 +1141,25 @@ const Templates = {
     }
     
     html += `<div class="wa-body">${this.formatPreviewText(body) || 'Enter your message...'}</div>`;
-    if (footer) html += `<div class="wa-footer">${footer}</div>`;
+    if (footer) html += `<div class="wa-footer">${this.escapeHtml(footer)}</div>`;
     
     const quickReplies = this.buttons.filter(b => b.type === 'QUICK_REPLY' && b.text);
     const actionButtons = this.buttons.filter(b => b.type !== 'QUICK_REPLY' && b.text);
     
     if (quickReplies.length > 0) {
-      html += '<div class="d-flex flex-wrap gap-1 mt-1">';
+      html += '<div class="wa-btn-group">';
       quickReplies.forEach(b => {
-        html += `<span class="wa-btn quick-reply">${b.text}</span>`;
+        html += `<span class="wa-btn quick-reply">${this.escapeHtml(b.text)}</span>`;
       });
       html += '</div>';
     }
     
     if (actionButtons.length > 0) {
       actionButtons.forEach(b => {
-        if (b.type === 'URL') html += `<div class="wa-btn">🌐 ${b.text}</div>`;
-        else if (b.type === 'PHONE_NUMBER') html += `<div class="wa-btn">📞 ${b.text}</div>`;
-        else if (b.type === 'COPY_CODE') html += `<div class="wa-btn">📋 ${b.text}</div>`;
-        else html += `<div class="wa-btn">${b.text}</div>`;
+        if (b.type === 'URL') html += `<div class="wa-btn">🌐 ${this.escapeHtml(b.text)}</div>`;
+        else if (b.type === 'PHONE_NUMBER') html += `<div class="wa-btn">📞 ${this.escapeHtml(b.text)}</div>`;
+        else if (b.type === 'COPY_CODE') html += `<div class="wa-btn">📋 ${this.escapeHtml(b.text)}</div>`;
+        else html += `<div class="wa-btn">${this.escapeHtml(b.text)}</div>`;
       });
     }
     
@@ -872,11 +1168,13 @@ const Templates = {
       html += `<div class="text-center mt-1" style="font-size:10px;color:#667781;">See all options</div>`;
     }
     
+    html += `<div class="wa-time">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>`;
     html += '</div>';
     preview.innerHTML = html;
   },
 
   formatPreviewText(text) {
+    if (!text) return '';
     return text
       .replace(/\{\{([^}]+)\}\}/g, '<span class="var">{{$1}}</span>')
       .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
@@ -890,7 +1188,7 @@ const Templates = {
     let html = '<div class="wa-preview">';
     if (tpl.headerType !== 'none') {
       if (tpl.headerType === 'text' && tpl.headerText) {
-        html += `<div class="wa-header-text">${tpl.headerText}</div>`;
+        html += `<div class="wa-header-text">${this.escapeHtml(tpl.headerText)}</div>`;
       } else if (tpl.headerType === 'image' && tpl.headerMediaUrl) {
         html += `<img src="${tpl.headerMediaUrl}" class="wa-header-img" alt="Header">`;
       } else if (tpl.headerType === 'video' && tpl.headerMediaUrl) {
@@ -898,19 +1196,20 @@ const Templates = {
       } else if (tpl.headerType === 'document' && tpl.headerMediaUrl) {
         html += `<div class="wa-header-doc"><i class="fas fa-file-pdf" style="font-size:24px;color:#ef4444;"></i><small>Document</small></div>`;
       } else if (tpl.headerType === 'location') {
-        html += `<div class="wa-header-doc"><i class="fas fa-map-marker-alt" style="font-size:24px;color:#ef4444;"></i><small>${tpl.headerText || 'Location'}</small></div>`;
+        html += `<div class="wa-header-doc"><i class="fas fa-map-marker-alt" style="font-size:24px;color:#ef4444;"></i><small>${this.escapeHtml(tpl.headerText) || 'Location'}</small></div>`;
       }
     }
-    html += `<div class="wa-body">${tpl.body || 'Enter your message...'}</div>`;
-    if (tpl.footer) html += `<div class="wa-footer">${tpl.footer}</div>`;
+    html += `<div class="wa-body">${this.escapeHtml(tpl.body) || 'Enter your message...'}</div>`;
+    if (tpl.footer) html += `<div class="wa-footer">${this.escapeHtml(tpl.footer)}</div>`;
     tpl.buttons.forEach(b => {
       if (b.text) {
-        if (b.type === 'QUICK_REPLY') html += `<span class="wa-btn quick-reply">${b.text}</span>`;
-        else if (b.type === 'URL') html += `<div class="wa-btn">🌐 ${b.text}</div>`;
-        else if (b.type === 'PHONE_NUMBER') html += `<div class="wa-btn">📞 ${b.text}</div>`;
-        else if (b.type === 'COPY_CODE') html += `<div class="wa-btn">📋 ${b.text}</div>`;
+        if (b.type === 'QUICK_REPLY') html += `<span class="wa-btn quick-reply">${this.escapeHtml(b.text)}</span>`;
+        else if (b.type === 'URL') html += `<div class="wa-btn">🌐 ${this.escapeHtml(b.text)}</div>`;
+        else if (b.type === 'PHONE_NUMBER') html += `<div class="wa-btn">📞 ${this.escapeHtml(b.text)}</div>`;
+        else if (b.type === 'COPY_CODE') html += `<div class="wa-btn">📋 ${this.escapeHtml(b.text)}</div>`;
       }
     });
+    html += `<div class="wa-time">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>`;
     html += '</div>';
     return html;
   },
@@ -920,10 +1219,14 @@ const Templates = {
     const header = document.getElementById('tplHeaderText')?.value || '';
     const body = document.getElementById('tplBody')?.value || '';
     const footer = document.getElementById('tplFooter')?.value || '';
-    document.getElementById('nameCount').textContent = name.length;
-    document.getElementById('headerCount').textContent = header.length;
-    document.getElementById('bodyCount').textContent = body.length;
-    document.getElementById('footerCount').textContent = footer.length;
+    const nameEl = document.getElementById('nameCount');
+    const headerEl = document.getElementById('headerCount');
+    const bodyEl = document.getElementById('bodyCount');
+    const footerEl = document.getElementById('footerCount');
+    if (nameEl) nameEl.textContent = name.length;
+    if (headerEl) headerEl.textContent = header.length;
+    if (bodyEl) bodyEl.textContent = body.length;
+    if (footerEl) footerEl.textContent = footer.length;
   },
 
   // ==================== SAVE TEMPLATE ====================
@@ -931,8 +1234,8 @@ const Templates = {
     const name = document.getElementById('tplName')?.value?.trim();
     const body = document.getElementById('tplBody')?.value?.trim();
     
-    if (!name) return alert('Template name is required!');
-    if (!body) return alert('Body content is required!');
+    if (!name) return showToast('❌ Template name is required!', 'error');
+    if (!body) return showToast('❌ Body content is required!', 'error');
     
     const components = [];
     
@@ -976,8 +1279,8 @@ const Templates = {
     
     const data = {
       name: name.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60),
-      category: document.getElementById('tplCategory')?.value || 'UTILITY',
-      language: document.getElementById('tplLanguage')?.value || 'en_US',
+      category: this.currentCategory,
+      language: document.getElementById('tplLanguage')?.value || 'en',
       components,
       clientId: getCurrentClientId(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -986,59 +1289,84 @@ const Templates = {
     try {
       if (this.editingId) {
         await db.collection('templates').doc(this.editingId).update(data);
-        alert('✅ Template updated!');
+        showToast('✅ Template updated!', 'success');
       } else {
         data.metaStatus = 'DRAFT';
         data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         await db.collection('templates').add(data);
-        alert('✅ Template saved as draft!');
+        showToast('✅ Template saved as draft!', 'success');
       }
       this.render();
-    } catch (err) { alert('Error: ' + err.message); }
+    } catch (err) { 
+      showToast('❌ Error: ' + err.message, 'error');
+    }
   },
 
   // ==================== SUBMIT TO META ====================
   async submitToMeta() {
     const name = document.getElementById('tplName')?.value?.trim();
-    if (!name) return alert('Template name is required!');
+    if (!name) return showToast('❌ Template name is required!', 'error');
     
     // Save first
     await this.saveTemplate();
     
-    // Then submit
-    const doc = await db.collection('templates').where('name', '==', name.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60)).get();
-    if (doc.empty) return alert('Template not found. Please save first.');
+    // Find the template
+    const templateName = name.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 60);
+    const doc = await db.collection('templates').where('name', '==', templateName).get();
+    if (doc.empty) return showToast('❌ Template not found. Please save first.', 'error');
     
     const tpl = doc.docs[0].data();
-    const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
-    if (!cfg?.accessToken) return alert('WhatsApp not configured.');
+    const cfg = await this.getConfig();
+    
+    if (!cfg?.accessToken) {
+      return showToast('❌ WhatsApp not configured. Please set up WhatsApp settings.', 'error');
+    }
+    
+    // Get WhatsApp Business Account ID
+    const wabaId = cfg.wabaId || cfg.businessAccountId;
+    if (!wabaId) {
+      return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
+    }
 
     const payload = {
       name: tpl.name,
       category: tpl.category || 'UTILITY',
-      language: tpl.language || 'en_US',
+      language: tpl.language || 'en',
       components: tpl.components || []
     };
 
     try {
-      const res = await fetch('https://graph.facebook.com/v22.0/342354115627791/message_templates', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + cfg.accessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      showToast('⏳ Submitting to Meta...', 'info');
+      
+      const res = await fetch(
+        `https://graph.facebook.com/v22.0/${wabaId}/message_templates`,
+        {
+          method: 'POST',
+          headers: { 
+            'Authorization': 'Bearer ' + cfg.accessToken, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify(payload)
+        }
+      );
       const result = await res.json();
+      
       if (res.ok && result.id) {
         await doc.docs[0].ref.update({
           metaTemplateId: result.id,
           metaStatus: result.status || 'PENDING',
           submittedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert('✅ Submitted for review!');
+        showToast('✅ Template submitted for review!', 'success');
         await this.fetchFromMeta();
         this.render();
       } else {
-        alert('❌ ' + JSON.stringify(result.error || result));
+        const errorMsg = result.error?.message || JSON.stringify(result);
+        showToast('❌ Submission failed: ' + errorMsg, 'error');
+        console.error('Meta API Error:', result);
       }
-    } catch (err) { alert('Error: ' + err.message); }
+    } catch (err) { 
+      showToast('❌ Error: ' + err.message, 'error');
+    }
   }
 };
