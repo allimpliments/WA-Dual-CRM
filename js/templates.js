@@ -2,6 +2,8 @@
 // js/templates.js — Advanced Meta WhatsApp Template Manager
 // COMPLETE UPGRADE - All existing features preserved
 // FIXED: Dynamic WABA ID for Meta Sync & Submission
+// FIXED: Media header_text removed for IMAGE/VIDEO/DOCUMENT
+// FIXED: Extra try block removed from fetchFromMeta
 // ==========================================
 
 const Templates = {
@@ -367,20 +369,12 @@ const Templates = {
 
   // ==================== SYNC FROM META (FIXED - Dynamic WABA ID) ====================
   async fetchFromMeta() {
-    // ✅ ADD THIS:
-    try {
-        var test = db.collection('templates');
-    } catch(e) {
-        console.error('Firestore not ready');
-        return;
-    }
     const cfg = await this.getConfig();
     if (!cfg?.accessToken) {
       console.warn('WhatsApp not configured — no access token');
       return;
     }
     
-    // ✅ Dynamic WABA ID — settings se lo, nahi to phoneNumberId se kaam chalao
     const wabaId = cfg.wabaId || cfg.businessAccountId || cfg.phoneNumberId;
     
     if (!wabaId) {
@@ -468,7 +462,6 @@ const Templates = {
       
       const templateComponents = [];
 
-      // HEADER with media
       if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
         if (header.example?.header_handle?.length > 0) {
           templateComponents.push({
@@ -479,9 +472,7 @@ const Templates = {
             }]
           });
         }
-      } 
-      // HEADER with text variables
-      else if (header && header.format === 'TEXT' && header.text) {
+      } else if (header && header.format === 'TEXT' && header.text) {
         const headerVars = header.text.match(/\{\{(\d+)\}\}/g);
         if (headerVars) {
           const params = headerVars.map(v => {
@@ -493,7 +484,6 @@ const Templates = {
         }
       }
 
-      // BODY variables
       if (body && body.text) {
         const bodyVars = body.text.match(/\{\{(\d+)\}\}/g);
         if (bodyVars) {
@@ -506,7 +496,6 @@ const Templates = {
         }
       }
 
-      // BUTTON URL variables
       if (buttons && buttons.buttons) {
         const urlButton = buttons.buttons.find(b => b.type === 'URL' && (b.url || '').includes('{{'));
         if (urlButton) {
@@ -639,15 +628,12 @@ const Templates = {
         </div>
         
         <div class="row g-4">
-          <!-- LEFT: Form -->
           <div class="col-md-7">
-            <!-- Template Name & Language -->
             <div class="mb-3">
               <label class="meta-label">Template name and language</label>
               <div class="row g-2">
                 <div class="col-md-8">
-                  <input id="tplName" class="meta-input" value="${this.escapeHtml(tpl.name)}" 
-                         placeholder="Enter a template name" oninput="Templates.updatePreview()">
+                  <input id="tplName" class="meta-input" value="${this.escapeHtml(tpl.name)}" placeholder="Enter a template name" oninput="Templates.updatePreview()">
                   <div class="meta-char-count"><span id="nameCount">${tpl.name.length}</span>/512</div>
                 </div>
                 <div class="col-md-4">
@@ -672,48 +658,38 @@ const Templates = {
               </div>
             </div>
 
-            <!-- Category -->
             <div class="mb-3">
               <label class="meta-label">Category</label>
               <div class="row g-2">
                 <div class="col-md-4">
-                  <button class="meta-select category-btn ${tpl.category==='UTILITY'?'active':''}" 
-                          style="text-align:left;padding:10px 12px;" 
-                          onclick="Templates.setCategorySelect('UTILITY')" data-cat="UTILITY">
+                  <button class="meta-select category-btn ${tpl.category==='UTILITY'?'active':''}" style="text-align:left;padding:10px 12px;" onclick="Templates.setCategorySelect('UTILITY')" data-cat="UTILITY">
                     <i class="fas fa-tools me-2"></i> Utility
                   </button>
                 </div>
                 <div class="col-md-4">
-                  <button class="meta-select category-btn ${tpl.category==='MARKETING'?'active':''}" 
-                          style="text-align:left;padding:10px 12px;" 
-                          onclick="Templates.setCategorySelect('MARKETING')" data-cat="MARKETING">
+                  <button class="meta-select category-btn ${tpl.category==='MARKETING'?'active':''}" style="text-align:left;padding:10px 12px;" onclick="Templates.setCategorySelect('MARKETING')" data-cat="MARKETING">
                     <i class="fas fa-bullhorn me-2"></i> Marketing
                   </button>
                 </div>
                 <div class="col-md-4">
-                  <button class="meta-select category-btn ${tpl.category==='AUTHENTICATION'?'active':''}" 
-                          style="text-align:left;padding:10px 12px;" 
-                          onclick="Templates.setCategorySelect('AUTHENTICATION')" data-cat="AUTHENTICATION">
+                  <button class="meta-select category-btn ${tpl.category==='AUTHENTICATION'?'active':''}" style="text-align:left;padding:10px 12px;" onclick="Templates.setCategorySelect('AUTHENTICATION')" data-cat="AUTHENTICATION">
                     <i class="fas fa-shield-alt me-2"></i> Authentication
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- Catalogue Format (Marketing only) -->
             <div id="catalogueSection" style="display:${tpl.category==='MARKETING'?'block':'none'}" class="mb-3">
               <label class="meta-label">Catalogue format</label>
               <div class="row g-2">
                 <div class="col-md-6">
-                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='catalogue'?'active':''}" 
-                       onclick="Templates.setCatalogueFormat('catalogue')">
+                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='catalogue'?'active':''}" onclick="Templates.setCatalogueFormat('catalogue')">
                     <h6><i class="fas fa-th-list me-2"></i> Catalogue message</h6>
                     <p>Include the entire catalogue to give your users a comprehensive view of all of your products.</p>
                   </div>
                 </div>
                 <div class="col-md-6">
-                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='multi'?'active':''}" 
-                       onclick="Templates.setCatalogueFormat('multi')">
+                  <div class="catalogue-format-card ${this.currentCatalogueFormat==='multi'?'active':''}" onclick="Templates.setCatalogueFormat('multi')">
                     <h6><i class="fas fa-th me-2"></i> Multi-product message</h6>
                     <p>Include up to 30 products from the catalogue. Useful for showcasing new collection or a specific product category.</p>
                   </div>
@@ -721,19 +697,15 @@ const Templates = {
               </div>
               <div id="catalogueSetup" class="mt-2 p-3 bg-light rounded" style="display:${tpl.category==='MARKETING'?'block':'none'}">
                 <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i> Connecting a catalogue will allow customers to view, message and send carts containing your products and services via WhatsApp.</p>
-                <button class="btn btn-outline-primary btn-sm" onclick="alert('Manage catalogue connection')">
-                  <i class="fas fa-link me-1"></i> Manage catalogue connection
-                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="alert('Manage catalogue connection')"><i class="fas fa-link me-1"></i> Manage catalogue connection</button>
               </div>
             </div>
 
-            <!-- Header -->
             <div class="mb-2">
               <label class="meta-label">Header <small>· Optional</small></label>
               <div class="header-type-grid">
                 ${headerTypes.map(ht => `
-                  <div class="header-type-btn ${tpl.headerType===ht.id?'active':''}" 
-                       onclick="Templates.selectHeaderType('${ht.id}')" data-type="${ht.id}">
+                  <div class="header-type-btn ${tpl.headerType===ht.id?'active':''}" onclick="Templates.selectHeaderType('${ht.id}')" data-type="${ht.id}">
                     <i class="fas ${ht.icon}"></i>
                     <span>${ht.label}</span>
                   </div>
@@ -742,73 +714,46 @@ const Templates = {
 
               <div id="headerFields" style="display:${tpl.headerType!=='none'?'block':'none'}">
                 <div id="headerTextField" style="display:${(tpl.headerType==='text'||tpl.headerType==='location')?'block':'none'}">
-                  <input id="tplHeaderText" class="meta-input" value="${this.escapeHtml(tpl.headerText)}" 
-                         placeholder="${tpl.headerType==='location'?'Location name':'Add a short line of text to the header of your message in English'}" 
-                         oninput="Templates.updatePreview()">
+                  <input id="tplHeaderText" class="meta-input" value="${this.escapeHtml(tpl.headerText)}" placeholder="${tpl.headerType==='location'?'Location name':'Add a short line of text to the header of your message in English'}" oninput="Templates.updatePreview()">
                   <div class="meta-char-count"><span id="headerCount">${tpl.headerText.length}</span>/60</div>
-                  <button class="btn btn-outline-secondary btn-sm mt-1" onclick="Templates.addVariable('header')">
-                    <i class="fas fa-plus"></i> Add variable
-                  </button>
+                  <button class="btn btn-outline-secondary btn-sm mt-1" onclick="Templates.addVariable('header')"><i class="fas fa-plus"></i> Add variable</button>
                 </div>
                 <div id="headerMediaField" style="display:${['image','video','document'].includes(tpl.headerType)?'block':'none'}">
                   <div class="media-upload-zone" onclick="document.getElementById('headerMediaUpload').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>Drag and drop to upload<br>Or choose files on your device</p>
                   </div>
-                  <input type="file" id="headerMediaUpload" style="display:none" 
-                         accept="image/*,video/*,.pdf,.doc,.docx" 
-                         onchange="Templates.uploadHeaderMedia(this)">
-                  <input id="tplHeaderMediaUrl" class="meta-input mt-2" value="${this.escapeHtml(tpl.headerMediaUrl)}" 
-                         placeholder="Media URL" oninput="Templates.updatePreview()">
+                  <input type="file" id="headerMediaUpload" style="display:none" accept="image/*,video/*,.pdf,.doc,.docx" onchange="Templates.uploadHeaderMedia(this)">
+                  <input id="tplHeaderMediaUrl" class="meta-input mt-2" value="${this.escapeHtml(tpl.headerMediaUrl)}" placeholder="Media URL" oninput="Templates.updatePreview()">
                   <div id="headerMediaPreview">${tpl.headerMediaUrl ? `<img src="${tpl.headerMediaUrl}" style="max-width:100%;max-height:150px;border-radius:8px;margin-top:8px;">` : ''}</div>
                 </div>
               </div>
             </div>
 
-            <!-- Body -->
             <div class="mb-2">
               <label class="meta-label">Body</label>
-              <textarea id="tplBody" class="meta-textarea" placeholder="Enter text in English" 
-                        oninput="Templates.updatePreview()">${this.escapeHtml(tpl.body)}</textarea>
+              <textarea id="tplBody" class="meta-textarea" placeholder="Enter text in English" oninput="Templates.updatePreview()">${this.escapeHtml(tpl.body)}</textarea>
               <div class="meta-char-count"><span id="bodyCount">${tpl.body.length}</span>/1024</div>
               <div class="d-flex gap-1 flex-wrap mt-1">
-                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.addVariable('body')">
-                  <i class="fas fa-plus"></i> Add variable
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('bold')">
-                  <i class="fas fa-bold"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('italic')">
-                  <i class="fas fa-italic"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('strike')">
-                  <i class="fas fa-strikethrough"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('monospace')">
-                  <i class="fas fa-code"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.openEmojiPicker()">
-                  <i class="far fa-smile"></i>
-                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.addVariable('body')"><i class="fas fa-plus"></i> Add variable</button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('bold')"><i class="fas fa-bold"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('italic')"><i class="fas fa-italic"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('strike')"><i class="fas fa-strikethrough"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.insertFormatting('monospace')"><i class="fas fa-code"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="Templates.openEmojiPicker()"><i class="far fa-smile"></i></button>
               </div>
             </div>
 
-            <!-- Footer -->
             <div class="mb-2">
               <label class="meta-label">Footer <small>· Optional</small></label>
-              <input id="tplFooter" class="meta-input" value="${this.escapeHtml(tpl.footer)}" 
-                     placeholder="Add a short line of text to the bottom of your message in English" 
-                     oninput="Templates.updatePreview()">
+              <input id="tplFooter" class="meta-input" value="${this.escapeHtml(tpl.footer)}" placeholder="Add a short line of text to the bottom of your message in English" oninput="Templates.updatePreview()">
               <div class="meta-char-count"><span id="footerCount">${tpl.footer.length}</span>/60</div>
             </div>
 
-            <!-- Buttons -->
             <div class="mb-2">
               <div class="d-flex justify-content-between align-items-center">
                 <label class="meta-label mb-0">Buttons <small>· Optional</small></label>
-                <button class="btn btn-outline-primary btn-sm" onclick="Templates.addButton()">
-                  <i class="fas fa-plus"></i> Add button
-                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="Templates.addButton()"><i class="fas fa-plus"></i> Add button</button>
               </div>
               <div class="small text-muted mb-2">Create buttons that let customers respond to your message or take action. You can add up to ten buttons. If you add more than three buttons, they will appear in a list.</div>
               <div id="buttonsContainer">
@@ -817,7 +762,6 @@ const Templates = {
               </div>
             </div>
 
-            <!-- Validity Period -->
             <div class="mb-2 p-3 bg-light rounded">
               <label class="meta-label">Message validity period</label>
               <div class="small text-muted mb-2">You can set a custom validity period that your message must be delivered by before it expires. If a message has not been delivered within this time frame, you will not be charged and your customer will not see the message.</div>
@@ -840,21 +784,13 @@ const Templates = {
               </div>
             </div>
 
-            <!-- Actions -->
             <div class="d-flex gap-2 mt-3 flex-wrap">
-              <button class="btn btn-primary" onclick="Templates.saveTemplate()">
-                <i class="fas fa-save me-1"></i> Save Draft
-              </button>
-              <button class="btn btn-warning" onclick="Templates.submitToMeta()">
-                <i class="fas fa-paper-plane me-1"></i> Submit for Review
-              </button>
-              <button class="btn btn-light" onclick="Templates.render()">
-                <i class="fas fa-times me-1"></i> Cancel
-              </button>
+              <button class="btn btn-primary" onclick="Templates.saveTemplate()"><i class="fas fa-save me-1"></i> Save Draft</button>
+              <button class="btn btn-warning" onclick="Templates.submitToMeta()"><i class="fas fa-paper-plane me-1"></i> Submit for Review</button>
+              <button class="btn btn-light" onclick="Templates.render()"><i class="fas fa-times me-1"></i> Cancel</button>
             </div>
           </div>
 
-          <!-- RIGHT: Preview -->
           <div class="col-md-5">
             <label class="meta-label">Template preview</label>
             <div class="preview-panel" id="livePreview">
@@ -886,14 +822,10 @@ const Templates = {
         <select class="form-select form-select-sm" style="width:140px" onchange="Templates.updateButtonType(this, ${index})">
           ${types.map(t => `<option value="${t.id}" ${button.type===t.id?'selected':''}>${t.label}</option>`).join('')}
         </select>
-        <input class="form-control form-control-sm" value="${this.escapeHtml(button.text||'')}" 
-               placeholder="Button text" maxlength="40" onchange="Templates.updateButtonText(this, ${index})">
-        ${button.type === 'URL' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.url||'')}" 
-               placeholder="https://example.com" onchange="Templates.updateButtonUrl(this, ${index})">` : ''}
-        ${button.type === 'PHONE_NUMBER' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.phone_number||'')}" 
-               placeholder="+91 1234567890" onchange="Templates.updateButtonPhone(this, ${index})">` : ''}
-        ${button.type === 'COPY_CODE' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.example||'')}" 
-               placeholder="Code to copy" onchange="Templates.updateButtonCode(this, ${index})">` : ''}
+        <input class="form-control form-control-sm" value="${this.escapeHtml(button.text||'')}" placeholder="Button text" maxlength="40" onchange="Templates.updateButtonText(this, ${index})">
+        ${button.type === 'URL' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.url||'')}" placeholder="https://example.com" onchange="Templates.updateButtonUrl(this, ${index})">` : ''}
+        ${button.type === 'PHONE_NUMBER' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.phone_number||'')}" placeholder="+91 1234567890" onchange="Templates.updateButtonPhone(this, ${index})">` : ''}
+        ${button.type === 'COPY_CODE' ? `<input class="form-control form-control-sm" value="${this.escapeHtml(button.example||'')}" placeholder="Code to copy" onchange="Templates.updateButtonCode(this, ${index})">` : ''}
         <button class="btn-remove" onclick="Templates.removeButton(${index})">×</button>
       </div>
     `;
@@ -933,19 +865,17 @@ const Templates = {
     this.updatePreview();
   },
 
-  // ==================== UPLOAD HEADER MEDIA (FIXED) ====================
+  // ==================== UPLOAD HEADER MEDIA ====================
   async uploadHeaderMedia(input) {
     const file = input.files[0];
     if (!file) return;
     
-    // Check file size
     const maxSize = file.type.startsWith('video/') ? 16 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
       showToast(`❌ File too large. Max ${maxSize/1024/1024}MB`, 'error');
       return;
     }
 
-    // Check file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/mov', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(file.type)) {
       showToast(`❌ Unsupported file type: ${file.type}`, 'error');
@@ -1256,7 +1186,6 @@ const Templates = {
     
     const components = [];
     
-    // Header
     if (this.headerType !== 'none') {
       const headerComp = { type: 'HEADER' };
       if (this.headerType === 'text' || this.headerType === 'location') {
@@ -1274,14 +1203,11 @@ const Templates = {
       }
     }
     
-    // Body
     components.push({ type: 'BODY', text: body });
     
-    // Footer
     const footer = document.getElementById('tplFooter')?.value?.trim();
     if (footer) components.push({ type: 'FOOTER', text: footer });
     
-    // Buttons
     const validButtons = this.buttons.filter(b => b.text?.trim());
     if (validButtons.length > 0) {
       const buttons = validButtons.map(b => {
@@ -1320,8 +1246,8 @@ const Templates = {
     }
   },
 
-  /// ==================== SUBMIT TO META (FIXED - Media Support) ====================
-async submitToMeta(editId = null) {
+  // ==================== SUBMIT TO META (FIXED) ====================
+  async submitToMeta(editId = null) {
     const id = editId || this.editingId;
     
     if (!id) {
@@ -1350,7 +1276,6 @@ async submitToMeta(editId = null) {
         return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
     }
 
-    // ✅ FIX: Clean components before sending to Meta
     let cleanComponents = [];
     const components = tpl.components || [];
     
@@ -1361,11 +1286,8 @@ async submitToMeta(editId = null) {
             clean.format = comp.format || 'TEXT';
             
             if (comp.format === 'TEXT' || comp.format === 'LOCATION') {
-                // Text/Location header — text allowed
                 if (comp.text) clean.text = comp.text;
-                
             } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)) {
-                // ✅ Media header — ONLY header_handle, NO header_text!
                 if (comp.example?.header_handle?.length > 0) {
                     const mediaUrl = comp.example.header_handle[0];
                     if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
@@ -1375,7 +1297,6 @@ async submitToMeta(editId = null) {
                     }
                 }
             }
-        }
         } else if (comp.type === 'BODY') {
             if (comp.text) clean.text = comp.text;
         } else if (comp.type === 'FOOTER') {
@@ -1395,7 +1316,6 @@ async submitToMeta(editId = null) {
         cleanComponents.push(clean);
     }
 
-    // ✅ Validate: Body must exist
     const hasBody = cleanComponents.some(c => c.type === 'BODY' && c.text?.trim());
     if (!hasBody) {
         return showToast('❌ Template must have a body!', 'error');
@@ -1444,6 +1364,6 @@ async submitToMeta(editId = null) {
     } catch (err) { 
         showToast('❌ Error: ' + err.message, 'error');
     }
-}
+  }
 
 };  // ✅ Templates object close
