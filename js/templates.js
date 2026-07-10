@@ -1361,16 +1361,18 @@ async submitToMeta(editId = null) {
             clean.format = comp.format || 'TEXT';
             
             if (comp.format === 'TEXT' || comp.format === 'LOCATION') {
-                // Text/Location header
+                // Text/Location header — text allowed
                 if (comp.text) clean.text = comp.text;
+                
             } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)) {
-            if (comp.example?.header_handle?.length > 0) {
-                const mediaUrl = comp.example.header_handle[0];
-                if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
-                    // ✅ FIX: Sirf header_handle — header_text hatao
-                    clean.example = {
-                        header_handle: [mediaUrl]
-                    };
+                // ✅ Media header — ONLY header_handle, NO header_text!
+                if (comp.example?.header_handle?.length > 0) {
+                    const mediaUrl = comp.example.header_handle[0];
+                    if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
+                        clean.example = {
+                            header_handle: [mediaUrl]
+                        };
+                    }
                 }
             }
         }
