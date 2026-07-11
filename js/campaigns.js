@@ -1,5 +1,4 @@
 // js/campaigns.js — Advanced Campaign Module with WhatsApp API Number Selection, Template Sync & Real Delivery
-// FIXED: Template language 'en', Media upload for IMAGE/VIDEO/DOC headers, Variables only if exist
 const Campaigns = {
   currentTab: 'bulk',
   editingCampaign: null,
@@ -260,18 +259,18 @@ const Campaigns = {
             <label class="form-label small fw-bold">Message *</label>
             <textarea id="bMessage" class="form-control mb-2" rows="4" placeholder="Type message or select a template above... Use {first_name}, {last_name}, {phone} for personalization"></textarea>
             
-            <!-- MEDIA URL (auto-filled from template) -->
+            <!-- MEDIA FIELD with WhatsApp Upload -->
             <div id="bMediaField" style="display:none;">
               <label class="form-label small fw-bold">
                 <i class="fas fa-paperclip me-1"></i> Media Attachment 
-                <small class="text-muted">(Optional — Image, Video, Document)</small>
+                <small class="text-muted">(Optional — Upload to WhatsApp)</small>
               </label>
               <div class="media-upload-zone-campaign" onclick="document.getElementById('campaignMediaUpload').click()">
                 <i class="fas fa-cloud-upload-alt"></i>
-                <p class="mt-2 mb-0" style="font-size:13px;">Click to upload media<br><small>JPG, PNG, MP4, PDF (Max 10MB)</small></p>
+                <p class="mt-2 mb-0" style="font-size:13px;">Click to upload image to WhatsApp<br><small>JPG, PNG (Max 5MB)</small></p>
               </div>
-              <input type="file" id="campaignMediaUpload" style="display:none" accept="image/*,video/*,.pdf" onchange="Campaigns.uploadCampaignMedia(this)">
-              <input id="bMedia" class="form-control mb-2" placeholder="Or paste Image/Video/Document URL" oninput="Campaigns.updateBulkPreview()">
+              <input type="file" id="campaignMediaUpload" style="display:none" accept="image/jpeg,image/png" onchange="Campaigns.uploadCampaignMedia(this)">
+              <input id="bMedia" class="form-control mb-2" placeholder="WhatsApp Media ID (auto-filled after upload)" readonly>
               <div id="bMediaPreview" style="display:none;" class="mb-2"></div>
             </div>
 
@@ -327,57 +326,80 @@ const Campaigns = {
     }, 200);
   },
 
-  // ✅ Upload campaign media
+  // ✅ Upload campaign media to WhatsApp Cloud API
   async uploadCampaignMedia(input) {
     const file = input.files[0];
     if (!file) return;
-    const maxSize = 10 * 1024 * 1024;
+    
+    const maxSize = 5 * 1024 * 1024; // 5MB for images
     if (file.size > maxSize) {
-      showToast('❌ File too large. Max 10MB', 'error');
+      showToast('❌ File too large. Max 5MB', 'error');
       return;
     }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      showToast('❌ Use JPG or PNG only', 'error');
+      return;
+    }
+
+    const cfg = await db.collection('settings').doc('whatsapp').get();
+    const data = cfg.data();
+    
+    if (!data?.phoneNumberId || !data?.accessToken) {
+      showToast('❌ WhatsApp not configured', 'error');
+      return;
+    }
+
     try {
-      showToast('Uploading...', 'info');
-      const path = `campaigns/media/${getCurrentClientId() || 'system'}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-      const ref = storage.ref(path);
-      const snapshot = await ref.put(file, { contentType: file.type });
-      const url = await snapshot.ref.getDownloadURL();
-      document.getElementById('bMedia').value = url;
-      this.showCampaignMediaPreview(url, file.type);
-      showToast('✅ Media uploaded!', 'success');
-      this.updateBulkPreview();
+      showToast('Uploading to WhatsApp...', 'info');
+      
+      // Upload to WhatsApp Cloud API using multipart/form-data
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('messaging_product', 'whatsapp');
+      
+      const res = await fetch(
+        `https://graph.facebook.com/v22.0/${data.phoneNumberId}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + data.accessToken
+          },
+          body: formData
+        }
+      );
+      
+      const result = await res.json();
+      console.log('📤 WhatsApp Media Upload Response:', result);
+      
+      if (res.ok && result.id) {
+        // Save WhatsApp Media ID
+        document.getElementById('bMedia').value = result.id;
+        
+        // Show preview
+        const preview = document.getElementById('bMediaPreview');
+        if (preview) {
+          preview.style.display = 'block';
+          const objectUrl = URL.createObjectURL(file);
+          preview.innerHTML = `
+            <div style="position: relative; display: inline-block;">
+              <img src="${objectUrl}" style="max-width: 200px; max-height: 150px; border-radius: 8px;" alt="Preview">
+              <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
+                      style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
+            </div>`;
+        }
+        
+        showToast('✅ Media uploaded! WhatsApp ID: ' + result.id, 'success');
+        this.updateBulkPreview();
+      } else {
+        const errorMsg = result.error?.message || 'Unknown error';
+        showToast('❌ Upload failed: ' + errorMsg, 'error');
+        console.error('WhatsApp Upload Error:', result.error);
+      }
+      
     } catch(e) {
       showToast('❌ Upload failed: ' + e.message, 'error');
-    }
-  },
-
-  // ✅ Show campaign media preview
-  showCampaignMediaPreview(url, fileType) {
-    const preview = document.getElementById('bMediaPreview');
-    if (!preview) return;
-    preview.style.display = 'block';
-    if (fileType && fileType.startsWith('image/')) {
-      preview.innerHTML = `
-        <div style="position: relative; display: inline-block;">
-          <img src="${url}" style="max-width: 200px; max-height: 150px; border-radius: 8px;" alt="Preview">
-          <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
-                  style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
-        </div>`;
-    } else if (fileType && fileType.startsWith('video/')) {
-      preview.innerHTML = `
-        <div style="position: relative; display: inline-block;">
-          <video src="${url}" style="max-width: 200px; max-height: 150px; border-radius: 8px;" controls></video>
-          <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
-                  style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
-        </div>`;
-    } else {
-      preview.innerHTML = `
-        <div class="d-flex align-items-center gap-2 p-2 bg-light rounded" style="display: inline-flex;">
-          <i class="fas fa-file" style="font-size: 20px; color: #6366f1;"></i>
-          <span class="small">${url.split('/').pop().substring(0, 30)}</span>
-          <button onclick="document.getElementById('bMedia').value=''; document.getElementById('bMediaPreview').style.display='none'; Campaigns.updateBulkPreview();" 
-                  style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer;">×</button>
-        </div>`;
     }
   },
 
@@ -410,7 +432,7 @@ const Campaigns = {
     if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
       if (mediaField) {
         mediaField.style.display = 'block';
-        document.getElementById(prefix + 'Media').value = header.example?.header_handle?.[0] || '';
+        document.getElementById(prefix + 'Media').value = '';
         const mediaPreview = document.getElementById(prefix + 'MediaPreview');
         if (mediaPreview) mediaPreview.style.display = 'none';
       }
@@ -421,7 +443,7 @@ const Campaigns = {
           <div class="p-2 rounded mb-2" style="background:#eef2ff; border:1px solid #6366f1; font-size:12px;">
             <i class="fas fa-info-circle text-primary me-1"></i>
             <strong>${labels[header.format] || 'Media Header'}</strong>
-            <br><small class="text-muted">Upload your own media or use template default. Leave empty for default image.</small>
+            <br><small class="text-muted">Upload your image to WhatsApp. Leave empty for template default.</small>
           </div>`;
       }
     } else if (header && header.format === 'TEXT') {
@@ -486,13 +508,7 @@ const Campaigns = {
     
     let html = '<div style="font-size:12px;">';
     if (media) {
-      if (media.match(/\.(mp4|mov)/i)) {
-        html += `<div class="wa-vid"><i class="fas fa-play"></i> Video</div>`;
-      } else if (media.match(/\.pdf/i)) {
-        html += `<div class="wa-doc"><i class="fas fa-file-pdf"></i> Document</div>`;
-      } else {
-        html += `<img src="${media}" class="wa-img" onerror="this.style.display='none'">`;
-      }
+      html += `<div style="background:#e8f0fe; padding:6px 10px; border-radius:8px; margin-bottom:6px; font-size:10px; color:#6366f1;">📷 WhatsApp Media ID: ${media}</div>`;
     }
     html += `<div class="wa-body">${message || 'Your message will appear here...'}</div>`;
     if (footer) html += `<div class="wa-footer">${footer}</div>`;
@@ -570,7 +586,7 @@ const Campaigns = {
     return sn.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  // ✅ FIXED: sendOne — Template components ONLY if variables/media exist
+  // ✅ FIXED: sendOne — WhatsApp Media ID + Language fix + Variables only if exist
   async sendOne(phone, message, media, campaignId, accessToken, phoneNumberId, templateData) {
     if (!accessToken || !phoneNumberId) {
       return { ok: false, error: 'WhatsApp not configured', status: 'config_error' };
@@ -582,8 +598,8 @@ const Campaigns = {
     try {
       let payload;
 
+      // Template message
       if (templateData?.name) {
-        // ✅ Template message — BINA components ke bhejo agar variables nahi
         payload = {
           messaging_product: 'whatsapp',
           to: phone,
@@ -599,18 +615,22 @@ const Campaigns = {
         const body = components.find(c => c.type === 'BODY');
         const templateComponents = [];
 
-        // ✅ Header media — only if campaign has media uploaded
+        // ✅ Header media — WhatsApp Media ID or skip
         if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format) && media) {
-          const mediaUrl = media.trim();
-          if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
+          const mediaValue = media.trim();
+          const format = header.format.toLowerCase();
+          
+          // Check if media is a WhatsApp Media ID (all digits)
+          if (/^\d+$/.test(mediaValue)) {
             templateComponents.push({
               type: 'header',
               parameters: [{
-                type: header.format.toLowerCase(),
-                [header.format.toLowerCase()]: { link: mediaUrl }
+                type: format,
+                [format]: { id: mediaValue }
               }]
             });
           }
+          // Skip Firebase/CDN URLs — Meta can't use them
         }
 
         // ✅ Body variables — ONLY if template actually has {{1}}, {{2}}
@@ -622,13 +642,12 @@ const Campaigns = {
           }
         }
 
-        // ✅ Only add components if there are any
         if (templateComponents.length > 0) {
           payload.template.components = templateComponents;
         }
         
       } else {
-        // ✅ Regular text message
+        // Regular text message
         payload = {
           messaging_product: 'whatsapp',
           to: phone,
@@ -725,7 +744,7 @@ const Campaigns = {
     // ✅ FIXED: Template data with actual template language
     const templateData = c.templateName ? {
       name: c.templateName,
-      language: c.templateLanguage || 'en',  // ✅ FIXED: Use saved template language
+      language: c.templateLanguage || 'en',
       components: c.templateComponents || []
     } : null;
 
