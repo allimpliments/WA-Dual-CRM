@@ -4,6 +4,7 @@
 // FIXED: Dynamic WABA ID for Meta Sync & Submission
 // FIXED: Media header_text removed for IMAGE/VIDEO/DOCUMENT
 // FIXED: Extra try block removed from fetchFromMeta
+// FIXED: sendTemplate language fallback
 // ==========================================
 
 const Templates = {
@@ -430,7 +431,7 @@ const Templates = {
     }
   },
 
-  // ==================== SEND TEMPLATE ====================
+  // ==================== SEND TEMPLATE (FIXED) ====================
   async sendTemplate(id) {
     let phone = prompt('Enter phone number (with country code):');
     if (!phone) return;
@@ -451,7 +452,7 @@ const Templates = {
         type: 'template',
         template: {
           name: tpl.name,
-          language: { code: tpl.language || 'en_US' }
+          language: { code: tpl.language || 'en' }
         }
       };
 
@@ -462,6 +463,7 @@ const Templates = {
       
       const templateComponents = [];
 
+      // Header with media — only if example exists
       if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
         if (header.example?.header_handle?.length > 0) {
           templateComponents.push({
@@ -472,7 +474,9 @@ const Templates = {
             }]
           });
         }
-      } else if (header && header.format === 'TEXT' && header.text) {
+      } 
+      // Header with text variables — only if variables exist
+      else if (header && header.format === 'TEXT' && header.text) {
         const headerVars = header.text.match(/\{\{(\d+)\}\}/g);
         if (headerVars) {
           const params = headerVars.map(v => {
@@ -484,6 +488,7 @@ const Templates = {
         }
       }
 
+      // Body variables — only if variables exist
       if (body && body.text) {
         const bodyVars = body.text.match(/\{\{(\d+)\}\}/g);
         if (bodyVars) {
@@ -496,6 +501,7 @@ const Templates = {
         }
       }
 
+      // Button URL variables
       if (buttons && buttons.buttons) {
         const urlButton = buttons.buttons.find(b => b.type === 'URL' && (b.url || '').includes('{{'));
         if (urlButton) {
@@ -1246,7 +1252,7 @@ const Templates = {
     }
   },
 
-    // ==================== SUBMIT TO META (FIXED - Working Format) ====================
+  // ==================== SUBMIT TO META (FIXED) ====================
   async submitToMeta(editId = null) {
     const id = editId || this.editingId;
     
@@ -1276,7 +1282,7 @@ const Templates = {
         return showToast('❌ WhatsApp Business Account ID not configured.', 'error');
     }
 
-    // ✅ Build components in Meta's EXACT expected format
+    // Build components in Meta's EXACT expected format
     let metaComponents = [];
     const components = tpl.components || [];
     
@@ -1357,7 +1363,7 @@ const Templates = {
         }
     }
 
-    // ✅ Validate: Body must exist
+    // Validate: Body must exist
     const hasBody = metaComponents.some(c => c.type === 'BODY' && c.text?.trim());
     if (!hasBody) {
         return showToast('❌ Template must have a body!', 'error');
@@ -1407,4 +1413,5 @@ const Templates = {
         showToast('❌ Error: ' + err.message, 'error');
     }
   }
+
 };
