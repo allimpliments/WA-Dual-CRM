@@ -1,4 +1,5 @@
 // js/campaigns.js — Advanced Campaign Module with WhatsApp API Number Selection, Template Sync & Real Delivery
+// FIXED: Template language 'en', Media upload for IMAGE/VIDEO/DOC headers, Variables only if exist
 const Campaigns = {
   currentTab: 'bulk',
   editingCampaign: null,
@@ -326,7 +327,7 @@ const Campaigns = {
     }, 200);
   },
 
-  // ✅ NEW: Upload campaign media
+  // ✅ Upload campaign media
   async uploadCampaignMedia(input) {
     const file = input.files[0];
     if (!file) return;
@@ -350,7 +351,7 @@ const Campaigns = {
     }
   },
 
-  // ✅ NEW: Show campaign media preview
+  // ✅ Show campaign media preview
   showCampaignMediaPreview(url, fileType) {
     const preview = document.getElementById('bMediaPreview');
     if (!preview) return;
@@ -569,7 +570,7 @@ const Campaigns = {
     return sn.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  // ✅ FIXED: sendOne with template support + correct language fallback
+  // ✅ FIXED: sendOne — Template components ONLY if variables/media exist
   async sendOne(phone, message, media, campaignId, accessToken, phoneNumberId, templateData) {
     if (!accessToken || !phoneNumberId) {
       return { ok: false, error: 'WhatsApp not configured', status: 'config_error' };
@@ -581,28 +582,26 @@ const Campaigns = {
     try {
       let payload;
 
-      // ✅ Template message bhejo agar template data hai
       if (templateData?.name) {
+        // ✅ Template message — BINA components ke bhejo agar variables nahi
         payload = {
           messaging_product: 'whatsapp',
           to: phone,
           type: 'template',
           template: {
             name: templateData.name,
-            language: { code: templateData.language || 'en' }  // ✅ FIXED: 'en' instead of 'en_US'
+            language: { code: templateData.language || 'en' }  // ✅ FIXED: 'en' fallback
           }
         };
 
-        // Template components (header media, body variables, button variables)
         const components = templateData.components || [];
         const header = components.find(c => c.type === 'HEADER');
         const body = components.find(c => c.type === 'BODY');
-        const buttons = components.find(c => c.type === 'BUTTONS');
         const templateComponents = [];
 
-        // Header media — campaign ki uploaded media use karo agar hai
-        if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format)) {
-          const mediaUrl = media || header.example?.header_handle?.[0] || '';
+        // ✅ Header media — only if campaign has media uploaded
+        if (header && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(header.format) && media) {
+          const mediaUrl = media.trim();
           if (mediaUrl && !mediaUrl.includes('scontent.whatsapp.net') && !mediaUrl.includes('lookaside.fbsbx.com')) {
             templateComponents.push({
               type: 'header',
@@ -613,28 +612,21 @@ const Campaigns = {
             });
           }
         }
-        // Header text variables
-        else if (header && header.format === 'TEXT' && header.text) {
-          const headerVars = header.text.match(/\{\{(\d+)\}\}/g);
-          if (headerVars) {
-            const params = headerVars.map(v => ({ type: 'text', text: message.split(' ')[0] || v }));
-            templateComponents.push({ type: 'header', parameters: params });
-          }
-        }
 
-        // Body variables
+        // ✅ Body variables — ONLY if template actually has {{1}}, {{2}}
         if (body && body.text) {
           const bodyVars = body.text.match(/\{\{(\d+)\}\}/g);
-          if (bodyVars) {
-            const parts = message.split('|').map(s => s.trim());
-            const bodyParams = bodyVars.map((v, i) => ({ type: 'text', text: parts[i] || v }));
+          if (bodyVars && bodyVars.length > 0) {
+            const bodyParams = bodyVars.map(v => ({ type: 'text', text: v }));
             templateComponents.push({ type: 'body', parameters: bodyParams });
           }
         }
 
+        // ✅ Only add components if there are any
         if (templateComponents.length > 0) {
           payload.template.components = templateComponents;
         }
+        
       } else {
         // ✅ Regular text message
         payload = {
