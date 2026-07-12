@@ -1,4 +1,5 @@
 // js/chatbot.js — World-Class Multi-Provider AI Chatbot Engine for SaaS
+// FIXED: addKeyword(), addTraining(), removeKeyword() — No page refresh, just UI update
 const Chatbot = {
   currentTab: 'config',
   provider: 'groq',
@@ -87,6 +88,9 @@ const Chatbot = {
         .bot-msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
         .bot-msg.user .bot-msg-bubble { background: #6366f1; color: #fff; border-radius: 12px 12px 0 12px; }
         .bot-msg.bot .bot-msg-bubble { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px 12px 12px 0; }
+        .bot-preset-btn { padding: 6px 12px; border-radius: 20px; font-size: 10px; cursor: pointer; border: 1px solid #6366f1; background: #eef2ff; color: #6366f1; margin: 2px; transition: 0.2s; }
+        .bot-preset-btn:hover { background: #6366f1; color: #fff; }
+        .bot-preset-btn.active { background: #6366f1; color: #fff; }
         @media (max-width: 768px) { .bot-tabs { overflow-x: auto; flex-wrap: nowrap; } }
       </style>
       <div class="bot-wrap">
@@ -136,6 +140,18 @@ const Chatbot = {
             <div class="bot-card">
               <h5><i class="fas fa-building me-2"></i>Business Instructions (AI Fallback)</h5>
               <p class="text-muted small">These instructions teach the AI about your business. When no keyword matches, AI uses this to generate relevant responses.</p>
+              
+              <!-- ✅ PRESET BUTTONS — Quick fill for common businesses -->
+              <div class="mb-3">
+                <small class="text-muted d-block mb-1">Quick Fill Presets:</small>
+                <button class="bot-preset-btn" onclick="Chatbot.fillPreset('digital_marketing')">📱 Digital Marketing Agency</button>
+                <button class="bot-preset-btn" onclick="Chatbot.fillPreset('real_estate')">🏠 Real Estate</button>
+                <button class="bot-preset-btn" onclick="Chatbot.fillPreset('healthcare')">🏥 Healthcare</button>
+                <button class="bot-preset-btn" onclick="Chatbot.fillPreset('education')">📚 Education</button>
+                <button class="bot-preset-btn" onclick="Chatbot.fillPreset('ecommerce')">🛒 E-Commerce</button>
+                <button class="bot-preset-btn" onclick="Chatbot.fillPreset('custom')">✏️ Custom</button>
+              </div>
+              
               <div class="row g-2">
                 <div class="col-md-6"><label class="bot-label">Business Name</label><input type="text" id="botBizName" class="bot-input" value="${config.businessName||''}" placeholder="e.g. 11 Avatar Digital Hub"></div>
                 <div class="col-md-6"><label class="bot-label">Response Tone</label><select id="botTone" class="bot-input"><option value="professional" ${config.tone==='professional'?'selected':''}>Professional</option><option value="friendly" ${config.tone==='friendly'?'selected':''}>Friendly</option><option value="casual" ${config.tone==='casual'?'selected':''}>Casual</option><option value="formal" ${config.tone==='formal'?'selected':''}>Formal</option></select></div>
@@ -147,7 +163,7 @@ const Chatbot = {
             <!-- Keywords -->
             <div class="bot-card">
               <h5><i class="fas fa-key me-2"></i>Keyword Auto-Replies</h5>
-              <div id="keywordList" style="margin-bottom:10px;">${(config.keywords||[]).map((kw,i)=>`<span class="bot-keyword-tag">${kw.keyword}: ${kw.reply.substring(0,30)}... <button onclick="Chatbot.removeKeyword(${i})">×</button></span>`).join('')}</div>
+              <div id="keywordList" style="margin-bottom:10px;">${(config.keywords||[]).length === 0 ? '<span class="text-muted small">No keywords added. Add keywords below for instant auto-replies.</span>' : config.keywords.map((kw,i)=>`<span class="bot-keyword-tag">${kw.keyword}: ${kw.reply.substring(0,30)}... <button onclick="Chatbot.removeKeyword(${i})">×</button></span>`).join('')}</div>
               <div class="row g-2">
                 <div class="col-md-4"><input type="text" id="newKeyword" class="bot-input" placeholder="Keyword (e.g. price)"></div>
                 <div class="col-md-6"><input type="text" id="newKeywordReply" class="bot-input" placeholder="Auto-reply message"></div>
@@ -185,18 +201,194 @@ const Chatbot = {
     contentArea.innerHTML = html;
   },
 
+  // ==================== PRESET FILL ====================
+  fillPreset(type) {
+    const presets = {
+      digital_marketing: {
+        name: '11 Avatar Digital Hub',
+        info: `11 Avatar Digital Hub is a full-service digital marketing agency and SaaS platform. We offer:
+
+1. Business Automation (₹4,999) - Auto-replies, WhatsApp/Email funnel, CRM lite dashboard, Lead tagging
+2. Website Design (₹5,999-₹14,999) - Mobile-responsive, SEO-ready, E-commerce
+3. Google & YouTube Ads - SEM (₹4,999) - Campaign setup, Keyword strategy, A/B testing
+4. Social Media Marketing - SMM (₹4,999) - FB/Insta ads, Retargeting, Pixel setup
+5. Social Media Optimization - SMO (₹4,999) - Profile setup, Bio, CTA, 12 posts, 2 reels/week
+6. Bulk WhatsApp Marketing (₹1,999) - 10,000 messages/month, Templates, Scheduling
+7. Google My Business - GMB (₹2,999) - Setup, Weekly posts, Review management
+8. SEO (₹9,999) - 10 keywords, On-page, Off-page, 2 blogs/week, Technical SEO
+
+Our SaaS CRM offers: WhatsApp Cloud API, Multi-agent, Lead Management, Campaign Builder, AI Chatbot, Templates, Appointments, Analytics.
+Contact: +91 74897 71499`,
+        instructions: `You are a helpful support agent for 11 Avatar Digital Hub, a WhatsApp CRM platform and digital marketing agency.
+
+Rules:
+1. Always greet with "Namaste! 👋 Main 11 Avatar Digital Hub ka AI assistant hoon."
+2. Keep replies friendly, short (2-3 sentences max), and in Hinglish.
+3. For pricing questions, mention the starting price and ask for their requirement.
+4. For service inquiries, ask what business they have and what they need.
+5. Always end with a question to engage the user.`
+      },
+      real_estate: {
+        name: '[Your Real Estate Company]',
+        info: `[Company Name] is a real estate agency specializing in residential and commercial properties. We help clients buy, sell, and rent properties in [City/Region].
+
+Services:
+- Property Sales (Residential & Commercial)
+- Rental Management
+- Property Valuation
+- Home Loans Assistance
+- Legal Documentation
+- Property Inspection
+
+Contact: [Phone Number]
+Website: [Website URL]`,
+        instructions: `You are a helpful real estate agent assistant for [Company Name].
+
+Rules:
+1. Always greet politely and ask about their property requirements.
+2. Ask about: Budget, Location preference, Property type (1BHK/2BHK/Villa/Commercial), Ready to move or under construction.
+3. Offer to schedule a site visit.
+4. Keep responses short and helpful.
+5. Always end with a question.`
+      },
+      healthcare: {
+        name: '[Your Clinic/Hospital Name]',
+        info: `[Clinic Name] is a healthcare facility providing quality medical care in [City]. We specialize in [Specialization - e.g., General Medicine, Dental, Cardiology].
+
+Services:
+- OPD Consultation (₹[Fee])
+- Diagnostics & Lab Tests
+- Health Checkup Packages
+- Online Consultation
+- Emergency Services
+
+Timings: [Timings]
+Contact: [Phone Number]
+Address: [Address]`,
+        instructions: `You are a helpful medical assistant for [Clinic Name].
+
+Rules:
+1. Ask about symptoms and suggest appropriate doctor/department.
+2. Help with appointment booking — ask preferred date and time.
+3. Mention consultation fees when asked.
+4. For emergencies, provide contact number immediately.
+5. Never provide medical advice — always suggest consulting a doctor.`
+      },
+      education: {
+        name: '[Your Institute Name]',
+        info: `[Institute Name] is an educational institution offering courses in [Subjects]. We provide quality education for students from [Level - e.g., School, College, Professional].
+
+Courses:
+- [Course 1] (₹[Fee])
+- [Course 2] (₹[Fee])
+- Online & Offline batches available
+- Free demo class available
+
+Contact: [Phone Number]
+Website: [Website URL]`,
+        instructions: `You are a helpful education counselor for [Institute Name].
+
+Rules:
+1. Ask about student's interest and educational background.
+2. Suggest relevant courses based on their goals.
+3. Offer free demo class scheduling.
+4. Mention fees, duration, and batch timings when asked.
+5. Keep tone encouraging and supportive.`
+      },
+      ecommerce: {
+        name: '[Your Store Name]',
+        info: `[Store Name] is an online store selling [Product Categories]. We offer quality products at competitive prices with fast delivery across India.
+
+Product Categories:
+- [Category 1] (Starting ₹[Price])
+- [Category 2] (Starting ₹[Price])
+- Free Delivery on orders above ₹[Amount]
+- Easy Returns & Exchange
+- COD Available
+
+Contact: [Phone Number]
+Website: [Website URL]`,
+        instructions: `You are a helpful support agent for [Store Name].
+
+Rules:
+1. Help customers find products — ask what they're looking for.
+2. Assist with order tracking — ask for order ID.
+3. For complaints/issues, offer refund/replacement options.
+4. Keep tone friendly and helpful.
+5. Always thank them for shopping with you.`
+      },
+      custom: {
+        name: '',
+        info: '',
+        instructions: ''
+      }
+    };
+
+    const preset = presets[type];
+    if (!preset) return;
+    
+    if (type === 'custom') {
+      // Clear all fields for custom input
+      document.getElementById('botBizName').value = '';
+      document.getElementById('botBizInfo').value = '';
+      document.getElementById('botInstructions').value = '';
+      showToast('✏️ Fill your custom business details', 'info');
+      return;
+    }
+
+    // Fill the form with preset data
+    document.getElementById('botBizName').value = preset.name;
+    document.getElementById('botBizInfo').value = preset.info;
+    document.getElementById('botInstructions').value = preset.instructions;
+    
+    // Highlight active preset
+    document.querySelectorAll('.bot-preset-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.bot-preset-btn[onclick*="${type}"]`)?.classList.add('active');
+    
+    showToast('✅ Preset filled! Update details as needed and Save.', 'success');
+  },
+
   selectProvider(id) { this.savedConfig.provider = id; this.render(); },
   
+  // ✅ FIXED: addKeyword — No page refresh, just UI update
   addKeyword() {
     const kw = document.getElementById('newKeyword')?.value?.trim();
     const reply = document.getElementById('newKeywordReply')?.value?.trim();
     if (!kw || !reply) return showToast('Enter both keyword and reply!', 'warning');
     if (!this.savedConfig.keywords) this.savedConfig.keywords = [];
     this.savedConfig.keywords.push({ keyword: kw.toLowerCase(), reply });
-    this.render();
+    
+    // Clear input fields
+    document.getElementById('newKeyword').value = '';
+    document.getElementById('newKeywordReply').value = '';
+    
+    // Update just the keyword list display
+    const keywordList = document.getElementById('keywordList');
+    if (keywordList) {
+      keywordList.innerHTML = this.savedConfig.keywords.length === 0 
+        ? '<span class="text-muted small">No keywords added. Add keywords below for instant auto-replies.</span>'
+        : this.savedConfig.keywords.map((kw, i) => 
+            `<span class="bot-keyword-tag">${kw.keyword}: ${kw.reply.substring(0,30)}... <button onclick="Chatbot.removeKeyword(${i})">×</button></span>`
+          ).join('');
+    }
+    
+    showToast('✅ Keyword added! Save configuration to persist.', 'success');
   },
 
-  removeKeyword(index) { this.savedConfig.keywords.splice(index, 1); this.render(); },
+  // ✅ FIXED: removeKeyword — No page refresh, just UI update
+  removeKeyword(index) { 
+    this.savedConfig.keywords.splice(index, 1);
+    
+    // Update just the keyword list display
+    const keywordList = document.getElementById('keywordList');
+    if (keywordList) {
+      keywordList.innerHTML = this.savedConfig.keywords.length === 0 
+        ? '<span class="text-muted small">No keywords added. Add keywords below for instant auto-replies.</span>'
+        : this.savedConfig.keywords.map((kw, i) => 
+            `<span class="bot-keyword-tag">${kw.keyword}: ${kw.reply.substring(0,30)}... <button onclick="Chatbot.removeKeyword(${i})">×</button></span>`
+          ).join('');
+    }
+  },
 
   async saveConfig() {
     const data = {
@@ -333,20 +525,68 @@ const Chatbot = {
       <div class="bot-wrap">
         <div class="d-flex align-items-center mb-3"><button class="bot-btn bot-btn-outline me-2" onclick="Chatbot.currentTab='config';Chatbot.render();"><i class="fas fa-arrow-left"></i> Back</button><h4 style="font-weight:800;margin:0;">📚 Training Data</h4></div>
         <div class="bot-card"><h5>Add Training Example</h5><div class="row g-2"><div class="col-md-5"><input type="text" id="trainQuestion" class="bot-input" placeholder="User question/message"></div><div class="col-md-5"><input type="text" id="trainAnswer" class="bot-input" placeholder="Expected AI response"></div><div class="col-md-2"><button class="bot-btn bot-btn-primary w-100" onclick="Chatbot.addTraining()"><i class="fas fa-plus"></i> Add</button></div></div></div>
-        <div class="bot-card"><h5>Training Examples (${trainingData.length})</h5>${trainingData.length===0?'<p class="text-muted">No training data yet.</p>':trainingData.map(t=>`<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('')}</div>
+        <div class="bot-card" id="trainingListCard"><h5>Training Examples (${trainingData.length})</h5><div id="trainingList">${trainingData.length===0?'<p class="text-muted">No training data yet.</p>':trainingData.map(t=>`<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('')}</div></div>
       </div>`;
     contentArea.innerHTML = html;
   },
 
+  // ✅ FIXED: addTraining — No page refresh, just UI update
   async addTraining() {
     const q = document.getElementById('trainQuestion')?.value?.trim();
     const a = document.getElementById('trainAnswer')?.value?.trim();
     if (!q || !a) return showToast('Enter both question and answer!', 'warning');
-    await db.collection('botReplies').add({ question: q, answer: a, clientId: getCurrentClientId(), createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    showToast('✅ Training data added!', 'success'); this.render();
+    
+    await db.collection('botReplies').add({ 
+      question: q, answer: a, 
+      clientId: getCurrentClientId(), 
+      createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+    });
+    
+    // Clear input fields
+    document.getElementById('trainQuestion').value = '';
+    document.getElementById('trainAnswer').value = '';
+    
+    showToast('✅ Training data added!', 'success');
+    
+    // Refresh training data list without full page reload
+    let trainingData = [];
+    try {
+      const snap = await db.collection('botReplies').orderBy('createdAt','desc').limit(50).get();
+      trainingData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
+    
+    // Update the training list
+    const trainingListEl = document.getElementById('trainingList');
+    const h5El = document.querySelector('#trainingListCard h5');
+    if (h5El) h5El.innerHTML = `Training Examples (${trainingData.length})`;
+    if (trainingListEl) {
+      trainingListEl.innerHTML = trainingData.length === 0 
+        ? '<p class="text-muted">No training data yet.</p>' 
+        : trainingData.map(t => `<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
+    }
   },
 
-  async deleteTraining(id) { if (!confirm('Delete?')) return; await db.collection('botReplies').doc(id).delete(); this.render(); },
+  // ✅ FIXED: deleteTraining — No page refresh
+  async deleteTraining(id) { 
+    if (!confirm('Delete this training example?')) return; 
+    await db.collection('botReplies').doc(id).delete();
+    
+    // Refresh training data list without full page reload
+    let trainingData = [];
+    try {
+      const snap = await db.collection('botReplies').orderBy('createdAt','desc').limit(50).get();
+      trainingData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
+    
+    const trainingListEl = document.getElementById('trainingList');
+    const h5El = document.querySelector('#trainingListCard h5');
+    if (h5El) h5El.innerHTML = `Training Examples (${trainingData.length})`;
+    if (trainingListEl) {
+      trainingListEl.innerHTML = trainingData.length === 0 
+        ? '<p class="text-muted">No training data yet.</p>' 
+        : trainingData.map(t => `<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
+    }
+  },
 
   // ==================== ANALYTICS ====================
   async renderAnalytics() {
