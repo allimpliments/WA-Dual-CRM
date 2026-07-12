@@ -185,56 +185,49 @@ const Knowledge = {
     }
   },
 
-  // ==================== PLATFORM DOCS (HIGHLIGHTED) ====================
-  async renderPlatform() {
-    const guides = [
-      { title:'Getting Started Guide', desc:'Complete walkthrough of the CRM — from login to first campaign', icon:'fa-rocket', section:'dashboard' },
-      { title:'Dashboard Overview', desc:'Understand your dashboard, KPIs, and quick actions', icon:'fa-tachometer-alt', section:'dashboard' },
-      { title:'Managing Leads', desc:'How to capture, track, and convert leads effectively', icon:'fa-funnel-dollar', section:'leads' },
-      { title:'Contacts Management', desc:'Import, organize, and segment your contacts', icon:'fa-users', section:'contacts' },
-      { title:'WhatsApp Chat Setup', desc:'Connect WhatsApp API and start live chatting', icon:'fa-whatsapp', section:'chats' },
-      { title:'Campaign Creation', desc:'Bulk & drip campaigns — step by step', icon:'fa-rocket', section:'campaigns' },
-      { title:'Templates & Flows', desc:'Create message templates and automation flows', icon:'fa-sitemap', section:'flows' },
-      { title:'Kanban Pipeline', desc:'Visual sales pipeline management', icon:'fa-tasks', section:'kanban' },
-      { title:'Social Media Connect', desc:'Connect & manage all social platforms', icon:'fa-globe', section:'social' },
-      { title:'Form Builder', desc:'Create lead capture forms with drag & drop', icon:'fa-wpforms', section:'forms' },
-      { title:'AI Chatbot Setup', desc:'Configure AI auto-replies for 24/7 support', icon:'fa-robot', section:'chatbot' },
-      { title:'E‑commerce Integration', desc:'Connect Shopify, WooCommerce & more', icon:'fa-store', section:'ecommerce' },
-      { title:'Appointment System', desc:'Book & manage appointments with staff', icon:'fa-calendar-check', section:'appointments' },
-      { title:'Analytics & Reports', desc:'Track performance with detailed analytics', icon:'fa-chart-bar', section:'analytics' },
-      { title:'Integrations Hub', desc:'Connect 30+ third-party tools', icon:'fa-plug', section:'integrations' },
-      { title:'Team & Agent Management', desc:'Invite team members and assign roles', icon:'fa-user-tie', section:'agents' },
-      { title:'Client Management', desc:'Onboard and manage multiple clients', icon:'fa-building', section:'clients' },
-      { title:'Ticket System', desc:'Manage customer support tickets', icon:'fa-ticket-alt', section:'tickets' },
-      { title:'Settings & Profile', desc:'Company profile, pipeline stages, preferences', icon:'fa-cog', section:'setup' },
-      { title:'Subscription & Plans', desc:'Upgrade your plan for more features', icon:'fa-credit-card', section:'plan' },
-    ];
+  // ==================== HELPER: Load external JS file dynamically ====================
+  loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+    });
+  },
 
-    let html = `
-      <div class="kn-wrap">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-          <button class="kn-btn kn-btn-outline btn-sm" onclick="Knowledge.currentSubTab=null;Knowledge.render();"><i class="fas fa-arrow-left"></i> Back</button>
-          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;"><i class="fas fa-book"></i></div>
-          <div><h4 style="font-weight:800;margin:0;">📖 Platform Documentation</h4><small class="text-muted">Complete guide to every feature — ${guides.length} guides</small></div>
-        </div>
-        <div class="row g-3">
-          ${guides.map(g => `
-            <div class="col-md-6 col-lg-4">
-              <div style="background:#fff;border-radius:16px;padding:20px;border:1px solid #f1f5f9;transition:0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 8px 25px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none';this.style.transform='none';" onclick="loadSection('${g.section}')">
-                <div class="d-flex gap-3 align-items-start">
-                  <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;color:#f59e0b;font-size:16px;flex-shrink:0;"><i class="fas ${g.icon}"></i></div>
-                  <div>
-                    <h6 style="font-weight:700;font-size:14px;margin:0;">${g.title}</h6>
-                    <p style="font-size:12px;color:#64748b;margin:4px 0 0;">${g.desc}</p>
-                    <span style="font-size:11px;color:#f59e0b;font-weight:600;">Open Module →</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>`;
-    contentArea.innerHTML = html;
+  // ==================== PLATFORM DOCS — FIXED: Delegates to PlatformDocs module ====================
+  async renderPlatform() {
+    try {
+      // Load platform.js if not already loaded
+      if (typeof PlatformDocs === 'undefined') {
+        await this.loadScript('js/knowledge/platform.js');
+      }
+      // Reset state and delegate rendering to PlatformDocs
+      PlatformDocs.currentGuide = null;
+      PlatformDocs.currentView = 'list';
+      await PlatformDocs.render();
+    } catch (error) {
+      console.error('Error loading Platform Documentation:', error);
+      // Fallback: show error message
+      let html = `
+        <div class="kn-wrap">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <button class="kn-btn kn-btn-outline btn-sm" onclick="Knowledge.currentSubTab=null;Knowledge.render();"><i class="fas fa-arrow-left"></i> Back</button>
+            <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;"><i class="fas fa-book"></i></div>
+            <div><h4 style="font-weight:800;margin:0;">📖 Platform Documentation</h4><small class="text-muted">Complete guide to every feature</small></div>
+          </div>
+          <div style="background:#fff;border-radius:16px;padding:60px 20px;text-align:center;border:1px solid #f1f5f9;">
+            <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3" style="opacity:0.3;"></i>
+            <h5 style="font-weight:700;">Unable to Load Documentation</h5>
+            <p class="text-muted">Please check your internet connection and try again.</p>
+            <button class="kn-btn kn-btn-outline mt-3" onclick="Knowledge.currentSubTab=null;Knowledge.render();">← Back to Knowledge Hub</button>
+          </div>
+        </div>`;
+      contentArea.innerHTML = html;
+    }
   },
 
   // ==================== OTHER SUB-MODULES ====================
