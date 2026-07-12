@@ -292,6 +292,30 @@ const PlatformDocs = {
     }
   ],
 
+  // Map guide ID to global variable name for script tag loading
+  guideGlobalNames: {
+    'getting-started': 'GettingStartedGuide',
+    'dashboard': 'DashboardGuide',
+    'leads': 'LeadsGuide',
+    'contacts': 'ContactsGuide',
+    'chats': 'ChatsGuide',
+    'campaigns': 'CampaignsGuide',
+    'templates-flows': 'TemplatesFlowsGuide',
+    'kanban': 'KanbanGuide',
+    'social': 'SocialGuide',
+    'forms': 'FormsGuide',
+    'chatbot': 'ChatbotGuide',
+    'ecommerce': 'EcommerceGuide',
+    'appointments': 'AppointmentsGuide',
+    'analytics': 'AnalyticsGuide',
+    'integrations': 'IntegrationsGuide',
+    'agents': 'AgentsGuide',
+    'clients': 'ClientsGuide',
+    'tickets': 'TicketsGuide',
+    'settings': 'SettingsGuide',
+    'plans': 'PlansGuide'
+  },
+
   // ==================== RENDER: MAIN ENTRY POINT ====================
   async render() {
     contentArea.style.paddingTop = '60px';
@@ -917,7 +941,22 @@ const PlatformDocs = {
     this.render();
   },
 
-  // ==================== LOAD INDIVIDUAL GUIDE FILE ====================
+  // ==================== FIXED: Load external JS file helper ====================
+  loadScript(src) {
+    return new Promise((resolve, reject) => {
+      // Check if already loaded
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) { resolve(); return; }
+      // Create and append script tag
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+    });
+  },
+
+  // ==================== FIXED: LOAD INDIVIDUAL GUIDE FILE (script tag approach) ====================
   async loadGuideContent(guideId) {
     const guide = this.guides.find(g => g.id === guideId);
     if (!guide) {
@@ -927,12 +966,26 @@ const PlatformDocs = {
     }
 
     try {
-      // Dynamically import the individual guide file
-      const guideModule = await import(`./guides/${guideId}.js`);
-      
-      if (guideModule && guideModule.default) {
-        // Pass the guide metadata + user progress to the guide module
-        guideModule.default.render({
+      const globalName = this.guideGlobalNames[guideId];
+      const guidePath = `js/knowledge/guides/${guideId}.js`;
+
+      // Load the guide file if not already loaded
+      if (typeof window[globalName] === 'undefined') {
+        await this.loadScript(guidePath);
+      }
+
+      // Get the guide module from global scope
+      const guideModule = window[globalName];
+
+      if (guideModule && typeof guideModule.render === 'function') {
+        // Mark as in-progress on first view
+        if (!this.userProgress[guideId] || this.userProgress[guideId] < 10) {
+          this.userProgress[guideId] = 10;
+          await this.saveUserProgress();
+        }
+
+        // Pass context to the guide module
+        guideModule.render({
           guide: guide,
           userProgress: this.userProgress[guideId] || 0,
           isBookmarked: this.bookmarkedGuides.includes(guideId),
@@ -942,9 +995,13 @@ const PlatformDocs = {
           },
           onComplete: async () => {
             await this.markComplete(guideId);
+            // Re-render guide with updated progress
+            this.loadGuideContent(guideId);
           },
           onBookmark: () => {
             this.toggleBookmark(guideId);
+            // Re-render guide with updated bookmark state
+            this.loadGuideContent(guideId);
           },
           onNavigate: (nextGuideId) => {
             this.openGuide(nextGuideId);
@@ -953,11 +1010,10 @@ const PlatformDocs = {
           allGuides: this.guides
         });
       } else {
-        throw new Error('Guide module not found or invalid format');
+        throw new Error(`Guide module "${globalName}" not found or missing render() method`);
       }
     } catch (error) {
       console.error('Error loading guide:', error);
-      
       // Fallback if guide file doesn't exist yet
       this.renderGuideFallback(guide);
     }
