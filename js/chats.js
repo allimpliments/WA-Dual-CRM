@@ -1,4 +1,4 @@
-// js/chats.js — Unified Live Chat (All Platforms Live + Meta Inbox + Social Platforms + clientId isolation)
+// js/chats.js — Unified Live Chat (All Platforms Live + Tab Switching)
 const Chats = {
   contactCache: {},
   currentChatTab: 'whatsapp',
@@ -28,15 +28,15 @@ const Chats = {
     contentArea.style.paddingTop = '60px';
     contentArea.style.background = 'var(--bg-primary, #f0f2f5)';
 
-    // ✅ ALL PLATFORMS NOW LIVE
+    // ✅ ALL PLATFORMS LIVE
     const tabs = [
-      { key: 'whatsapp', name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366', status: 'live' },
-      { key: 'facebook', name: 'FB Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF', status: 'live' },
-      { key: 'instagram', name: 'Instagram', icon: 'fa-instagram', color: '#E4405F', status: 'live' },
-      { key: 'linkedin', name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2', status: 'live' },
-      { key: 'youtube', name: 'YouTube', icon: 'fa-youtube', color: '#FF0000', status: 'live' },
-      { key: 'telegram', name: 'Telegram', icon: 'fa-telegram', color: '#0088cc', status: 'live' },
-      { key: 'email', name: 'Email', icon: 'fa-envelope', color: '#ea4335', status: 'live' },
+      { key: 'whatsapp', name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366' },
+      { key: 'facebook', name: 'FB Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF' },
+      { key: 'instagram', name: 'Instagram', icon: 'fa-instagram', color: '#E4405F' },
+      { key: 'linkedin', name: 'LinkedIn', icon: 'fa-linkedin', color: '#0A66C2' },
+      { key: 'youtube', name: 'YouTube', icon: 'fa-youtube', color: '#FF0000' },
+      { key: 'telegram', name: 'Telegram', icon: 'fa-telegram', color: '#0088cc' },
+      { key: 'email', name: 'Email', icon: 'fa-envelope', color: '#ea4335' },
     ];
 
     let html = `
@@ -73,13 +73,13 @@ const Chats = {
         .platform-status.connected{background:#d1fae5;color:#065f46;}
         .platform-status.disconnected{background:#fee2e2;color:#991b1b;}
         .platform-status.live{background:#dbeafe;color:#1e40af;}
-        /* Footer */
-        .chat-footer{background:#fff;border-top:1px solid #e5e7eb;padding:16px 20px;margin-top:24px;border-radius:12px;}
-        .chat-footer-links{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;}
-        .chat-footer-links a{color:#64748b;text-decoration:none;font-size:12px;display:flex;align-items:center;gap:6px;transition:0.2s;}
-        .chat-footer-links a:hover{color:#0f172a;}
-        .chat-footer-links .dot{color:#d1d5db;font-size:16px;}
-        @media (max-width:768px){.chat-tabs{overflow-x:auto;flex-wrap:nowrap;}.chat-footer-links{gap:10px;}}
+        /* Quick Links - Only WhatsApp & FB Messenger */
+        .quick-links{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px;margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+        .quick-links span{font-size:11px;color:#94a3b8;font-weight:600;}
+        .quick-links a{color:#64748b;text-decoration:none;font-size:12px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:16px;transition:0.2s;}
+        .quick-links a:hover{background:#f1f5f9;color:#0f172a;}
+        .quick-links a.active{background:#eef2ff;color:#6366f1;}
+        @media (max-width:768px){.chat-tabs{overflow-x:auto;flex-wrap:nowrap;}.quick-links{flex-wrap:wrap;}}
       </style>
 
       <div class="chat-tabs">
@@ -92,7 +92,7 @@ const Chats = {
       </div>
     `;
 
-    // ✅ All platforms now handled by individual render methods
+    // ✅ Platform renderers
     const platformRenderers = {
       whatsapp: () => this.renderWhatsAppChat(),
       facebook: () => this.renderPlatformChat('facebook'),
@@ -109,27 +109,16 @@ const Chats = {
       html += platformRenderers[this.currentChatTab]?.() || this.renderPlatformChat(this.currentChatTab);
     }
 
-    // ✅ FOOTER — All platforms added
+    // ✅ QUICK LINKS - ONLY WhatsApp and FB Messenger (NO FOOTER)
     html += `
-      <div class="chat-footer">
-        <div class="chat-footer-links">
-          <a href="#" onclick="Chats.currentChatTab='whatsapp';Chats.render();"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp</a>
-          <span class="dot">•</span>
-          <a href="#" onclick="Chats.currentChatTab='facebook';Chats.render();"><i class="fab fa-facebook-messenger" style="color:#00B2FF;"></i> Messenger</a>
-          <span class="dot">•</span>
-          <a href="#" onclick="Chats.currentChatTab='instagram';Chats.render();"><i class="fab fa-instagram" style="color:#E4405F;"></i> Instagram</a>
-          <span class="dot">•</span>
-          <a href="#" onclick="Chats.currentChatTab='linkedin';Chats.render();"><i class="fab fa-linkedin" style="color:#0A66C2;"></i> LinkedIn</a>
-          <span class="dot">•</span>
-          <a href="#" onclick="Chats.currentChatTab='youtube';Chats.render();"><i class="fab fa-youtube" style="color:#FF0000;"></i> YouTube</a>
-          <span class="dot">•</span>
-          <a href="#" onclick="Chats.currentChatTab='telegram';Chats.render();"><i class="fab fa-telegram" style="color:#0088cc;"></i> Telegram</a>
-          <span class="dot">•</span>
-          <a href="#" onclick="Chats.currentChatTab='email';Chats.render();"><i class="fas fa-envelope" style="color:#ea4335;"></i> Email</a>
-        </div>
-        <div style="text-align:center;margin-top:10px;font-size:10px;color:#94a3b8;">
-          🔒 All conversations are end-to-end encrypted • AI-powered auto-replies available
-        </div>
+      <div class="quick-links">
+        <span>📌 Quick Access:</span>
+        <a href="#" onclick="Chats.currentChatTab='whatsapp';Chats.render();" class="${this.currentChatTab === 'whatsapp' ? 'active' : ''}">
+          <i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp
+        </a>
+        <a href="#" onclick="Chats.currentChatTab='facebook';Chats.render();" class="${this.currentChatTab === 'facebook' ? 'active' : ''}">
+          <i class="fab fa-facebook-messenger" style="color:#00B2FF;"></i> Messenger
+        </a>
       </div>
     `;
 
@@ -307,7 +296,7 @@ const Chats = {
           <p class="small text-muted mb-0">
             <i class="fas fa-robot me-1"></i> 
             AI auto-replies are integrated. Configure your chatbot in the 
-            <a href="#" onclick="Chatbot.currentTab='config';Chatbot.render();" style="color:#6366f1;">Chatbot Settings</a>.
+            <a href="#" onclick="event.preventDefault(); Chatbot.currentTab='config'; Chatbot.render();" style="color:#6366f1;cursor:pointer;">Chatbot Settings</a>.
           </p>
         </div>
       </div>
@@ -390,7 +379,6 @@ const Chats = {
         return;
       }
       
-      // Use Chatbot.getAIReply which handles API key properly
       let reply = await Chatbot.getAIReply(msg, ai);
       
       document.getElementById('aiTestResult').innerHTML = `
