@@ -1,41 +1,5 @@
 // js/chatbot.js — World-Class Multi-Provider AI Chatbot Engine for SaaS
-// FIXED: addKeyword(), addTraining(), removeKeyword() — No page refresh, just UI update
-// FIXED: Training Data add/delete working properly
-
-// ✅ Ensure helper functions exist
-if (typeof showToast !== 'function') {
-  window.showToast = function(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-      position: fixed; bottom: 20px; right: 20px; padding: 12px 24px;
-      background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#6366f1'};
-      color: #fff; border-radius: 8px; z-index: 99999; font-size: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 400px;
-      animation: slideIn 0.3s ease;
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.3s';
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  };
-}
-
-if (typeof getCurrentClientId !== 'function') {
-  window.getCurrentClientId = function() {
-    return window.currentUser?.clientId || null;
-  };
-}
-
-if (typeof shouldFilterByClient !== 'function') {
-  window.shouldFilterByClient = function() {
-    const role = window.currentUser?.role;
-    return role !== 'platform_owner' && role !== 'platform_super_admin' && role !== 'admin';
-  };
-}
-
+// FIXED: API key loading, Training Data, Keywords — All working
 const Chatbot = {
   currentTab: 'config',
   provider: 'groq',
@@ -71,39 +35,55 @@ const Chatbot = {
       greetingMessage: 'Hello! 👋 How can I help you today?',
       keywords: []
     };
+    
     try {
       const doc = await db.collection('settings').doc('chatbot').get();
       if (doc.exists) config = { ...config, ...doc.data() };
-    } catch(e) {}
+    } catch(e) {
+      console.error('Error loading chatbot config:', e);
+    }
     
-    // ✅ FIX: API key load karke config mein save karo
+    // ✅ CRITICAL FIX: API key load karke config mein save karo
+    let groqKey = '';
+    let openaiKey = '';
+    
     try {
+      // Groq API key load
       const groqDoc = await db.collection('settings').doc('groq_ai').get();
       if (groqDoc.exists) {
-        const groqKey = groqDoc.data().apiKey || '';
+        groqKey = groqDoc.data().apiKey || '';
         if (groqKey && config.provider === 'groq') {
           config.apiKey = groqKey;
+          console.log('✅ Groq API key loaded from groq_ai settings');
         }
       }
+    } catch(e) {
+      console.error('Error loading Groq API key:', e);
+    }
+    
+    try {
+      // OpenAI API key load
       const openaiDoc = await db.collection('settings').doc('openai').get();
       if (openaiDoc.exists) {
-        const openaiKey = openaiDoc.data().apiKey || '';
+        openaiKey = openaiDoc.data().apiKey || '';
         if (openaiKey && config.provider === 'openai') {
           config.apiKey = openaiKey;
+          console.log('✅ OpenAI API key loaded from openai settings');
         }
       }
-    } catch(e) {}
+    } catch(e) {
+      console.error('Error loading OpenAI API key:', e);
+    }
     
-    this.savedConfig = config;
+    // ✅ CRITICAL FIX: savedConfig mein API key properly save karo
+    this.savedConfig = { ...config };
+    this.savedConfig.apiKey = config.apiKey || '';
+    
+    console.log('🔑 API Key loaded:', this.savedConfig.apiKey ? 'Yes (length: ' + this.savedConfig.apiKey.length + ')' : 'No');
 
-    // Load API keys for display
-    let groqKey = '', openaiKey = '', claudeKey = '', geminiKey = '';
-    try {
-      const groqDoc = await db.collection('settings').doc('groq_ai').get();
-      if (groqDoc.exists) groqKey = groqDoc.data().apiKey || '';
-      const openaiDoc = await db.collection('settings').doc('openai').get();
-      if (openaiDoc.exists) openaiKey = openaiDoc.data().apiKey || '';
-    } catch(e) {}
+    // Load API keys for display (show Connected/Setup Required status)
+    let displayGroqKey = groqKey;
+    let displayOpenaiKey = openaiKey;
 
     const providerModels = {
       groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
@@ -154,6 +134,8 @@ const Chatbot = {
         .bot-preset-btn.active { background: #6366f1; color: #fff; }
         .dash-recent-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
         .dash-recent-item:last-child { border-bottom: none; }
+        .bot-status-connected { color: #10b981; font-size: 12px; }
+        .bot-status-disconnected { color: #ef4444; font-size: 12px; }
         @media (max-width: 768px) { .bot-tabs { overflow-x: auto; flex-wrap: nowrap; } }
       </style>
       <div class="bot-wrap">
@@ -177,8 +159,8 @@ const Chatbot = {
               <h5><i class="fas fa-brain me-2"></i>AI Provider</h5>
               <div class="row g-3">
                 ${[
-                  { id:'groq', name:'Groq', icon:'fa-bolt', color:'#f59e0b', desc:'Ultra-fast inference • Free tier available', connected: !!groqKey },
-                  { id:'openai', name:'OpenAI (ChatGPT)', icon:'fa-brain', color:'#10b981', desc:'GPT-4o & GPT-3.5 • Most powerful', connected: !!openaiKey },
+                  { id:'groq', name:'Groq', icon:'fa-bolt', color:'#f59e0b', desc:'Ultra-fast inference • Free tier available', connected: !!displayGroqKey },
+                  { id:'openai', name:'OpenAI (ChatGPT)', icon:'fa-brain', color:'#10b981', desc:'GPT-4o & GPT-3.5 • Most powerful', connected: !!displayOpenaiKey },
                   { id:'claude', name:'Anthropic Claude', icon:'fa-robot', color:'#8b5cf6', desc:'Safe & reliable • Great for business', connected: false },
                   { id:'gemini', name:'Google Gemini', icon:'fa-google', color:'#4285F4', desc:'Multimodal AI • Google ecosystem', connected: false }
                 ].map(p => `
@@ -187,7 +169,7 @@ const Chatbot = {
                       <div class="icon"><i class="fas ${p.icon}" style="color:${p.color};"></i></div>
                       <div style="font-weight:700;font-size:14px;">${p.name}</div>
                       <div style="font-size:10px;color:#64748b;">${p.desc}</div>
-                      <span class="bot-badge" style="background:${p.connected?'#ecfdf5':'#f1f5f9'};color:${p.connected?'#10b981':'#94a3b8'};font-size:9px;margin-top:4px;display:inline-block;padding:2px 8px;border-radius:10px;">${p.connected?'Connected':'Setup Required'}</span>
+                      <span class="bot-badge" style="background:${p.connected?'#ecfdf5':'#f1f5f9'};color:${p.connected?'#10b981':'#94a3b8'};font-size:9px;margin-top:4px;display:inline-block;padding:2px 8px;border-radius:10px;">${p.connected?'✅ Connected':'⚙️ Setup Required'}</span>
                     </div>
                   </div>
                 `).join('')}
@@ -197,6 +179,7 @@ const Chatbot = {
                 <div class="col-md-3"><label class="bot-label">Temperature</label><input type="number" id="botTemp" class="bot-input" value="${config.temperature}" step="0.1" min="0" max="2"></div>
                 <div class="col-md-3"><label class="bot-label">Max Tokens</label><input type="number" id="botMaxTokens" class="bot-input" value="${config.maxTokens}" min="50" max="2000"></div>
               </div>
+              ${this.savedConfig.apiKey ? `<div class="mt-2 text-success"><i class="fas fa-check-circle"></i> API Key connected (${this.savedConfig.provider})</div>` : `<div class="mt-2 text-danger"><i class="fas fa-exclamation-circle"></i> No API Key found. Please setup in Settings.</div>`}
             </div>
 
             <!-- Business Instructions (AI Fallback) -->
@@ -204,7 +187,6 @@ const Chatbot = {
               <h5><i class="fas fa-building me-2"></i>Business Instructions (AI Fallback)</h5>
               <p class="text-muted small">These instructions teach the AI about your business. When no keyword matches, AI uses this to generate relevant responses.</p>
               
-              <!-- ✅ PRESET BUTTONS — Quick fill for common businesses -->
               <div class="mb-3">
                 <small class="text-muted d-block mb-1">Quick Fill Presets:</small>
                 <button class="bot-preset-btn" onclick="Chatbot.fillPreset('digital_marketing')">📱 Digital Marketing Agency</button>
@@ -391,7 +373,6 @@ Rules:
     if (!preset) return;
     
     if (type === 'custom') {
-      // Clear all fields for custom input
       const nameEl = document.getElementById('botBizName');
       const infoEl = document.getElementById('botBizInfo');
       const instrEl = document.getElementById('botInstructions');
@@ -402,7 +383,6 @@ Rules:
       return;
     }
 
-    // Fill the form with preset data
     const nameEl = document.getElementById('botBizName');
     const infoEl = document.getElementById('botBizInfo');
     const instrEl = document.getElementById('botInstructions');
@@ -410,16 +390,18 @@ Rules:
     if (infoEl) infoEl.value = preset.info;
     if (instrEl) instrEl.value = preset.instructions;
     
-    // Highlight active preset
     document.querySelectorAll('.bot-preset-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`.bot-preset-btn[onclick*="${type}"]`)?.classList.add('active');
     
     showToast('✅ Preset filled! Update details as needed and Save.', 'success');
   },
 
-  selectProvider(id) { this.savedConfig.provider = id; this.render(); },
+  selectProvider(id) { 
+    this.savedConfig.provider = id; 
+    this.render(); 
+  },
   
-  // ✅ FIXED: addKeyword — No page refresh, just UI update
+  // ✅ addKeyword — No page refresh, just UI update
   addKeyword() {
     const kw = document.getElementById('newKeyword')?.value?.trim();
     const reply = document.getElementById('newKeywordReply')?.value?.trim();
@@ -427,13 +409,11 @@ Rules:
     if (!this.savedConfig.keywords) this.savedConfig.keywords = [];
     this.savedConfig.keywords.push({ keyword: kw.toLowerCase(), reply });
     
-    // Clear input fields
     const kwEl = document.getElementById('newKeyword');
     const replyEl = document.getElementById('newKeywordReply');
     if (kwEl) kwEl.value = '';
     if (replyEl) replyEl.value = '';
     
-    // Update just the keyword list display
     const keywordList = document.getElementById('keywordList');
     if (keywordList) {
       keywordList.innerHTML = this.savedConfig.keywords.length === 0 
@@ -446,11 +426,10 @@ Rules:
     showToast('✅ Keyword added! Save configuration to persist.', 'success');
   },
 
-  // ✅ FIXED: removeKeyword — No page refresh, just UI update
+  // ✅ removeKeyword — No page refresh, just UI update
   removeKeyword(index) { 
     this.savedConfig.keywords.splice(index, 1);
     
-    // Update just the keyword list display
     const keywordList = document.getElementById('keywordList');
     if (keywordList) {
       keywordList.innerHTML = this.savedConfig.keywords.length === 0 
@@ -486,7 +465,8 @@ Rules:
     };
     try {
       await db.collection('settings').doc('chatbot').set(data);
-      this.savedConfig = data;
+      // ✅ Save API key too
+      this.savedConfig = { ...this.savedConfig, ...data };
       showToast('✅ Chatbot configuration saved!', 'success');
     } catch(e) { showToast('Error: ' + e.message, 'error'); }
   },
@@ -495,7 +475,11 @@ Rules:
   async renderTestChat() {
     let html = `
       <div class="bot-wrap">
-        <div class="d-flex align-items-center mb-3"><button class="bot-btn bot-btn-outline me-2" onclick="Chatbot.currentTab='config';Chatbot.render();"><i class="fas fa-arrow-left"></i> Back</button><h4 style="font-weight:800;margin:0;">🧪 Test Chatbot</h4></div>
+        <div class="d-flex align-items-center mb-3">
+          <button class="bot-btn bot-btn-outline me-2" onclick="Chatbot.currentTab='config';Chatbot.render();"><i class="fas fa-arrow-left"></i> Back</button>
+          <h4 style="font-weight:800;margin:0;">🧪 Test Chatbot</h4>
+          ${this.savedConfig.apiKey ? `<span class="badge bg-success ms-2">API Connected</span>` : `<span class="badge bg-danger ms-2">No API Key</span>`}
+        </div>
         <div class="bot-card">
           <div class="bot-test-chat" id="testChatWindow">
             <div class="bot-msg bot"><div class="bot-msg-bubble">👋 Hi! I'm your AI assistant. Type a message to test how I respond.</div></div>
@@ -521,18 +505,17 @@ Rules:
     if (win) { win.innerHTML += `<div class="bot-msg bot"><div class="bot-msg-bubble">${reply}</div></div>`; win.scrollTop = win.scrollHeight; }
   },
 
-  // ==================== AI ENGINE (Used by Chats module) ====================
-  // ✅ FIXED: Properly load API key from provider settings
+  // ==================== AI ENGINE ====================
   async getAIReply(incomingMsg, configOverride = null) {
     const config = configOverride || this.savedConfig;
     
-    // Load config if not provided or apiKey missing
-    if (!config.apiKey || !config.enabled) {
+    // ✅ FIX: Force reload API key if not present
+    if (!config.apiKey) {
       try {
+        // Load from chatbot config
         const doc = await db.collection('settings').doc('chatbot').get();
         if (doc.exists) {
           const data = doc.data();
-          // Merge but don't override apiKey if we're about to load it
           Object.assign(config, data);
         }
       } catch(e) {
@@ -540,7 +523,7 @@ Rules:
       }
     }
 
-    // ✅ FIX: If API key still not set, try to load from provider settings
+    // ✅ FIX: If STILL no API key, load from provider settings
     if (!config.apiKey) {
       try {
         const providerKey = config.provider === 'openai' ? 'openai' : 'groq_ai';
@@ -548,8 +531,8 @@ Rules:
         if (keyDoc.exists) {
           const keyData = keyDoc.data();
           config.apiKey = keyData.apiKey || '';
-          // Also save it back to savedConfig for future use
           this.savedConfig.apiKey = config.apiKey;
+          console.log('✅ API key loaded from:', providerKey);
         }
       } catch(e) {
         console.error('Error loading API key:', e);
@@ -557,27 +540,31 @@ Rules:
     }
 
     // Check if enabled
-    if (!config.enabled) return '';
+    if (!config.enabled) {
+      return '🤖 Chatbot is disabled. Please enable it in settings.';
+    }
 
     // 1. Keyword matching (if enabled)
     if (config.keywordFallback && config.keywords?.length > 0) {
       const msgLower = incomingMsg.toLowerCase();
       for (const kw of config.keywords) {
-        if (msgLower.includes(kw.keyword.toLowerCase())) return kw.reply;
+        if (msgLower.includes(kw.keyword.toLowerCase())) {
+          return kw.reply;
+        }
       }
     }
 
     // 2. AI Fallback (if enabled)
     if (!config.fallbackEnabled) {
-      return config.keywordFallback ? 'Thanks for your message! 🙏' : '';
+      return config.keywordFallback ? 'Thanks for your message! 🙏' : '🤖 AI Fallback is disabled.';
     }
 
-    // Final check: do we have API key?
+    // ✅ FINAL CHECK: API key
     if (!config.apiKey) {
-      return 'AI is not configured. Please set up an API key in settings.';
+      return '⚠️ AI is not configured. Please set up an API key in Settings > Setup.';
     }
 
-    // Build system prompt from business instructions
+    // Build system prompt
     let systemPrompt = `You are a helpful AI assistant`;
     if (config.businessName) systemPrompt += ` for ${config.businessName}`;
     systemPrompt += `. Respond in a ${config.tone} tone. Keep responses under 150 words.`;
@@ -586,45 +573,39 @@ Rules:
     systemPrompt += `\n\nIf asked about pricing, products, services, or business details, use the business information provided. If you don't know something, politely say so and offer to connect them with a human agent.`;
 
     try {
-      if (config.provider === 'openai') {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST', 
-          headers: { 'Authorization': 'Bearer ' + config.apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            model: config.model || 'gpt-4o', 
-            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
-            max_tokens: config.maxTokens || 150, 
-            temperature: config.temperature || 0.7 
-          })
-        });
-        const d = await res.json();
-        if (d.error) {
-          console.error('OpenAI API Error:', d.error);
-          return 'AI service error: ' + (d.error.message || 'Unknown error');
-        }
-        return d.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
-      } else {
-        // Default: Groq
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST', 
-          headers: { 'Authorization': 'Bearer ' + config.apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            model: config.model || 'llama-3.3-70b-versatile', 
-            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
-            max_tokens: config.maxTokens || 150, 
-            temperature: config.temperature || 0.7 
-          })
-        });
-        const d = await res.json();
-        if (d.error) {
-          console.error('Groq API Error:', d.error);
-          return 'AI service error: ' + (d.error.message || 'Unknown error');
-        }
-        return d.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
+      const apiUrl = config.provider === 'openai' 
+        ? 'https://api.openai.com/v1/chat/completions'
+        : 'https://api.groq.com/openai/v1/chat/completions';
+      
+      const model = config.provider === 'openai' 
+        ? (config.model || 'gpt-4o')
+        : (config.model || 'llama-3.3-70b-versatile');
+
+      console.log('🤖 Sending request to:', apiUrl, 'with model:', model);
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 
+          'Authorization': 'Bearer ' + config.apiKey, 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ 
+          model: model,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
+          max_tokens: config.maxTokens || 150, 
+          temperature: config.temperature || 0.7 
+        })
+      });
+      
+      const d = await res.json();
+      if (d.error) {
+        console.error('API Error:', d.error);
+        return '⚠️ AI service error: ' + (d.error.message || 'Unknown error');
       }
+      return d.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
     } catch(e) {
       console.error('AI Error:', e);
-      return 'AI service temporarily unavailable. Please try again later.';
+      return '⚠️ AI service temporarily unavailable. Please try again later.';
     }
   },
 
@@ -632,7 +613,6 @@ Rules:
   async renderTraining() {
     let trainingData = [];
     try {
-      // ✅ FIX: Add client filter for training data
       let query = db.collection('botReplies');
       if (shouldFilterByClient()) {
         const clientId = getCurrentClientId();
@@ -691,7 +671,6 @@ Rules:
     contentArea.innerHTML = html;
   },
 
-  // ✅ FIXED: addTraining — No page refresh, just UI update
   async addTraining() {
     const qEl = document.getElementById('trainQuestion');
     const aEl = document.getElementById('trainAnswer');
@@ -717,14 +696,11 @@ Rules:
         createdAt: firebase.firestore.FieldValue.serverTimestamp() 
       });
       
-      // Clear input fields
       if (qEl) qEl.value = '';
       if (aEl) aEl.value = '';
       if (statusEl) statusEl.innerHTML = '<span class="text-success">✅ Training data added!</span>';
       
       showToast('✅ Training data added successfully!', 'success');
-      
-      // Refresh training data list without full page reload
       await this.refreshTrainingList();
       
     } catch(e) {
@@ -734,7 +710,6 @@ Rules:
     }
   },
 
-  // ✅ FIXED: Helper method to refresh training list
   async refreshTrainingList() {
     try {
       let query = db.collection('botReplies');
@@ -771,15 +746,12 @@ Rules:
     }
   },
 
-  // ✅ FIXED: deleteTraining — No page refresh
   async deleteTraining(id) { 
     if (!confirm('Delete this training example?')) return; 
     
     try {
       await db.collection('botReplies').doc(id).delete();
       showToast('✅ Training example deleted!', 'success');
-      
-      // Refresh training data list without full page reload
       await this.refreshTrainingList();
     } catch(e) {
       console.error('Error deleting training:', e);
