@@ -1,8 +1,15 @@
-// js/chats.js — Unified Live Chat (All Platforms Live + Tab Switching + AI Auto-Reply)
+// js/chats.js — Fixed: Rate Limit + Duplicate Prevention + Better Error Handling
 const Chats = {
   contactCache: {},
   currentChatTab: 'whatsapp',
   realtimeListeners: {},
+  
+  // ✅ Rate limit tracking
+  rateLimit: {
+    lastRequestTime: 0,
+    cooldownUntil: 0,
+    consecutiveErrors: 0
+  },
 
   async getContactName(number) {
     if (!number || number === 'unknown') return null;
@@ -77,6 +84,7 @@ const Chats = {
         .quick-links a{color:#64748b;text-decoration:none;font-size:12px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:16px;transition:0.2s;}
         .quick-links a:hover{background:#f1f5f9;color:#0f172a;}
         .quick-links a.active{background:#eef2ff;color:#6366f1;}
+        .rate-limit-warning{background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#92400e;}
         @media (max-width:768px){.chat-tabs{overflow-x:auto;flex-wrap:nowrap;}.quick-links{flex-wrap:wrap;}}
       </style>
 
@@ -126,6 +134,8 @@ const Chats = {
   async renderWhatsAppChat() {
     let messages = [];
     let waConfig = { connected: false };
+    let isRateLimited = Date.now() < this.rateLimit.cooldownUntil;
+    
     try {
       const cfgDoc = await db.collection('settings').doc('whatsapp').get();
       if (cfgDoc.exists) {
@@ -173,6 +183,7 @@ const Chats = {
           <div class="chat-send-box mt-3">
             <h6><i class="fas fa-robot text-warning me-1"></i>AI Auto-Reply</h6>
             <p class="small text-muted">Bot auto-replies via AI + Keywords</p>
+            ${isRateLimited ? `<div class="rate-limit-warning">⚠️ Rate limit active. Please wait ${Math.ceil((this.rateLimit.cooldownUntil - Date.now())/1000)}s</div>` : ''}
             <button class="btn btn-outline-warning btn-sm w-100" onclick="Chats.testAutoReply()"><i class="fas fa-flask me-1"></i> Test AI</button>
             <div id="aiTestResult" class="mt-2"></div>
           </div>
@@ -197,7 +208,7 @@ const Chats = {
                   <div class="chat-msg-body">
                     <div class="d-flex justify-content-between">
                       <span class="chat-msg-name">${msg.type==='incoming'?(this.contactCache[msg.from]||msg.from):(this.contactCache[msg.to]||msg.to)}</span>
-                      <span class="chat-badge ${msg.type||'incoming'}">${msg.type}</span>
+                      <span class="chat-badge ${msg.type||'incoming'}">${msg.type}${msg.isAI ? ' 🤖' : ''}${msg.aiError ? ' ⚠️' : ''}</span>
                     </div>
                     <div class="chat-msg-text message-body">${msg.body||'(media)'}</div>
                     <div class="chat-msg-time">${msg.createdAt?.toDate?.().toLocaleString()||''}</div>
@@ -372,17 +383,23 @@ const Chats = {
       document.getElementById('aiTestResult').innerHTML = `
         <div class="p-2 rounded" style="background:#f0fdf4;">
           <span class="ai-badge">🤖 AI Reply</span>
-          <p class="small mt-1 mb-0">${reply}</p>
+          <p class="small mt-1 mb-0">${reply || 'No reply generated'}</p>
         </div>`;
     } catch(e) {
       document.getElementById('aiTestResult').innerHTML = `<span class="text-danger">Error: ${e.message}</span>`;
     }
   },
 
-  // ==================== ✅ CORE AI PROCESSOR (Used by both test and webhook) ====================
+  // ==================== ✅ CORE AI PROCESSOR ====================
   async processAIResponse(incomingMsg) {
+    // ✅ Rate limit check - agar cooldown mein hai toh skip karo
+    if (Date.now() < this.rateLimit.cooldownUntil) {
+      const waitTime = Math.ceil((this.rateLimit.cooldownUntil - Date.now()) / 1000);
+      console.log(`⏳ Rate limit active, waiting ${waitTime}s`);
+      return `⏳ Rate limit active. Please wait ${waitTime} seconds before trying again.`;
+    }
+
     try {
-      // Load chatbot config
       const aiDoc = await db.collection('settings').doc('chatbot').get();
       const ai = aiDoc.data() || {};
       
@@ -391,7 +408,6 @@ const Chats = {
         return null;
       }
 
-      // Load API key from groq_ai settings if not in chatbot config
       if (!ai.apiKey) {
         const keyDoc = await db.collection('settings').doc('groq_ai').get();
         if (keyDoc.exists) {
@@ -399,56 +415,35 @@ const Chats = {
         }
       }
 
-      // Call Chatbot.getAIReply with proper config
+      // ✅ Rate limit tracking - request se pehle timestamp save karo
+      this.rateLimit.lastRequestTime = Date.now();
+
       const reply = await Chatbot.getAIReply(incomingMsg, ai);
       
-      // Check if it's a fallback message (not actual AI reply)
-      if (reply === 'Thanks for your message! 🙏' || reply === 'AI is not configured. Please set up an API key in settings.') {
-        console.log('⚠️ AI returned fallback message, trying direct API call...');
-        // Try direct API call with Groq
-        if (ai.apiKey) {
-          const directReply = await this.directGroqCall(incomingMsg, ai);
-          if (directReply && directReply !== 'Thanks for your message! 🙏') {
-            return directReply;
-          }
+      // ✅ Agar rate limit error aaya toh cooldown set karo
+      if (reply && reply.includes('Rate limit reached')) {
+        // Extract wait time from error message
+        const match = reply.match(/try again in ([\d.]+)(ms|s)/);
+        if (match) {
+          let waitTime = parseFloat(match[1]);
+          if (match[2] === 's') waitTime = waitTime * 1000;
+          if (match[2] === 'ms') waitTime = waitTime;
+          
+          // Add buffer
+          waitTime = Math.max(waitTime + 2000, 5000);
+          this.rateLimit.cooldownUntil = Date.now() + waitTime;
+          this.rateLimit.consecutiveErrors++;
+          console.log(`⏳ Rate limit set cooldown for ${waitTime}ms`);
         }
         return reply;
       }
+
+      // ✅ Success - reset error counter
+      this.rateLimit.consecutiveErrors = 0;
       
       return reply;
     } catch(e) {
       console.error('Error processing AI response:', e);
-      return null;
-    }
-  },
-
-  // ==================== DIRECT GROQ API CALL ====================
-  async directGroqCall(incomingMsg, config) {
-    try {
-      const systemPrompt = `You are a helpful AI assistant for a business. Respond in a professional tone. Keep responses under 150 words.`;
-      
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 
-          'Authorization': 'Bearer ' + config.apiKey, 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ 
-          model: config.model || 'llama-3.3-70b-versatile',
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
-          max_tokens: config.maxTokens || 150, 
-          temperature: config.temperature || 0.7 
-        })
-      });
-      
-      const d = await res.json();
-      if (d.error) {
-        console.error('Direct Groq API Error:', d.error);
-        return null;
-      }
-      return d.choices?.[0]?.message?.content || null;
-    } catch(e) {
-      console.error('Direct Groq call error:', e);
       return null;
     }
   },
@@ -458,15 +453,25 @@ const Chats = {
     try {
       const { from, body, id, timestamp } = messageData;
       
+      // ✅ Skip if media (no text to process)
+      if (!body || body === '(media)') {
+        console.log('📷 Skipping media message (no text)');
+        return;
+      }
+
       console.log('📩 Incoming WhatsApp message:', { from, body });
       
-      // Get AI response
+      // ✅ Rate limit check
+      if (Date.now() < this.rateLimit.cooldownUntil) {
+        console.log('⏳ Rate limit active, skipping AI for this message');
+        return;
+      }
+      
       const aiReply = await this.processAIResponse(body);
       
-      if (aiReply) {
+      if (aiReply && !aiReply.includes('Rate limit')) {
         console.log('🤖 AI Reply generated:', aiReply);
         
-        // Send reply via WhatsApp
         const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
         if (cfg?.accessToken && cfg?.phoneNumberId) {
           const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`, {
@@ -481,7 +486,6 @@ const Chats = {
           });
           
           if (res.ok) {
-            // Save AI reply to messages
             await db.collection('messages').add({
               to: from,
               from: cfg.phoneNumberId,
@@ -494,9 +498,24 @@ const Chats = {
             });
             console.log('✅ AI reply sent successfully');
           } else {
-            console.error('❌ Failed to send AI reply:', await res.text());
+            const errorText = await res.text();
+            console.error('❌ Failed to send AI reply:', errorText);
           }
         }
+      } else if (aiReply && aiReply.includes('Rate limit')) {
+        console.log('⏳ Rate limit reached, saving error message');
+        // Save rate limit error as a message
+        await db.collection('messages').add({
+          to: from,
+          from: cfg?.phoneNumberId || 'system',
+          body: aiReply,
+          type: 'outgoing',
+          platform: 'whatsapp',
+          isAI: true,
+          aiError: true,
+          clientId: window.currentUser?.clientId || null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
       } else {
         console.log('ℹ️ No AI reply generated for:', body);
       }
@@ -518,24 +537,32 @@ const Chats = {
         const list = document.getElementById('messageList');
         if (!list) return;
         
-        // ✅ Check for new incoming messages and process AI
+        // ✅ Process ONLY NEW incoming messages (not already processed)
+        for (const msg of msgs) {
+          // ✅ Skip if already processed by AI OR already has AI reply
+          if (msg.processed || msg.isAI || msg.aiError) continue;
+          
+          // ✅ Only process incoming text messages
+          if (msg.type === 'incoming' && msg.from && msg.from !== '342354115627791' && msg.body && msg.body !== '(media)') {
+            console.log('🔄 New incoming message detected:', msg.body);
+            
+            // ✅ Mark as processed FIRST to avoid duplicate processing
+            await db.collection('messages').doc(msg.id).update({ processed: true });
+            
+            // ✅ Process AI reply
+            await this.processIncomingWhatsApp({
+              from: msg.from,
+              body: msg.body,
+              id: msg.id,
+              timestamp: msg.createdAt
+            });
+          }
+        }
+        
+        // Update contact names
         for (const msg of msgs) {
           if (msg.from && msg.from !== '342354115627791') {
             await this.getContactName(msg.from);
-            
-            // ✅ If incoming message and not already processed by AI
-            if (msg.type === 'incoming' && !msg.processed && !msg.isAI) {
-              console.log('🔄 New incoming message detected:', msg.body);
-              // Mark as processed to avoid duplicate
-              await db.collection('messages').doc(msg.id).update({ processed: true });
-              // Process AI reply
-              await this.processIncomingWhatsApp({
-                from: msg.from,
-                body: msg.body,
-                id: msg.id,
-                timestamp: msg.createdAt
-              });
-            }
           }
           if (msg.to && msg.to !== '342354115627791') {
             await this.getContactName(msg.to);
@@ -549,7 +576,7 @@ const Chats = {
             <div class="chat-msg-body">
               <div class="d-flex justify-content-between">
                 <span class="chat-msg-name">${msg.type==='incoming'?(this.contactCache[msg.from]||msg.from):(this.contactCache[msg.to]||msg.to)}</span>
-                <span class="chat-badge ${msg.type||'incoming'}">${msg.type}${msg.isAI ? ' 🤖' : ''}</span>
+                <span class="chat-badge ${msg.type||'incoming'}">${msg.type}${msg.isAI ? ' 🤖' : ''}${msg.aiError ? ' ⚠️' : ''}</span>
               </div>
               <div class="chat-msg-text message-body">${msg.body||'(media)'}</div>
               <div class="chat-msg-time">${msg.createdAt?.toDate?.().toLocaleString()||''}</div>
