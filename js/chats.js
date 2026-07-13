@@ -1,4 +1,4 @@
-// js/chats.js — Unified Live Chat (All Platforms Live + Tab Switching)
+// js/chats.js — Unified Live Chat (All Platforms Live + Tab Switching + AI Auto-Reply)
 const Chats = {
   contactCache: {},
   currentChatTab: 'whatsapp',
@@ -28,7 +28,6 @@ const Chats = {
     contentArea.style.paddingTop = '60px';
     contentArea.style.background = 'var(--bg-primary, #f0f2f5)';
 
-    // ✅ ALL PLATFORMS LIVE
     const tabs = [
       { key: 'whatsapp', name: 'WhatsApp', icon: 'fa-whatsapp', color: '#25D366' },
       { key: 'facebook', name: 'FB Messenger', icon: 'fa-facebook-messenger', color: '#00B2FF' },
@@ -73,7 +72,6 @@ const Chats = {
         .platform-status.connected{background:#d1fae5;color:#065f46;}
         .platform-status.disconnected{background:#fee2e2;color:#991b1b;}
         .platform-status.live{background:#dbeafe;color:#1e40af;}
-        /* Quick Links - Only WhatsApp & FB Messenger */
         .quick-links{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px;margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
         .quick-links span{font-size:11px;color:#94a3b8;font-weight:600;}
         .quick-links a{color:#64748b;text-decoration:none;font-size:12px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:16px;transition:0.2s;}
@@ -92,7 +90,6 @@ const Chats = {
       </div>
     `;
 
-    // ✅ Platform renderers
     const platformRenderers = {
       whatsapp: () => this.renderWhatsAppChat(),
       facebook: () => this.renderPlatformChat('facebook'),
@@ -109,7 +106,6 @@ const Chats = {
       html += platformRenderers[this.currentChatTab]?.() || this.renderPlatformChat(this.currentChatTab);
     }
 
-    // ✅ QUICK LINKS - ONLY WhatsApp and FB Messenger (NO FOOTER)
     html += `
       <div class="quick-links">
         <span>📌 Quick Access:</span>
@@ -215,7 +211,7 @@ const Chats = {
     `;
   },
 
-  // ==================== ALL PLATFORMS (Facebook, Instagram, LinkedIn, YouTube, Telegram, Email) ====================
+  // ==================== ALL PLATFORMS ====================
   renderPlatformChat(platform) {
     const configs = {
       facebook: { 
@@ -372,15 +368,7 @@ const Chats = {
     if (!msg) return;
     document.getElementById('aiTestResult').innerHTML = '<span class="text-info">AI thinking...</span>';
     try {
-      const aiDoc = await db.collection('settings').doc('chatbot').get();
-      const ai = aiDoc.data() || {};
-      if (!ai.enabled) {
-        document.getElementById('aiTestResult').innerHTML = '<span class="text-warning">AI not enabled. Configure in Chatbot settings.</span>';
-        return;
-      }
-      
-      let reply = await Chatbot.getAIReply(msg, ai);
-      
+      const reply = await this.processAIResponse(msg);
       document.getElementById('aiTestResult').innerHTML = `
         <div class="p-2 rounded" style="background:#f0fdf4;">
           <span class="ai-badge">🤖 AI Reply</span>
@@ -388,6 +376,132 @@ const Chats = {
         </div>`;
     } catch(e) {
       document.getElementById('aiTestResult').innerHTML = `<span class="text-danger">Error: ${e.message}</span>`;
+    }
+  },
+
+  // ==================== ✅ CORE AI PROCESSOR (Used by both test and webhook) ====================
+  async processAIResponse(incomingMsg) {
+    try {
+      // Load chatbot config
+      const aiDoc = await db.collection('settings').doc('chatbot').get();
+      const ai = aiDoc.data() || {};
+      
+      if (!ai.enabled) {
+        console.log('🤖 Chatbot is disabled');
+        return null;
+      }
+
+      // Load API key from groq_ai settings if not in chatbot config
+      if (!ai.apiKey) {
+        const keyDoc = await db.collection('settings').doc('groq_ai').get();
+        if (keyDoc.exists) {
+          ai.apiKey = keyDoc.data().apiKey || '';
+        }
+      }
+
+      // Call Chatbot.getAIReply with proper config
+      const reply = await Chatbot.getAIReply(incomingMsg, ai);
+      
+      // Check if it's a fallback message (not actual AI reply)
+      if (reply === 'Thanks for your message! 🙏' || reply === 'AI is not configured. Please set up an API key in settings.') {
+        console.log('⚠️ AI returned fallback message, trying direct API call...');
+        // Try direct API call with Groq
+        if (ai.apiKey) {
+          const directReply = await this.directGroqCall(incomingMsg, ai);
+          if (directReply && directReply !== 'Thanks for your message! 🙏') {
+            return directReply;
+          }
+        }
+        return reply;
+      }
+      
+      return reply;
+    } catch(e) {
+      console.error('Error processing AI response:', e);
+      return null;
+    }
+  },
+
+  // ==================== DIRECT GROQ API CALL ====================
+  async directGroqCall(incomingMsg, config) {
+    try {
+      const systemPrompt = `You are a helpful AI assistant for a business. Respond in a professional tone. Keep responses under 150 words.`;
+      
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 
+          'Authorization': 'Bearer ' + config.apiKey, 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ 
+          model: config.model || 'llama-3.3-70b-versatile',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
+          max_tokens: config.maxTokens || 150, 
+          temperature: config.temperature || 0.7 
+        })
+      });
+      
+      const d = await res.json();
+      if (d.error) {
+        console.error('Direct Groq API Error:', d.error);
+        return null;
+      }
+      return d.choices?.[0]?.message?.content || null;
+    } catch(e) {
+      console.error('Direct Groq call error:', e);
+      return null;
+    }
+  },
+
+  // ==================== ✅ PROCESS INCOMING WHATSAPP MESSAGE ====================
+  async processIncomingWhatsApp(messageData) {
+    try {
+      const { from, body, id, timestamp } = messageData;
+      
+      console.log('📩 Incoming WhatsApp message:', { from, body });
+      
+      // Get AI response
+      const aiReply = await this.processAIResponse(body);
+      
+      if (aiReply) {
+        console.log('🤖 AI Reply generated:', aiReply);
+        
+        // Send reply via WhatsApp
+        const cfg = (await db.collection('settings').doc('whatsapp').get()).data();
+        if (cfg?.accessToken && cfg?.phoneNumberId) {
+          const res = await fetch(`https://graph.facebook.com/v22.0/${cfg.phoneNumberId}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${cfg.accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              messaging_product: 'whatsapp', 
+              to: from, 
+              type: 'text', 
+              text: { body: aiReply } 
+            })
+          });
+          
+          if (res.ok) {
+            // Save AI reply to messages
+            await db.collection('messages').add({
+              to: from,
+              from: cfg.phoneNumberId,
+              body: aiReply,
+              type: 'outgoing',
+              platform: 'whatsapp',
+              isAI: true,
+              clientId: window.currentUser?.clientId || null,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('✅ AI reply sent successfully');
+          } else {
+            console.error('❌ Failed to send AI reply:', await res.text());
+          }
+        }
+      } else {
+        console.log('ℹ️ No AI reply generated for:', body);
+      }
+    } catch(e) {
+      console.error('Error processing incoming message:', e);
     }
   },
 
@@ -403,14 +517,40 @@ const Chats = {
         const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const list = document.getElementById('messageList');
         if (!list) return;
-        for (const m of msgs) {
-          if (m.from && m.from !== '342354115627791') await this.getContactName(m.from);
+        
+        // ✅ Check for new incoming messages and process AI
+        for (const msg of msgs) {
+          if (msg.from && msg.from !== '342354115627791') {
+            await this.getContactName(msg.from);
+            
+            // ✅ If incoming message and not already processed by AI
+            if (msg.type === 'incoming' && !msg.processed && !msg.isAI) {
+              console.log('🔄 New incoming message detected:', msg.body);
+              // Mark as processed to avoid duplicate
+              await db.collection('messages').doc(msg.id).update({ processed: true });
+              // Process AI reply
+              await this.processIncomingWhatsApp({
+                from: msg.from,
+                body: msg.body,
+                id: msg.id,
+                timestamp: msg.createdAt
+              });
+            }
+          }
+          if (msg.to && msg.to !== '342354115627791') {
+            await this.getContactName(msg.to);
+          }
         }
+        
+        // Update UI
         list.innerHTML = msgs.length === 0 ? '<p class="text-muted text-center py-4">No messages</p>' : msgs.map(msg => `
           <div class="chat-msg ${msg.type||'incoming'} message-row">
             <div class="chat-msg-avatar">${(msg.type==='incoming'?(this.contactCache[msg.from]||msg.from||'?')[0]:(this.contactCache[msg.to]||msg.to||'?')[0]).toUpperCase()}</div>
             <div class="chat-msg-body">
-              <div class="d-flex justify-content-between"><span class="chat-msg-name">${msg.type==='incoming'?(this.contactCache[msg.from]||msg.from):(this.contactCache[msg.to]||msg.to)}</span><span class="chat-badge ${msg.type||'incoming'}">${msg.type}</span></div>
+              <div class="d-flex justify-content-between">
+                <span class="chat-msg-name">${msg.type==='incoming'?(this.contactCache[msg.from]||msg.from):(this.contactCache[msg.to]||msg.to)}</span>
+                <span class="chat-badge ${msg.type||'incoming'}">${msg.type}${msg.isAI ? ' 🤖' : ''}</span>
+              </div>
               <div class="chat-msg-text message-body">${msg.body||'(media)'}</div>
               <div class="chat-msg-time">${msg.createdAt?.toDate?.().toLocaleString()||''}</div>
             </div>
