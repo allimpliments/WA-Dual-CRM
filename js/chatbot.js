@@ -33,9 +33,28 @@ const Chatbot = {
       const doc = await db.collection('settings').doc('chatbot').get();
       if (doc.exists) config = { ...config, ...doc.data() };
     } catch(e) {}
+    
+    // ✅ FIX: API key load karke config mein save karo
+    try {
+      const groqDoc = await db.collection('settings').doc('groq_ai').get();
+      if (groqDoc.exists) {
+        const groqKey = groqDoc.data().apiKey || '';
+        if (groqKey && config.provider === 'groq') {
+          config.apiKey = groqKey;
+        }
+      }
+      const openaiDoc = await db.collection('settings').doc('openai').get();
+      if (openaiDoc.exists) {
+        const openaiKey = openaiDoc.data().apiKey || '';
+        if (openaiKey && config.provider === 'openai') {
+          config.apiKey = openaiKey;
+        }
+      }
+    } catch(e) {}
+    
     this.savedConfig = config;
 
-    // Load API keys from setup
+    // Load API keys for display
     let groqKey = '', openaiKey = '', claudeKey = '', geminiKey = '';
     try {
       const groqDoc = await db.collection('settings').doc('groq_ai').get();
@@ -451,15 +470,38 @@ Rules:
   },
 
   // ==================== AI ENGINE (Used by Chats module) ====================
+  // ✅ FIXED: Properly load API key from provider settings
   async getAIReply(incomingMsg, configOverride = null) {
     const config = configOverride || this.savedConfig;
     
-    // Load config if not provided
-    if (!config.apiKey) {
+    // Load config if not provided or apiKey missing
+    if (!config.apiKey || !config.enabled) {
       try {
         const doc = await db.collection('settings').doc('chatbot').get();
-        if (doc.exists) Object.assign(config, doc.data());
-      } catch(e) {}
+        if (doc.exists) {
+          const data = doc.data();
+          // Merge but don't override apiKey if we're about to load it
+          Object.assign(config, data);
+        }
+      } catch(e) {
+        console.error('Error loading chatbot config:', e);
+      }
+    }
+
+    // ✅ FIX: If API key still not set, try to load from provider settings
+    if (!config.apiKey) {
+      try {
+        const providerKey = config.provider === 'openai' ? 'openai' : 'groq_ai';
+        const keyDoc = await db.collection('settings').doc(providerKey).get();
+        if (keyDoc.exists) {
+          const keyData = keyDoc.data();
+          config.apiKey = keyData.apiKey || '';
+          // Also save it back to savedConfig for future use
+          this.savedConfig.apiKey = config.apiKey;
+        }
+      } catch(e) {
+        console.error('Error loading API key:', e);
+      }
     }
 
     // Check if enabled
@@ -474,17 +516,14 @@ Rules:
     }
 
     // 2. AI Fallback (if enabled)
-    if (!config.fallbackEnabled) return config.keywordFallback ? 'Thanks for your message! 🙏' : '';
-
-    // Get API key based on provider
-    let apiKey = config.apiKey;
-    if (!apiKey) {
-      try {
-        const keyDoc = await db.collection('settings').doc(config.provider === 'openai' ? 'openai' : 'groq_ai').get();
-        if (keyDoc.exists) apiKey = keyDoc.data().apiKey || '';
-      } catch(e) {}
+    if (!config.fallbackEnabled) {
+      return config.keywordFallback ? 'Thanks for your message! 🙏' : '';
     }
-    if (!apiKey) return 'AI is not configured. Please set up an API key.';
+
+    // Final check: do we have API key?
+    if (!config.apiKey) {
+      return 'AI is not configured. Please set up an API key in settings.';
+    }
 
     // Build system prompt from business instructions
     let systemPrompt = `You are a helpful AI assistant`;
@@ -497,21 +536,44 @@ Rules:
     try {
       if (config.provider === 'openai') {
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: config.model || 'gpt-4o', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], max_tokens: config.maxTokens || 150, temperature: config.temperature || 0.7 })
+          method: 'POST', 
+          headers: { 'Authorization': 'Bearer ' + config.apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            model: config.model || 'gpt-4o', 
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
+            max_tokens: config.maxTokens || 150, 
+            temperature: config.temperature || 0.7 
+          })
         });
         const d = await res.json();
+        if (d.error) {
+          console.error('OpenAI API Error:', d.error);
+          return 'AI service error: ' + (d.error.message || 'Unknown error');
+        }
         return d.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
       } else {
         // Default: Groq
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: config.model || 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], max_tokens: config.maxTokens || 150, temperature: config.temperature || 0.7 })
+          method: 'POST', 
+          headers: { 'Authorization': 'Bearer ' + config.apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            model: config.model || 'llama-3.3-70b-versatile', 
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: incomingMsg }], 
+            max_tokens: config.maxTokens || 150, 
+            temperature: config.temperature || 0.7 
+          })
         });
         const d = await res.json();
+        if (d.error) {
+          console.error('Groq API Error:', d.error);
+          return 'AI service error: ' + (d.error.message || 'Unknown error');
+        }
         return d.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
       }
-    } catch(e) { return 'AI service temporarily unavailable. Please try again later.'; }
+    } catch(e) {
+      console.error('AI Error:', e);
+      return 'AI service temporarily unavailable. Please try again later.';
+    }
   },
 
   // ==================== TRAINING DATA ====================
