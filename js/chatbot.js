@@ -1,5 +1,41 @@
 // js/chatbot.js — World-Class Multi-Provider AI Chatbot Engine for SaaS
 // FIXED: addKeyword(), addTraining(), removeKeyword() — No page refresh, just UI update
+// FIXED: Training Data add/delete working properly
+
+// ✅ Ensure helper functions exist
+if (typeof showToast !== 'function') {
+  window.showToast = function(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed; bottom: 20px; right: 20px; padding: 12px 24px;
+      background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#6366f1'};
+      color: #fff; border-radius: 8px; z-index: 99999; font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 400px;
+      animation: slideIn 0.3s ease;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+}
+
+if (typeof getCurrentClientId !== 'function') {
+  window.getCurrentClientId = function() {
+    return window.currentUser?.clientId || null;
+  };
+}
+
+if (typeof shouldFilterByClient !== 'function') {
+  window.shouldFilterByClient = function() {
+    const role = window.currentUser?.role;
+    return role !== 'platform_owner' && role !== 'platform_super_admin' && role !== 'admin';
+  };
+}
+
 const Chatbot = {
   currentTab: 'config',
   provider: 'groq',
@@ -11,7 +47,13 @@ const Chatbot = {
     contentArea.style.background = '#f8fafc';
 
     if (this.currentTab === 'test') { await this.renderTestChat(); return; }
-    if (this.currentTab === 'flows') { Flows.currentTab = 'myflows'; Flows.render(); return; }
+    if (this.currentTab === 'flows') { 
+      if (typeof Flows !== 'undefined') {
+        Flows.currentTab = 'myflows'; 
+        Flows.render(); 
+      }
+      return; 
+    }
     if (this.currentTab === 'training') { await this.renderTraining(); return; }
     if (this.currentTab === 'analytics') { await this.renderAnalytics(); return; }
 
@@ -110,6 +152,8 @@ const Chatbot = {
         .bot-preset-btn { padding: 6px 12px; border-radius: 20px; font-size: 10px; cursor: pointer; border: 1px solid #6366f1; background: #eef2ff; color: #6366f1; margin: 2px; transition: 0.2s; }
         .bot-preset-btn:hover { background: #6366f1; color: #fff; }
         .bot-preset-btn.active { background: #6366f1; color: #fff; }
+        .dash-recent-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+        .dash-recent-item:last-child { border-bottom: none; }
         @media (max-width: 768px) { .bot-tabs { overflow-x: auto; flex-wrap: nowrap; } }
       </style>
       <div class="bot-wrap">
@@ -348,17 +392,23 @@ Rules:
     
     if (type === 'custom') {
       // Clear all fields for custom input
-      document.getElementById('botBizName').value = '';
-      document.getElementById('botBizInfo').value = '';
-      document.getElementById('botInstructions').value = '';
+      const nameEl = document.getElementById('botBizName');
+      const infoEl = document.getElementById('botBizInfo');
+      const instrEl = document.getElementById('botInstructions');
+      if (nameEl) nameEl.value = '';
+      if (infoEl) infoEl.value = '';
+      if (instrEl) instrEl.value = '';
       showToast('✏️ Fill your custom business details', 'info');
       return;
     }
 
     // Fill the form with preset data
-    document.getElementById('botBizName').value = preset.name;
-    document.getElementById('botBizInfo').value = preset.info;
-    document.getElementById('botInstructions').value = preset.instructions;
+    const nameEl = document.getElementById('botBizName');
+    const infoEl = document.getElementById('botBizInfo');
+    const instrEl = document.getElementById('botInstructions');
+    if (nameEl) nameEl.value = preset.name;
+    if (infoEl) infoEl.value = preset.info;
+    if (instrEl) instrEl.value = preset.instructions;
     
     // Highlight active preset
     document.querySelectorAll('.bot-preset-btn').forEach(b => b.classList.remove('active'));
@@ -378,8 +428,10 @@ Rules:
     this.savedConfig.keywords.push({ keyword: kw.toLowerCase(), reply });
     
     // Clear input fields
-    document.getElementById('newKeyword').value = '';
-    document.getElementById('newKeywordReply').value = '';
+    const kwEl = document.getElementById('newKeyword');
+    const replyEl = document.getElementById('newKeywordReply');
+    if (kwEl) kwEl.value = '';
+    if (replyEl) replyEl.value = '';
     
     // Update just the keyword list display
     const keywordList = document.getElementById('keywordList');
@@ -580,73 +632,158 @@ Rules:
   async renderTraining() {
     let trainingData = [];
     try {
-      const snap = await db.collection('botReplies').orderBy('createdAt','desc').limit(50).get();
+      // ✅ FIX: Add client filter for training data
+      let query = db.collection('botReplies');
+      if (shouldFilterByClient()) {
+        const clientId = getCurrentClientId();
+        if (clientId) query = query.where('clientId', '==', clientId);
+      }
+      const snap = await query.orderBy('createdAt','desc').limit(50).get();
       trainingData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch(e) {}
+    } catch(e) {
+      console.error('Error loading training data:', e);
+    }
+    
     let html = `
       <div class="bot-wrap">
-        <div class="d-flex align-items-center mb-3"><button class="bot-btn bot-btn-outline me-2" onclick="Chatbot.currentTab='config';Chatbot.render();"><i class="fas fa-arrow-left"></i> Back</button><h4 style="font-weight:800;margin:0;">📚 Training Data</h4></div>
-        <div class="bot-card"><h5>Add Training Example</h5><div class="row g-2"><div class="col-md-5"><input type="text" id="trainQuestion" class="bot-input" placeholder="User question/message"></div><div class="col-md-5"><input type="text" id="trainAnswer" class="bot-input" placeholder="Expected AI response"></div><div class="col-md-2"><button class="bot-btn bot-btn-primary w-100" onclick="Chatbot.addTraining()"><i class="fas fa-plus"></i> Add</button></div></div></div>
-        <div class="bot-card" id="trainingListCard"><h5>Training Examples (${trainingData.length})</h5><div id="trainingList">${trainingData.length===0?'<p class="text-muted">No training data yet.</p>':trainingData.map(t=>`<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('')}</div></div>
+        <div class="d-flex align-items-center mb-3">
+          <button class="bot-btn bot-btn-outline me-2" onclick="Chatbot.currentTab='config';Chatbot.render();"><i class="fas fa-arrow-left"></i> Back</button>
+          <h4 style="font-weight:800;margin:0;">📚 Training Data</h4>
+          <span class="badge bg-info ms-2">${trainingData.length} entries</span>
+        </div>
+        <div class="bot-card">
+          <h5><i class="fas fa-plus-circle me-2"></i>Add Training Example</h5>
+          <div class="row g-2">
+            <div class="col-md-5">
+              <input type="text" id="trainQuestion" class="bot-input" placeholder="User question/message">
+            </div>
+            <div class="col-md-5">
+              <input type="text" id="trainAnswer" class="bot-input" placeholder="Expected AI response">
+            </div>
+            <div class="col-md-2">
+              <button class="bot-btn bot-btn-primary w-100" onclick="Chatbot.addTraining()">
+                <i class="fas fa-plus"></i> Add
+              </button>
+            </div>
+          </div>
+          <div id="trainingStatus" class="mt-2"></div>
+        </div>
+        <div class="bot-card" id="trainingListCard">
+          <h5><i class="fas fa-list me-2"></i>Training Examples (${trainingData.length})</h5>
+          <div id="trainingList">
+            ${trainingData.length === 0 ? '<p class="text-muted text-center py-3">No training data yet. Add your first example above!</p>' : 
+              trainingData.map(t => `
+                <div class="dash-recent-item">
+                  <div class="flex-grow-1">
+                    <strong>Q:</strong> ${t.question || 'N/A'}<br>
+                    <strong>A:</strong> ${t.answer || 'N/A'}
+                    ${t.clientId ? `<span class="badge bg-light text-muted ms-1">client:${t.clientId}</span>` : ''}
+                  </div>
+                  <button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              `).join('')
+            }
+          </div>
+        </div>
       </div>`;
     contentArea.innerHTML = html;
   },
 
   // ✅ FIXED: addTraining — No page refresh, just UI update
   async addTraining() {
-    const q = document.getElementById('trainQuestion')?.value?.trim();
-    const a = document.getElementById('trainAnswer')?.value?.trim();
-    if (!q || !a) return showToast('Enter both question and answer!', 'warning');
+    const qEl = document.getElementById('trainQuestion');
+    const aEl = document.getElementById('trainAnswer');
+    const statusEl = document.getElementById('trainingStatus');
     
-    await db.collection('botReplies').add({ 
-      question: q, answer: a, 
-      clientId: getCurrentClientId(), 
-      createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-    });
+    const q = qEl?.value?.trim();
+    const a = aEl?.value?.trim();
     
-    // Clear input fields
-    document.getElementById('trainQuestion').value = '';
-    document.getElementById('trainAnswer').value = '';
+    if (!q || !a) {
+      showToast('⚠️ Enter both question and answer!', 'warning');
+      if (statusEl) statusEl.innerHTML = '<span class="text-warning">⚠️ Please enter both question and answer.</span>';
+      return;
+    }
     
-    showToast('✅ Training data added!', 'success');
-    
-    // Refresh training data list without full page reload
-    let trainingData = [];
     try {
-      const snap = await db.collection('botReplies').orderBy('createdAt','desc').limit(50).get();
-      trainingData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch(e) {}
-    
-    // Update the training list
-    const trainingListEl = document.getElementById('trainingList');
-    const h5El = document.querySelector('#trainingListCard h5');
-    if (h5El) h5El.innerHTML = `Training Examples (${trainingData.length})`;
-    if (trainingListEl) {
-      trainingListEl.innerHTML = trainingData.length === 0 
-        ? '<p class="text-muted">No training data yet.</p>' 
-        : trainingData.map(t => `<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
+      if (statusEl) statusEl.innerHTML = '<span class="text-info">⏳ Saving...</span>';
+      
+      const clientId = getCurrentClientId();
+      await db.collection('botReplies').add({ 
+        question: q, 
+        answer: a, 
+        clientId: clientId || null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+      });
+      
+      // Clear input fields
+      if (qEl) qEl.value = '';
+      if (aEl) aEl.value = '';
+      if (statusEl) statusEl.innerHTML = '<span class="text-success">✅ Training data added!</span>';
+      
+      showToast('✅ Training data added successfully!', 'success');
+      
+      // Refresh training data list without full page reload
+      await this.refreshTrainingList();
+      
+    } catch(e) {
+      console.error('Error adding training:', e);
+      if (statusEl) statusEl.innerHTML = `<span class="text-danger">❌ Error: ${e.message}</span>`;
+      showToast('❌ Error: ' + e.message, 'error');
+    }
+  },
+
+  // ✅ FIXED: Helper method to refresh training list
+  async refreshTrainingList() {
+    try {
+      let query = db.collection('botReplies');
+      if (shouldFilterByClient()) {
+        const clientId = getCurrentClientId();
+        if (clientId) query = query.where('clientId', '==', clientId);
+      }
+      const snap = await query.orderBy('createdAt','desc').limit(50).get();
+      const trainingData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      const trainingListEl = document.getElementById('trainingList');
+      const h5El = document.querySelector('#trainingListCard h5');
+      
+      if (h5El) h5El.innerHTML = `<i class="fas fa-list me-2"></i>Training Examples (${trainingData.length})`;
+      
+      if (trainingListEl) {
+        trainingListEl.innerHTML = trainingData.length === 0 
+          ? '<p class="text-muted text-center py-3">No training data yet. Add your first example above!</p>'
+          : trainingData.map(t => `
+              <div class="dash-recent-item">
+                <div class="flex-grow-1">
+                  <strong>Q:</strong> ${t.question || 'N/A'}<br>
+                  <strong>A:</strong> ${t.answer || 'N/A'}
+                  ${t.clientId ? `<span class="badge bg-light text-muted ms-1">client:${t.clientId}</span>` : ''}
+                </div>
+                <button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            `).join('');
+      }
+    } catch(e) {
+      console.error('Error refreshing training list:', e);
     }
   },
 
   // ✅ FIXED: deleteTraining — No page refresh
   async deleteTraining(id) { 
     if (!confirm('Delete this training example?')) return; 
-    await db.collection('botReplies').doc(id).delete();
     
-    // Refresh training data list without full page reload
-    let trainingData = [];
     try {
-      const snap = await db.collection('botReplies').orderBy('createdAt','desc').limit(50).get();
-      trainingData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch(e) {}
-    
-    const trainingListEl = document.getElementById('trainingList');
-    const h5El = document.querySelector('#trainingListCard h5');
-    if (h5El) h5El.innerHTML = `Training Examples (${trainingData.length})`;
-    if (trainingListEl) {
-      trainingListEl.innerHTML = trainingData.length === 0 
-        ? '<p class="text-muted">No training data yet.</p>' 
-        : trainingData.map(t => `<div class="dash-recent-item"><div class="flex-grow-1"><strong>Q:</strong> ${t.question}<br><strong>A:</strong> ${t.answer}</div><button class="bot-btn bot-btn-danger btn-sm" onclick="Chatbot.deleteTraining('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
+      await db.collection('botReplies').doc(id).delete();
+      showToast('✅ Training example deleted!', 'success');
+      
+      // Refresh training data list without full page reload
+      await this.refreshTrainingList();
+    } catch(e) {
+      console.error('Error deleting training:', e);
+      showToast('❌ Error: ' + e.message, 'error');
     }
   },
 
